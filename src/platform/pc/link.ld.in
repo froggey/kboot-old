@@ -70,5 +70,6 @@ SECTIONS {
 	/DISCARD/ : {
 		*(.note.GNU-stack)
 		*(.comment*)
+		*(.eh_frame*)
 	}
 }
