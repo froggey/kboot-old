@@ -99,8 +99,13 @@ config.AddVariables(
 
 # Create the build environment and save the configuration.
 env = Environment(ENV = os.environ, variables = config)
-Help(config.GenerateHelpText(env))
 config.Save('.config.cache', env)
+
+# Set the help text.
+Help('There are a number of options available to configure the build process and the\n')
+Help('features that will enabled. To change them, pass <option>=<value> to scons,\n')
+Help('e.g. scons DEBUG=1\n')
+Help(config.GenerateHelpText(env))
 
 # Add a builder to preprocess linker scripts.
 env['BUILDERS']['LDScript'] = Builder(action = Action(
