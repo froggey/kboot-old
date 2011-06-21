@@ -35,6 +35,11 @@ supported_archs = {
 	})
 }
 
+# Boolean feature flags. These will be set in CPPDEFINES.
+features = [
+	('DEBUG', 'Compile with debugging features enabled.', True),
+]
+
 # Set up the build configuration. The no_config function is called if a required
 # value is not set.
 config = Variables('.config.cache')
@@ -81,6 +86,10 @@ def platform_validator(key, value, env):
 			"Platform '%s' unsupported by architecture '%s'. Use 'scons PLATFORM=?'." % (
 				value, env['ARCH']))
 config.Add('PLATFORM', 'Target platform. Use ARCH=<arch> PLATFORM=? for a list of possible values.', '', platform_validator)
+
+# Add boolean feature options.
+for feature in features:
+	config.Add(BoolVariable(feature[0], feature[1], feature[2]))
 
 # Add other configuration variables.
 config.AddVariables(
@@ -139,6 +148,12 @@ incdir = Popen([env['CC'], '-print-file-name=include'], stdout=PIPE).communicate
 env['CCFLAGS'] += ['-isystem', incdir]
 env['ASFLAGS'] += ['-isystem', incdir]
 
+# Add definitions for feature options.
+env['CPPDEFINES'] = {}
+for feature in features:
+	if env[feature[0]]:
+		env['CPPDEFINES'][feature[0]] = 1
+
 # Make the output nice.
 verbose = ARGUMENTS.get('V') == '1'
 if not verbose:
@@ -151,9 +166,6 @@ if not verbose:
 	env['RANLIBCOMSTR'] = ' RANLIB $TARGET'
 	env['GENCOMSTR']    = ' GEN    $TARGET'
 	env['STRIPCOMSTR']  = ' STRIP  $TARGET'
-
-#TEMP
-env['CPPDEFINES'] = {'CONFIG_DEBUG': 1, 'CONFIG_PC_SERIAL_PORT': 1}
 
 # For compatibility with the main Kiwi build system.
 env['SRCARCH'] = env['ARCH']

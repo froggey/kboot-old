@@ -28,16 +28,11 @@
 
 #include <console.h>
 
-/** Convert the serial port number from the configuration to a port number. */
-#if CONFIG_PC_SERIAL_PORT == 1
-# define SERIAL_PORT		0x3F8
-#elif CONFIG_PC_SERIAL_PORT == 2
-# define SERIAL_PORT		0x2F8
-#elif CONFIG_PC_SERIAL_PORT == 3
-# define SERIAL_PORT		0x3E8
-#elif CONFIG_PC_SERIAL_PORT == 4
-# define SERIAL_PORT		0x2E8
-#endif
+/** Define the serial port to use. */
+#define SERIAL_PORT		0x3F8		/**< COM1. */
+//#define SERIAL_PORT		0x2F8		/**< COM2. */
+//#define SERIAL_PORT		0x3E8		/**< COM3. */
+//#define SERIAL_PORT		0x2E8		/**< COM4. */
 
 /** VGA attributes. */
 #define VGA_ATTRIB		0x0700
