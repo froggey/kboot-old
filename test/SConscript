@@ -5,7 +5,7 @@
 # purpose with or without fee is hereby granted, provided that the above
 # copyright notice and this permission notice appear in all copies.
 #
-# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# THE SOFTWARE IS PROVIDED AS IS AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 # WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
 # MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
 # ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
@@ -16,12 +16,15 @@
 
 Import('env')
 
-# Set the include search paths (done here so it points to the build directory,
-# not the source tree).
-env['CPPPATH'] = [
-	Dir('src/include'),
-	Dir('src/arch/%s/include' % (env['ARCH'])),
-	Dir('src/platform/%s/include' % (env['PLATFORM'])),
-]
+# List of our own sources.
+sources = map(File, [
+	'main.c',
+	'support.c',
+])
 
-SConscript(dirs = ['src', 'test'])
+# Link the test kernel.
+target = env.LDScript('link.ld', 'link.ld.in')
+env.Program('test.elf', map(env.Object, sources), LINKFLAGS = env['LINKFLAGS'] + ["-Wl,-T,${File('link.ld')}"])
+Depends('test.elf', target)
+
+Alias('test', File('test.elf'))
