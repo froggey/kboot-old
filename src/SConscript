@@ -42,10 +42,6 @@ sources = map(File, [
 	'video.c',
 ])
 
-############################
-# Build environment set-up #
-############################
-
 # Get the list of source files from the architecture/platform.
 arch_sources = SConscript(dirs = ['arch/' + env['SRCARCH']], exports = ['env'])
 platform_sources = SConscript(dirs = ['platform/' + env['PLATFORM']], exports = ['env'])
@@ -56,9 +52,10 @@ env.Program('loader.elf', map(env.Object, sources), LINKFLAGS = env['LINKFLAGS']
 Depends('loader.elf', env['LDSCRIPT'])
 
 # Generate various information files and the stripped boot loader image.
-env.Command(['loader', 'loader.lst', 'loader.rde', 'loader.sym'], 'loader.elf', [
+target = env.Command(['loader', 'loader.lst', 'loader.rde', 'loader.sym'], 'loader.elf', [
 	Action('$OBJCOPY -O binary --strip-all $SOURCE ${TARGETS[0]}', '$GENCOMSTR'),
 	Action('$OBJDUMP -d $SOURCE > ${TARGETS[1]}', None),
 	Action('$READELF -a $SOURCE > ${TARGETS[2]}', None),
 	Action('$NM -C $SOURCE | sort > ${TARGETS[3]}', None),
 ])
+Default(target)

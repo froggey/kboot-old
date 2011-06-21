@@ -29,8 +29,7 @@ sources = map(File, [
 	'video.c',
 ])
 
-# Build the stage 1 loaders. Make the loader depend on them to ensure they
-# always get built.
+# Build the stage 1 loaders.
 stage1s = ['cdboot', 'pxeboot']
 for f in stage1s:
 	env.Program('%s.elf' % (f), '%s.S' % (f), LINKFLAGS = env['LINKFLAGS'] + [
@@ -38,10 +37,11 @@ for f in stage1s:
 		'-Wl,-N'
 	])
 	Depends('%s.elf' % (f), File('stage1.ld'))
-	env.Command(f, '%s.elf' % (f), Action(
+	target = env.Command(f, '%s.elf' % (f), Action(
 		"$OBJCOPY -O binary --strip-all -R '.note.*' -R .comment $SOURCE $TARGET",
 		'$GENCOMSTR'
 	))
+	Default(target)
 
 # Set the linker script path.
 env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')
