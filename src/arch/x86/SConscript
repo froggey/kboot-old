@@ -20,6 +20,7 @@ sources = map(File, [
 	'loaders/enter.S',
 	'loaders/kboot.c',
 	'arch.c',
+	'backtrace.c',
 	'cpu.c',
 	'except.S',
 	'mmu.c',

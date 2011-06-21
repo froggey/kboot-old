@@ -153,7 +153,7 @@ if not verbose:
 	env['STRIPCOMSTR']  = ' STRIP  $TARGET'
 
 #TEMP
-env['CPPDEFINES'] = {'CONFIG_ARCH_X86': 1, 'CONFIG_DEBUG': 1, 'CONFIG_PC_SERIAL_PORT': 1}
+env['CPPDEFINES'] = {'CONFIG_DEBUG': 1, 'CONFIG_PC_SERIAL_PORT': 1}
 
 # For compatibility with the main Kiwi build system.
 env['SRCARCH'] = env['ARCH']

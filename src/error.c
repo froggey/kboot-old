@@ -45,36 +45,16 @@ static void internal_error_printf_helper(char ch, void *data, int *total) {
 }
 
 /** Formatted print function for internal_error(). */
-static void internal_error_printf(const char *fmt, ...) {
+static int internal_error_printf(const char *fmt, ...) {
 	va_list args;
+	int ret;
 
 	va_start(args, fmt);
-	do_printf(internal_error_printf_helper, NULL, fmt, args);
+	ret = do_printf(internal_error_printf_helper, NULL, fmt, args);
 	va_end(args);
+
+	return ret;
 }
-
-#ifdef CONFIG_ARCH_X86
-/** Structure containing a stack frame. */
-typedef struct stack_frame {
-	struct stack_frame *next;	/**< Pointer to next stack frame. */
-	ptr_t addr;			/**< Function return address. */
-} stack_frame_t;
-
-static void backtrace(void) {
-	stack_frame_t *frame;
-	ptr_t addr = 0;
-
-	__asm__ volatile("mov %%ebp, %0" : "=r"(addr));
-	frame = (stack_frame_t *)addr;
-
-	while(frame) {
-		internal_error_printf(" %p\n", frame->addr);
-		frame = frame->next;
-	}
-}
-#else
-# error "Please implement backtrace for this architecture."
-#endif
 
 /** Raise an internal error.
  * @param fmt		Error format string.
@@ -94,7 +74,7 @@ void __noreturn internal_error(const char *fmt, ...) {
 	internal_error_printf("\n\n");
 	internal_error_printf("Please report this error to http://kiwi.alex-smith.me.uk/\n");
 	internal_error_printf("Backtrace:\n");
-	backtrace();
+	backtrace(internal_error_printf);
 	while(1);
 }
 

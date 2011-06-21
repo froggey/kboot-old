@@ -47,6 +47,8 @@ extern void loader_type_set(environ_t *env, loader_type_t *type);
 extern void *loader_data_get(environ_t *env);
 extern void loader_data_set(environ_t *env, void *data);
 
+extern void backtrace(int (*printfn)(const char *fmt, ...));
+
 extern void internal_error(const char *fmt, ...) __printf(1, 2) __noreturn;
 extern void boot_error(const char *fmt, ...) __printf(1, 2) __noreturn;
 
