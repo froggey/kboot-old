@@ -22,6 +22,7 @@
 #ifndef __ELF_LOAD_H
 #define __ELF_LOAD_H
 
+#include <arch/endian.h>
 #include <arch/mmu.h>
 
 #include <lib/string.h>
@@ -32,7 +33,7 @@
 #include <fs.h>
 #include <memory.h>
 
-#ifdef CONFIG_ARCH_LITTLE_ENDIAN
+#ifdef LITTLE_ENDIAN
 # define ELF_ENDIAN	ELFDATA2LSB
 #else
 # define ELF_ENDIAN	ELFDATA2MSB
