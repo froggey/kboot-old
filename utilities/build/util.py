@@ -14,19 +14,20 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('config', 'dirs', 'env')
-
-# Generate the configuration header. We don't generate with Kconfig because its
-# too much of a pain to get SCons to do it properly.
-f = open('config.h', 'w')
-f.write('/* This file is automatically-generated, do not edit. */\n\n')
-for (k, v) in config.items():
-        if isinstance(v, str):
-                f.write("#define CONFIG_%s \"%s\"\n" % (k, v))
-        elif isinstance(v, bool) or isinstance(v, int):
-                f.write("#define CONFIG_%s %d\n" % (k, int(v)))
-        else:
-                raise Exception, "Unsupported type %s in config" % (type(v))
-f.close()
-
-SConscript(dirs = dirs, exports = ['env'])
+## Helper for creating source lists with certain files only enabled by config settings.
+# @param config		Configuration object.
+# @param files		List of files. If an entry is a string, it is always
+#			added. If a tuple, the first entry is the config
+#                       setting and the second is the file name, and will only
+#			be added if the setting is True.
+def FeatureSources(config, files):
+	from SCons.Script import File
+	
+	output = []
+	for f in files:
+		if type(f) == tuple:
+			if config[f[0]]:
+				output.append(File(f[1]))
+		else:
+			output.append(File(f))
+	return output

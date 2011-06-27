@@ -14,19 +14,36 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('config', 'dirs', 'env')
+Import('env')
 
-# Generate the configuration header. We don't generate with Kconfig because its
-# too much of a pain to get SCons to do it properly.
-f = open('config.h', 'w')
-f.write('/* This file is automatically-generated, do not edit. */\n\n')
-for (k, v) in config.items():
-        if isinstance(v, str):
-                f.write("#define CONFIG_%s \"%s\"\n" % (k, v))
-        elif isinstance(v, bool) or isinstance(v, int):
-                f.write("#define CONFIG_%s %d\n" % (k, int(v)))
-        else:
-                raise Exception, "Unsupported type %s in config" % (type(v))
-f.close()
+sources = map(File, [
+	'loaders/chainload.c',
+	'loaders/enter.S',
+	'bios.S',
+	'console.c',
+	'disk.c',
+	'memory.c',
+	'platform.c',
+	'pxe.c',
+	'start.S',
+	'video.c',
+])
 
-SConscript(dirs = dirs, exports = ['env'])
+# Build the stage 1 loaders.
+stage1s = ['cdboot', 'pxeboot']
+for f in stage1s:
+	env.Program('%s.elf' % (f), '%s.S' % (f), LIBS = [], LINKFLAGS = env['LINKFLAGS'] + [
+		'-Wl,-T,source/platform/pc/stage1.ld',
+		'-Wl,-N'
+	])
+	Depends('%s.elf' % (f), File('stage1.ld'))
+	target = env.Command(f, '%s.elf' % (f), Action(
+		"$OBJCOPY -O binary --strip-all -R '.note.*' -R .comment $SOURCE $TARGET",
+		'$GENCOMSTR'
+	))
+	Default(target)
+
+# Set the linker script path.
+env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')
+
+Return('sources')

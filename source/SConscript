@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env')
+Import('env', 'config')
 
 # List of our own sources.
 sources = map(File, [
@@ -42,9 +42,19 @@ sources = map(File, [
 	'video.c',
 ])
 
+# Set the include search paths (done here so it points to the build directory,
+# not the source tree).
+env['CPPPATH'] = [
+	Dir('include'),
+	Dir('arch/%s/include' % (config['ARCH'])),
+	Dir('platform/%s/include' % (config['PLATFORM'])),
+]
+env['CCFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config['PLATFORM'])]
+env['ASFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config['PLATFORM'])]
+
 # Get the list of source files from the architecture/platform.
-arch_sources = SConscript(dirs = ['arch/' + env['SRCARCH']], exports = ['env'])
-platform_sources = SConscript(dirs = ['platform/' + env['PLATFORM']], exports = ['env'])
+arch_sources = SConscript(dirs = ['arch/' + config['SRCARCH']], exports = ['env'])
+platform_sources = SConscript(dirs = ['platform/' + config['PLATFORM']], exports = ['env'])
 sources = arch_sources + platform_sources + sources
 
 # Link the bootloader.

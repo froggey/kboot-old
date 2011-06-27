@@ -14,36 +14,34 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env')
+mainmenu "KBoot Configuration"
 
-sources = map(File, [
-	'loaders/chainload.c',
-	'loaders/enter.S',
-	'bios.S',
-	'console.c',
-	'disk.c',
-	'memory.c',
-	'platform.c',
-	'pxe.c',
-	'start.S',
-	'video.c',
-])
+####################
+menu "Build options"
+####################
 
-# Build the stage 1 loaders.
-stage1s = ['cdboot', 'pxeboot']
-for f in stage1s:
-	env.Program('%s.elf' % (f), '%s.S' % (f), LINKFLAGS = env['LINKFLAGS'] + [
-		'-Wl,-T,src/platform/pc/stage1.ld',
-		'-Wl,-N'
-	])
-	Depends('%s.elf' % (f), File('stage1.ld'))
-	target = env.Command(f, '%s.elf' % (f), Action(
-		"$OBJCOPY -O binary --strip-all -R '.note.*' -R .comment $SOURCE $TARGET",
-		'$GENCOMSTR'
-	))
-	Default(target)
+config CROSS_COMPILER
+	string "Cross-compiler prefix"
+	default ""
+	help
+	  Prefix for cross-compiler utilities, e.g. /usr/cross/bin/i686-elf-
+	  If empty, the system's default compiler will be used.
 
-# Set the linker script path.
-env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')
+config EXTRA_CCFLAGS
+	string "Extra CCFLAGS"
+	default ""
+	help
+	  Extra options for the C compiler.
 
-Return('sources')
+#######
+endmenu
+#######
+
+comment "Target system"
+
+source "config/Kconfig.arch"
+source "config/Kconfig.platform"
+
+comment "Feature configuration"
+
+source "source/Kconfig"
