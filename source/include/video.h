@@ -25,6 +25,8 @@
 #include <lib/list.h>
 #include <ui.h>
 
+#if CONFIG_KBOOT_HAVE_VIDEO
+
 /** Structure describing a video mode. */
 typedef struct video_mode {
 	list_t header;			/**< Link to video modes list. */
@@ -42,9 +44,12 @@ extern video_mode_t *default_video_mode;
 extern video_mode_t *video_mode_find(int width, int height, int depth);
 extern video_mode_t *video_mode_find_string(const char *mode);
 extern void video_mode_add(video_mode_t *mode);
+#if CONFIG_KBOOT_UI
 extern ui_entry_t *video_mode_chooser(const char *label, value_t *value);
+#endif
 
 extern void video_init(void);
 extern void video_enable(video_mode_t *mode);
 
+#endif /* CONFIG_KBOOT_HAVE_VIDEO */
 #endif /* __VIDEO_H */

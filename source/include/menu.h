@@ -24,6 +24,8 @@
 
 #include <config.h>
 
+#if CONFIG_KBOOT_UI
 extern environ_t *menu_display(void);
+#endif
 
 #endif /* __MENU_H */

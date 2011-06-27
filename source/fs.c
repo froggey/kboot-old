@@ -28,8 +28,13 @@
 
 /** Array of filesystem implementations. */
 static fs_type_t *filesystem_types[] = {
+#if CONFIG_KBOOT_FS_EXT2
 	&ext2_fs_type,
+#endif
+#if CONFIG_KBOOT_FS_ISO9660
 	&iso9660_fs_type,
+#endif
+	NULL,
 };
 
 /** Create a filesystem handle.
@@ -55,7 +60,7 @@ fs_mount_t *fs_probe(disk_t *disk) {
 	size_t i;
 
 	mount = kmalloc(sizeof(fs_mount_t));
-	for(i = 0; i < ARRAYSZ(filesystem_types); i++) {
+	for(i = 0; filesystem_types[i]; i++) {
 		memset(mount, 0, sizeof(fs_mount_t));
 		mount->disk = disk;
 		mount->type = filesystem_types[i];
@@ -161,7 +166,9 @@ fs_handle_t *fs_open(fs_mount_t *mount, const char *path) {
  * @param handle	Handle to close. */
 void fs_close(fs_handle_t *handle) {
 	if(--handle->count == 0) {
-		handle->mount->type->close(handle);
+		if(handle->mount->type->close) {
+			handle->mount->type->close(handle);
+		}
 		kfree(handle);
 	}
 }

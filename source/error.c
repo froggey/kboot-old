@@ -25,10 +25,12 @@
 #include <memory.h>
 #include <ui.h>
 
+#if CONFIG_KBOOT_UI
 /** Boot error window state. */
 static const char *boot_error_format;
 static va_list boot_error_args;
 static ui_window_t *debug_log_window;
+#endif
 
 /** Helper for internal_error_printf().
  * @param ch		Character to display.
@@ -65,7 +67,7 @@ void __noreturn internal_error(const char *fmt, ...) {
 	if(main_console) {
 		main_console->reset();
 	}
-	internal_error_printf("An internal error has occurred:\n\n");
+	internal_error_printf("\nAn internal error has occurred:\n\n");
 
 	va_start(args, fmt);
 	do_printf(internal_error_printf_helper, NULL, fmt, args);
@@ -78,17 +80,23 @@ void __noreturn internal_error(const char *fmt, ...) {
 	while(1);
 }
 
+/** Print the boot error message. */
+static void boot_error_display(const char *fmt, va_list args) {
+	internal_error_printf("An error has occurred during boot:\n\n");
+
+	do_printf(internal_error_printf_helper, NULL, fmt, args);
+
+	internal_error_printf("\n\n");
+	internal_error_printf("Ensure that you have enough memory available, that you do not have any\n");
+	internal_error_printf("malfunctioning hardware and that your computer meets the minimum system\n");
+	internal_error_printf("requirements for the operating system.\n");
+}
+
+#if CONFIG_KBOOT_UI
 /** Render the boot error window.
  * @param window	Window to render. */
 static void boot_error_window_render(ui_window_t *window) {
-	kprintf("An error has occurred during boot:\n\n");
-
-	kvprintf(boot_error_format, boot_error_args);
-	kprintf("\n\n");
-
-	kprintf("Ensure that you have enough memory available, that you do not have any\n");
-	kprintf("malfunctioning hardware and that your computer meets the minimum system\n");
-	kprintf("requirements for the operating system.\n");
+	boot_error_display(boot_error_format, boot_error_args);
 }
 
 /** Write the help text for the boot error window.
@@ -119,11 +127,13 @@ static ui_window_type_t boot_error_window_type = {
 	.help = boot_error_window_help,
 	.input = boot_error_window_input,
 };
+#endif
 
 /** Display details of a boot error.
  * @param fmt		Error format string.
  * @param ...		Values to substitute into format. */
 void __noreturn boot_error(const char *fmt, ...) {
+#if CONFIG_KBOOT_UI
 	ui_window_t *window;
 
 	boot_error_format = fmt;
@@ -136,5 +146,19 @@ void __noreturn boot_error(const char *fmt, ...) {
 	window = kmalloc(sizeof(ui_window_t));
 	ui_window_init(window, &boot_error_window_type, "Boot Error");
 	ui_window_display(window, 0);
+#else
+	va_list args;
+
+	if(main_console) {
+		main_console->reset();
+	}
+	if(debug_console) {
+		debug_console->putch('\n');
+	}
+
+	va_start(args, fmt);
+	boot_error_display(fmt, args);
+	va_end(args);
+#endif
 	while(1);
 }

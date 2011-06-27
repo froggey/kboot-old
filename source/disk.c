@@ -27,15 +27,19 @@
 #include <loader.h>
 #include <memory.h>
 
-#include "partitions/msdos.h"
+#if CONFIG_KBOOT_HAVE_DISK
+# include "partitions/msdos.h"
+#endif
 
 /** List of all disk devices. */
 static LIST_DECLARE(disk_list);
 
+#if CONFIG_KBOOT_HAVE_DISK
 /** Array of partition probe functions. */
 static bool (*partition_probe_funcs[])(disk_t *) = {
 	msdos_partition_probe,
 };
+#endif
 
 /** Current disk device. */
 disk_t *current_disk = NULL;
@@ -153,6 +157,7 @@ bool disk_read(disk_t *disk, void *buf, size_t count, offset_t offset) {
 	return true;
 }
 
+#if CONFIG_KBOOT_HAVE_DISK
 /** Probe a disk for filesystems/partitions.
  * @param disk		Disk to probe. */
 static void disk_probe(disk_t *disk) {
@@ -212,6 +217,7 @@ void disk_partition_add(disk_t *parent, uint8_t id, uint64_t lba, uint64_t block
 
 	list_append(&disk_list, &disk->header);
 }
+#endif
 
 /** Register a disk device.
  * @param name		Name of the disk (will be duplicated).
@@ -235,11 +241,12 @@ void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *
 	disk->data = data;
 	disk->boot = boot;
 
+#if CONFIG_KBOOT_HAVE_DISK
 	/* Probe for filesystems/partitions if necessary. */
 	if(!disk->fs) {
 		disk_probe(disk);
 	}
-
+#endif
 	/* Set the disk as the current if it is the boot disk. */
 	if(disk->fs && boot) {
 		current_disk = disk;
@@ -253,16 +260,19 @@ void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *
  * @return		Parent disk (if disk is already the top level, it will
  *			be returned). */
 disk_t *disk_parent(disk_t *disk) {
+#if CONFIG_KBOOT_HAVE_DISK
 	while(disk->ops == &partition_disk_ops) {
 		disk = disk->parent;
 	}
-
+#endif
 	return disk;
 }
 
 /** Detect all disk devices. */
 void disk_init(void) {
+#if CONFIG_KBOOT_HAVE_DISK
 	platform_disk_detect();
+#endif
 	if(!current_disk || !current_disk->fs) {
 		boot_error("Could not find boot filesystem");
 	}

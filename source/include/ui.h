@@ -25,6 +25,8 @@
 #include <config.h>
 #include <console.h>
 
+#if CONFIG_KBOOT_UI
+
 struct ui_entry;
 struct ui_window;
 
@@ -113,4 +115,5 @@ extern ui_entry_t *ui_textbox_create(const char *label, value_t *value);
 extern ui_entry_t *ui_chooser_create(const char *label, value_t *value);
 extern void ui_chooser_insert(ui_entry_t *entry, const char *name, void *value, bool selected);
 
+#endif /* CONFIG_KBOOT_UI */
 #endif /* __UI_H */

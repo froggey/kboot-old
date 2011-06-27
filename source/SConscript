@@ -15,11 +15,12 @@
 #
 
 Import('env', 'config')
+from util import FeatureSources
 
 # List of our own sources.
-sources = map(File, [
-	'fs/ext2.c',
-	'fs/iso9660.c',
+sources = FeatureSources(config, [
+	('KBOOT_FS_EXT2', 'fs/ext2.c'),
+	('KBOOT_FS_ISO9660', 'fs/iso9660.c'),
 
 	'lib/printf.c',
 	'lib/string.c',
@@ -27,7 +28,7 @@ sources = map(File, [
 
 	'loaders/kboot.c',
 
-	'partitions/msdos.c',
+	('KBOOT_HAVE_DISK', 'partitions/msdos.c'),
 
 	'config.c',
 	'console.c',
@@ -37,9 +38,9 @@ sources = map(File, [
 	'fs.c',
 	'main.c',
 	'memory.c',
-	'menu.c',
-	'ui.c',
-	'video.c',
+	('KBOOT_UI', 'menu.c'),
+	('KBOOT_UI', 'ui.c'),
+	('KBOOT_HAVE_VIDEO', 'video.c'),
 ])
 
 # Set the include search paths (done here so it points to the build directory,

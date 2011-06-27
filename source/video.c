@@ -85,6 +85,7 @@ void video_mode_add(video_mode_t *mode) {
 	list_append(&video_modes, &mode->header);
 }
 
+#if CONFIG_KBOOT_UI
 /** Generate a video mode chooser.
  * @param label		Label to give the chooser.
  * @param value		Value to store choice in.
@@ -101,3 +102,4 @@ ui_entry_t *video_mode_chooser(const char *label, value_t *value) {
 
 	return chooser;
 }
+#endif

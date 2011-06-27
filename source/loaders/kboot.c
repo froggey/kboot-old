@@ -50,7 +50,9 @@ typedef struct kboot_data {
 	bool is_kboot;			/**< Whether the image is a KBoot image. */
 	value_t modules;		/**< Modules to load. */
 	phys_ptr_t tags;		/**< Start of the tag list. */
+#if CONFIG_KBOOT_UI
 	ui_window_t *config;		/**< Configuration window. */
+#endif
 	mmu_context_t *mmu;		/**< MMU context. */
 } kboot_data_t;
 
@@ -217,6 +219,7 @@ static void set_option(kboot_data_t *data, const char *name, uint32_t type) {
 	}
 }
 
+#if CONFIG_KBOOT_HAVE_VIDEO
 /** Set the video mode.
  * @param data		Loader data pointer. */
 static void set_video_mode(kboot_data_t *data) {
@@ -234,6 +237,7 @@ static void set_video_mode(kboot_data_t *data) {
 	tag->depth = mode->bpp;
 	tag->addr = mode->addr;
 }
+#endif
 
 /** Tag iterator to set options in the tag list.
  * @param note		Note header.
@@ -254,12 +258,12 @@ static bool set_options(elf_note_t *note, const char *name, void *desc, void *_d
 	switch(note->n_type) {
 	case KBOOT_ITAG_IMAGE:
 		image = desc;
-
+#if CONFIG_KBOOT_HAVE_VIDEO
 		/* Set the video mode if requested. */
 		if(image->flags & KBOOT_IMAGE_LFB) {
 			set_video_mode(data);
 		}
-
+#endif
 		break;
 	case KBOOT_ITAG_OPTION:
 		option = desc;
@@ -322,17 +326,21 @@ static __noreturn void kboot_loader_load(environ_t *env) {
 	kboot_arch_enter(data->mmu, data->tags);
 }
 
+#if CONFIG_KBOOT_UI
 /** Display a configuration menu.
  * @param env		Environment for the OS. */
 static void kboot_loader_configure(environ_t *env) {
 	kboot_data_t *data = loader_data_get(env);
 	ui_window_display(data->config, 0);
 }
+#endif
 
 /** KBoot loader type. */
 static loader_type_t kboot_loader_type = {
 	.load = kboot_loader_load,
+#if CONFIG_KBOOT_UI
 	.configure = kboot_loader_configure,
+#endif
 };
 
 /** Tag iterator to add options to the environment.
@@ -346,7 +354,9 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 	kboot_itag_option_t *option;
 	kboot_data_t *data = _data;
 	kboot_itag_image_t *image;
+#if CONFIG_KBOOT_HAVE_VIDEO
 	video_mode_t *mode = NULL;
+#endif
 	value_t *exist, value;
 	void *opt_default;
 
@@ -366,15 +376,20 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 
 		/* If the kernel wants a video mode, add a video mode chooser. */
 		if(image->flags & KBOOT_IMAGE_LFB) {
+#if CONFIG_KBOOT_HAVE_VIDEO
 			if((exist = environ_lookup(data->env, "video_mode")) && exist->type == VALUE_TYPE_STRING) {
 				mode = video_mode_find_string(exist->string);
 			}
 			value.type = VALUE_TYPE_POINTER;
 			value.pointer = (mode) ? mode : default_video_mode;
 			environ_insert(data->env, "video_mode", &value);
-
+#if CONFIG_KBOOT_UI
 			ui_list_insert(data->config, video_mode_chooser("Video mode",
 				environ_lookup(data->env, "video_mode")), false);
+#endif
+#else
+			boot_error("Kernel requests LFB but video mode setting support missing");
+#endif
 		}
 
 		break;
@@ -403,8 +418,9 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 		if(!exist || exist->type != value.type) {
 			environ_insert(data->env, opt_name, &value);
 		}
-
+#if CONFIG_KBOOT_UI
 		ui_list_insert_env(data->config, data->env, opt_name, opt_desc, false);
+#endif
 		break;
 	}
 
@@ -432,7 +448,9 @@ static bool config_cmd_kboot(value_list_t *args, environ_t *env) {
 	data->env = env;
 	data->is_kboot = false;
 	data->tags = 0;
+#if CONFIG_KBOOT_UI
 	data->config = ui_list_create("Kernel Options", true);
+#endif
 
 	/* Open the kernel image. */
 	data->kernel = fs_open(NULL, args->values[0].string);

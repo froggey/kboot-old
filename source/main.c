@@ -104,11 +104,17 @@ void loader_main(void) {
 	/* Detect hardware details. */
 	memory_init();
 	disk_init();
+#if CONFIG_KBOOT_HAVE_VIDEO
 	video_init();
+#endif
 	config_init();
 
+#if CONFIG_KBOOT_UI
 	/* Display the menu interface. */
 	env = menu_display();
+#else
+	env = root_environ;
+#endif
 
 	/* Set the current filesystem. */
 	if((value = environ_lookup(env, "device")) && value->type == VALUE_TYPE_STRING) {
