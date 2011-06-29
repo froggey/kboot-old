@@ -31,7 +31,6 @@
 
 #include <assert.h>
 #include <config.h>
-#include <console.h>
 #include <elf_load.h>
 #include <fs.h>
 #include <kboot.h>

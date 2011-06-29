@@ -27,7 +27,6 @@
 #include <lib/utility.h>
 
 #include <assert.h>
-#include <console.h>
 #include <memory.h>
 #include <system.h>
 #include <time.h>

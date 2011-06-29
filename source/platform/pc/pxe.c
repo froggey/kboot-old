@@ -25,7 +25,6 @@
 #include <pc/bios.h>
 #include <pc/pxe.h>
 
-#include <console.h>
 #include <disk.h>
 #include <endian.h>
 #include <fs.h>

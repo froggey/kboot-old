@@ -25,7 +25,6 @@
 #include <pc/bios.h>
 #include <pc/vbe.h>
 
-#include <console.h>
 #include <memory.h>
 #include <menu.h>
 #include <system.h>

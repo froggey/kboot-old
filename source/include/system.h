@@ -26,6 +26,11 @@
 
 #include <platform/system.h>
 
+extern int kvprintf(const char *fmt, va_list args);
+extern int kprintf(const char *fmt, ...) __printf(1, 2);
+extern int dvprintf(const char *fmt, va_list args);
+extern int dprintf(const char *fmt, ...) __printf(1, 2);
+
 extern void backtrace(int (*printfn)(const char *fmt, ...));
 
 extern void internal_error(const char *fmt, ...) __printf(1, 2) __noreturn;

@@ -108,11 +108,6 @@ extern char debug_log[];
 extern console_t *main_console;
 extern console_t *debug_console;
 
-extern int kvprintf(const char *fmt, va_list args);
-extern int kprintf(const char *fmt, ...) __printf(1, 2);
-extern int dvprintf(const char *fmt, va_list args);
-extern int dprintf(const char *fmt, ...) __printf(1, 2);
-
 extern void console_init(void);
 
 #endif /* __CONSOLE_H */

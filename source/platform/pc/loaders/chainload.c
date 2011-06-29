@@ -24,7 +24,6 @@
 #include <pc/bios.h>
 
 #include <config.h>
-#include <console.h>
 #include <loader.h>
 #include <system.h>
 

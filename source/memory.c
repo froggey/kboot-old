@@ -24,7 +24,6 @@
 #include <lib/utility.h>
 
 #include <assert.h>
-#include <console.h>
 #include <kboot.h>
 #include <memory.h>
 #include <system.h>

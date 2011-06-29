@@ -21,7 +21,7 @@
 
 #include <arch/io.h>
 #include <lib/string.h>
-#include <console.h>
+#include <system.h>
 
 /** Serial port to use. */
 #define SERIAL_PORT		0x3F8

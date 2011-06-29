@@ -20,7 +20,9 @@
  */
 
 #include <lib/printf.h>
+
 #include <console.h>
+#include <system.h>
 
 /** Debug log size. */
 #define DEBUG_LOG_SIZE		8192

@@ -28,10 +28,10 @@
 #include <lib/string.h>
 #include <lib/utility.h>
 
-#include <console.h>
 #include <elf.h>
 #include <fs.h>
 #include <memory.h>
+#include <system.h>
 
 #ifdef LITTLE_ENDIAN
 # define ELF_ENDIAN	ELFDATA2LSB

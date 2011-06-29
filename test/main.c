@@ -19,8 +19,8 @@
  * @brief		KBoot test kernel.
  */
 
-#include <console.h>
 #include <kboot.h>
+#include <system.h>
 
 extern void kmain(phys_ptr_t tags);
 

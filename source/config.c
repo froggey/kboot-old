@@ -26,7 +26,6 @@
 #include <lib/utility.h>
 
 #include <config.h>
-#include <console.h>
 #include <fs.h>
 #include <memory.h>
 #include <menu.h>

@@ -23,10 +23,10 @@
 #include <lib/string.h>
 
 #include <assert.h>
-#include <console.h>
 #include <endian.h>
 #include <fs.h>
 #include <memory.h>
+#include <system.h>
 
 #include "iso9660.h"
 

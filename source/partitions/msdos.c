@@ -21,8 +21,8 @@
 
 #include <lib/utility.h>
 
-#include <console.h>
 #include <memory.h>
+#include <system.h>
 
 #include "msdos.h"
 

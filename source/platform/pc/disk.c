@@ -27,7 +27,6 @@
 #include <pc/pxe.h>
 
 #include <assert.h>
-#include <console.h>
 #include <disk.h>
 #include <memory.h>
 #include <system.h>

@@ -23,10 +23,10 @@
 #include <lib/utility.h>
 
 #include <assert.h>
-#include <console.h>
 #include <endian.h>
 #include <fs.h>
 #include <memory.h>
+#include <system.h>
 
 #include "ext2.h"
 
