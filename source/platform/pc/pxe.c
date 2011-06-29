@@ -29,8 +29,8 @@
 #include <disk.h>
 #include <endian.h>
 #include <fs.h>
-#include <loader.h>
 #include <memory.h>
+#include <system.h>
 
 /** Structure containing details of a PXE handle. */
 typedef struct pxe_handle {

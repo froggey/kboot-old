@@ -21,8 +21,8 @@
 
 #include <lib/printf.h>
 
-#include <loader.h>
 #include <memory.h>
+#include <system.h>
 #include <ui.h>
 
 #if CONFIG_KBOOT_UI

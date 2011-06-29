@@ -16,10 +16,10 @@
 
 /**
  * @file
- * @brief		Various support functions.
+ * @brief		Runtime support functions.
  */
 
-#include <loader.h>
+#include <system.h>
 
 #ifdef __ARM_EABI__
 extern void abort(void);

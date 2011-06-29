@@ -29,8 +29,8 @@
 #include <assert.h>
 #include <console.h>
 #include <disk.h>
-#include <loader.h>
 #include <memory.h>
+#include <system.h>
 
 /** Drive parameters structure. We only care about the EDD 1.x fields. */
 typedef struct drive_parameters {

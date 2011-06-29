@@ -24,8 +24,8 @@
 
 #include <disk.h>
 #include <fs.h>
-#include <loader.h>
 #include <memory.h>
+#include <system.h>
 
 #if CONFIG_KBOOT_HAVE_DISK
 # include "partitions/msdos.h"

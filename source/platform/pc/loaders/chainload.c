@@ -24,7 +24,9 @@
 #include <pc/bios.h>
 
 #include <config.h>
+#include <console.h>
 #include <loader.h>
+#include <system.h>
 
 extern void chain_loader_enter(uint8_t id, ptr_t part) __noreturn;
 

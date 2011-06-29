@@ -28,7 +28,7 @@
 #include <pc/multiboot.h>
 
 #include <config.h>
-#include <loader.h>
+#include <system.h>
 #include <time.h>
 
 extern char *video_mode_override;

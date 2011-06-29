@@ -20,7 +20,7 @@
  */
 
 #include <arch/page.h>
-#include <platform/loader.h>
+#include <platform/system.h>
 #include <pc/multiboot.h>
 #include <x86/asm.h>
 

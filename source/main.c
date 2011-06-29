@@ -16,12 +16,8 @@
 
 /**
  * @file
- * @brief		Bootloader main function.
+ * @brief		KBoot main function.
  */
-
-#include <arch/loader.h>
-
-#include <platform/loader.h>
 
 #include <lib/string.h>
 
@@ -32,6 +28,7 @@
 #include <loader.h>
 #include <memory.h>
 #include <menu.h>
+#include <system.h>
 #include <video.h>
 
 extern char __bss_start[], __bss_end[];

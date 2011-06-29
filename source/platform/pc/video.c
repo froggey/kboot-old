@@ -26,9 +26,9 @@
 #include <pc/vbe.h>
 
 #include <console.h>
-#include <loader.h>
 #include <memory.h>
 #include <menu.h>
+#include <system.h>
 #include <video.h>
 
 /** Structure describing a VBE video mode. */

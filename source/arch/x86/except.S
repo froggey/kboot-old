@@ -19,7 +19,7 @@
  * @brief		x86 interrupt service routines.
  */
 
-#include <platform/loader.h>
+#include <platform/system.h>
 #include <x86/asm.h>
 
 .section ".text", "ax", @progbits

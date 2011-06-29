@@ -24,7 +24,7 @@
 #include <x86/asm.h>
 #include <x86/cpu.h>
 
-#include <platform/loader.h>
+#include <platform/system.h>
 
 .section .text, "ax", @progbits
 

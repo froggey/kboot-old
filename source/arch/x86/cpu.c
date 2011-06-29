@@ -20,19 +20,16 @@
  */
 
 #include <arch/io.h>
-#include <arch/loader.h>
 
 #include <x86/descriptor.h>
 
 #include <lib/string.h>
 #include <lib/utility.h>
 
-#include <platform/loader.h>
-
 #include <assert.h>
 #include <console.h>
-#include <loader.h>
 #include <memory.h>
+#include <system.h>
 #include <time.h>
 
 /** Structure defining an interrupt stack frame. */

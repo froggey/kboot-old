@@ -16,21 +16,15 @@
 
 /**
  * @file
- * @brief		Loader type structure.
+ * @brief		OS loader type structure.
  */
 
 #ifndef __LOADER_H
 #define __LOADER_H
 
-#include <arch/loader.h>
-
-#include <platform/loader.h>
-
 #include <config.h>
-#include <fs.h>
-#include <ui.h>
 
-/** Structure defining a loader type. */
+/** Structure defining an OS loader type. */
 typedef struct loader_type {
 	/** Load the operating system.
 	 * @note		Should not return.
@@ -46,10 +40,5 @@ extern loader_type_t *loader_type_get(environ_t *env);
 extern void loader_type_set(environ_t *env, loader_type_t *type);
 extern void *loader_data_get(environ_t *env);
 extern void loader_data_set(environ_t *env, void *data);
-
-extern void backtrace(int (*printfn)(const char *fmt, ...));
-
-extern void internal_error(const char *fmt, ...) __printf(1, 2) __noreturn;
-extern void boot_error(const char *fmt, ...) __printf(1, 2) __noreturn;
 
 #endif /* __LOADER_H */

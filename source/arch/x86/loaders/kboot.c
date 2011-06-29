@@ -28,7 +28,7 @@
 #include <elf_load.h>
 #include <fs.h>
 #include <kboot.h>
-#include <loader.h>
+#include <system.h>
 
 extern mmu_context_t *kboot_arch_load(fs_handle_t *handle, phys_ptr_t *physp);
 extern void kboot_arch_enter(mmu_context_t *ctx, phys_ptr_t tags) __noreturn;

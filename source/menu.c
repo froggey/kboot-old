@@ -26,6 +26,7 @@
 #include <loader.h>
 #include <memory.h>
 #include <menu.h>
+#include <system.h>
 #include <time.h>
 #include <ui.h>
 

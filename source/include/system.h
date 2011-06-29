@@ -16,15 +16,19 @@
 
 /**
  * @file
- * @brief		x86 loader definitions.
+ * @brief		Core definitions.
  */
 
-#ifndef __ARCH_LOADER_H
-#define __ARCH_LOADER_H
+#ifndef __SYSTEM_H
+#define __SYSTEM_H
 
-#include <types.h>
+#include <arch/system.h>
 
-extern void cpu_init(void);
-extern void arch_early_init(void);
+#include <platform/system.h>
 
-#endif /* __ARCH_LOADER_H */
+extern void backtrace(int (*printfn)(const char *fmt, ...));
+
+extern void internal_error(const char *fmt, ...) __printf(1, 2) __noreturn;
+extern void boot_error(const char *fmt, ...) __printf(1, 2) __noreturn;
+
+#endif /* __SYSTEM_H */

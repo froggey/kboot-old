@@ -19,7 +19,7 @@
  * @brief		BIOS interrupt functions.
  */
 
-#include <platform/loader.h>
+#include <platform/system.h>
 #include <x86/asm.h>
 
 /** Size of the registers structure. */

@@ -16,60 +16,15 @@
 
 /**
  * @file
- * @brief		PC bootloader linker script.
+ * @brief		x86 core definitions.
  */
 
-#include <arch/page.h>
-#include <platform/system.h>
+#ifndef __ARCH_SYSTEM_H
+#define __ARCH_SYSTEM_H
 
-OUTPUT_FORMAT("elf32-i386")
-OUTPUT_ARCH("i386")
+#include <types.h>
 
-SECTIONS {
-	. = LOADER_LOAD_ADDR;
-	__start = .;
+extern void cpu_init(void);
+extern void arch_early_init(void);
 
-	.text : {
-		__text_start = .;
-		*(.init.text)
-		*(.text)
-		*(.text.*)
-		__text_end = .;
-	}
-
-	.rodata ALIGN(32) : {
-		__rodata_start = .;
-		*(.rodata)
-		*(.rodata.*)
-		__rodata_end = .;
-	}
-
-	.data ALIGN(32) : {
-		__data_start = .;
-		*(.data)
-		*(.data.*)
-
-		__commands_start = .;
-		*(.commands)
-		__commands_end = .;
-
-		__data_end = .;
-	}
-
-	.bss ALIGN(32) : {
-		__bss_start = .;
-		*(.bss)
-		*(.bss.*)
-		*(COMMON)
-		__bss_end = .;
-	}
-
-	. = ALIGN(PAGE_SIZE);
-	__end = .;
-
-	/DISCARD/ : {
-		*(.note.GNU-stack)
-		*(.comment*)
-		*(.eh_frame*)
-	}
-}
+#endif /* __ARCH_SYSTEM_H */

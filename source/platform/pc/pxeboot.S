@@ -24,7 +24,7 @@
  * this will have to be done a different way...
  */
 
-#include <platform/loader.h>
+#include <platform/system.h>
 #include <x86/asm.h>
 
 .section .text

@@ -19,7 +19,7 @@
  * @brief		x86 backtrace function.
  */
 
-#include <loader.h>
+#include <system.h>
 
 /** Structure containing a stack frame. */
 typedef struct stack_frame {
