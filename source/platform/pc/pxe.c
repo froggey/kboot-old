@@ -41,8 +41,8 @@ typedef struct pxe_handle {
 extern int pxe_call_real(int func, uint32_t segoff);
 
 /** Static call structures (limited stack space). */
-//static pxenv_tftp_open_t tftp_open_data;
-//static pxenv_tftp_get_fsize_t tftp_fsize_data;
+static pxenv_tftp_open_t tftp_open_data;
+static pxenv_tftp_get_fsize_t tftp_fsize_data;
 
 /** PXE network information. */
 static pxe_ip4_t pxe_your_ip;
@@ -50,7 +50,7 @@ static pxe_ip4_t pxe_server_ip;
 static pxe_ip4_t pxe_gateway_ip;
 
 /** Current TFTP handle. */
-//static fs_handle_t *current_tftp_file = NULL;
+static fs_handle_t *current_tftp_file = NULL;
 
 /** PXE entry point. */
 pxe_segoff_t pxe_entry_point;
@@ -63,7 +63,6 @@ static int pxe_call(int func, void *linear) {
 	return pxe_call_real(func, LIN2SEGOFF((ptr_t)linear));
 }
 
-#if 0
 /** Set the current TFTP file.
  * @param handle	Handle to set to. If NULL, current will be closed.
  * @return		Whether successful. */
@@ -245,16 +244,16 @@ static fs_type_t tftp_fs_type = {
 	.read = tftp_read,
 	.size = tftp_size,
 };
-#endif
 
 /** Detect whether booted from PXE. */
 bool pxe_detect(void) {
 	pxenv_get_cached_info_t ci;
 	pxenv_boot_player_t *bp;
-	//fs_mount_t *mount;
+	fs_mount_t *mount;
 	bios_regs_t regs;
 	pxenv_t *pxenv;
 	pxe_t *pxe;
+	device_t *device;
 
 	/* Use the PXE installation check function. */
 	bios_regs_init(&regs);
@@ -299,15 +298,18 @@ bool pxe_detect(void) {
 	        bp->server_ip.a[2], bp->server_ip.a[3]);
 	dprintf(" gateway IP: %d.%d.%d.%d\n", bp->gateway_ip.a[0], bp->gateway_ip.a[1],
 	        bp->gateway_ip.a[2], bp->gateway_ip.a[3]);
-#if 0
-	/* Mount a TFTP filesystem and add a disk with it on. */
+
+	/* Mount a TFTP filesystem and add a device with it on. */
 	mount = kmalloc(sizeof(fs_mount_t));
 	memset(mount, 0, sizeof(fs_mount_t));
 	mount->type = &tftp_fs_type;
 	mount->label = kstrdup("PXE");
 	mount->uuid = kstrdup("PXE");
-	disk_add("pxe", 0, 0, NULL, NULL, mount, true);
-#endif
-	internal_error("FIXME");
+	device = device_add("pxe", NULL);
+	device->fs = mount;
+
+	/* This is the boot device. */
+	current_device = device;
+
 	return true;
 }
