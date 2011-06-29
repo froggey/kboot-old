@@ -32,7 +32,8 @@ sources = FeatureSources(config, [
 
 	'config.c',
 	'console.c',
-	'disk.c',
+	'device.c',
+	('KBOOT_HAVE_DISK', 'disk.c'),
 	'elf.c',
 	'error.c',
 	'fs.c',

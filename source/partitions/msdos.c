@@ -26,10 +26,12 @@
 
 #include "msdos.h"
 
-/** Probe a disk for an MSDOS partition table.
- * @param disk		Device to scan.
- * @return		Whether an MSDOS partition table was found. */
-bool msdos_partition_probe(disk_t *disk) {
+/** Iterate over the partitions on a device.
+ * @param disk		Disk to iterate over.
+ * @param cb		Callback function.
+ * @param data		Data argument to pass to the callback function.
+ * @return		Whether the device contained an MSDOS partition table. */
+static bool msdos_partition_iterate(disk_t *disk, partition_map_iterate_cb_t cb, void *data) {
 	msdos_mbr_t *mbr = kmalloc(disk->block_size);
 	msdos_part_t *part;
 	size_t i;
@@ -51,14 +53,19 @@ bool msdos_partition_probe(disk_t *disk) {
 			continue;
 		}
 
-		dprintf("disk: found MSDOS partition %d on device %s\n", i, disk->name);
+		dprintf("disk: found MSDOS partition %d:\n", i);
 		dprintf(" type:      0x%x\n", part->type);
 		dprintf(" start_lba: %u\n", part->start_lba);
 		dprintf(" num_sects: %u\n", part->num_sects);
 
-		disk_partition_add(disk, i, part->start_lba, part->num_sects);
+		cb(disk, i, part->start_lba, part->num_sects, data);
 	}
 
 	kfree(mbr);
 	return true;
 }
+
+/** MS-DOS parition map type. */
+partition_map_ops_t msdos_partition_map_ops = {
+	.iterate = msdos_partition_iterate,
+};

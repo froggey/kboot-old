@@ -16,19 +16,40 @@
 
 /**
  * @file
- * @brief		Bootloader disk functions.
+ * @brief		Disk device layer.
  */
 
 #ifndef __DISK_H
 #define __DISK_H
 
-#include <lib/list.h>
+#include <device.h>
+
+#if CONFIG_KBOOT_HAVE_DISK
 
 struct disk;
-struct fs_mount;
 
-/** Structure containing operations for a disk device. */
-typedef struct disk_ops_t {
+/** Partition map iteration callback function type.
+ * @param disk		Disk containing the partition.
+ * @param id		ID of the partition.
+ * @param lba		Start LBA.
+ * @param blocks	Size in blocks.
+ * @param data		Data argument passed to iterate. */
+typedef void (*partition_map_iterate_cb_t)(struct disk *disk, uint8_t id, uint64_t lba,
+                                           uint64_t blocks, void *data);
+
+/** Partition map operations. */
+typedef struct partition_map_ops {
+	/** Iterate over the partitions on the device.
+	 * @param disk		Disk to iterate over.
+	 * @param cb		Callback function.
+	 * @param data		Data argument to pass to the callback function.
+	 * @return		Whether the device contained a partition map of
+	 *			this type. */
+	bool (*iterate)(struct disk *disk, partition_map_iterate_cb_t cb, void *data);
+} partition_map_ops_t;
+
+/** Operations for a disk device. */
+typedef struct disk_ops {
 	/** Check if a partition is the boot partition.
 	 * @param disk		Disk the partition is on.
 	 * @param id		ID of partition.
@@ -47,13 +68,9 @@ typedef struct disk_ops_t {
 
 /** Structure representing a disk device. */
 typedef struct disk {
-	list_t header;			/**< Link to device list. */
-
-	char *name;			/**< Name of the device. */
 	size_t block_size;		/**< Size of one block on the disk. */
 	uint64_t blocks;		/**< Number of blocks on the disk. */
 	disk_ops_t *ops;		/**< Pointer to operations structure. */
-	struct fs_mount *fs;		/**< Filesystem that resides on the device. */
 	union {
 		struct {
 			/** Implementation-specific data pointer. */
@@ -66,29 +83,23 @@ typedef struct disk {
 			/** Parent of the partition. */
 			struct disk *parent;
 
-			/** Offset of the partition on the parent. */
-			uint64_t offset;
-
-			/** ID of the partition. */
+			/** Partition ID. */
 			uint8_t id;
+
+			/** Offset of the partition on the disk. */
+			offset_t offset;
 		};
 	};
 } disk_t;
 
-extern disk_t *current_disk;
-
-extern disk_t *disk_lookup(const char *str);
 extern bool disk_read(disk_t *disk, void *buf, size_t count, offset_t offset);
-#if CONFIG_KBOOT_HAVE_DISK
-extern void disk_partition_add(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blocks);
-#endif
 extern void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *ops,
-                     void *data, struct fs_mount *fs, bool boot);
+                     void *data, bool boot);
 extern disk_t *disk_parent(disk_t *disk);
 
-#if CONFIG_KBOOT_HAVE_DISK
 extern void platform_disk_detect(void);
-#endif
+
 extern void disk_init(void);
 
+#endif /* CONFIG_KBOOT_HAVE_DISK */
 #endif /* __DISK_H */

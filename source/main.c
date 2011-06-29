@@ -86,7 +86,7 @@ void loader_main(void) {
 	loader_type_t *type;
 	environ_t *env;
 	value_t *value;
-	disk_t *disk;
+	device_t *device;
 
 	/* Zero BSS. */
 	memset(__bss_start, 0, __bss_end - __bss_start);
@@ -100,10 +100,19 @@ void loader_main(void) {
 
 	/* Detect hardware details. */
 	memory_init();
+#if CONFIG_KBOOT_HAVE_DISK
 	disk_init();
+#endif
+	/* We must have a filesystem to boot from. */
+	if(!current_device || !current_device->fs) {
+		boot_error("Could not find boot filesystem");
+	}
+
 #if CONFIG_KBOOT_HAVE_VIDEO
 	video_init();
 #endif
+
+	/* Load the configuration file. */
 	config_init();
 
 #if CONFIG_KBOOT_UI
@@ -115,10 +124,10 @@ void loader_main(void) {
 
 	/* Set the current filesystem. */
 	if((value = environ_lookup(env, "device")) && value->type == VALUE_TYPE_STRING) {
-		if(!(disk = disk_lookup(value->string))) {
+		if(!(device = device_lookup(value->string))) {
 			boot_error("Could not find device %s", value->string);
 		}
-		current_disk = disk;
+		current_device = device;
 	}
 
 	/* Load the operating system. */

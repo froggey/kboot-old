@@ -106,7 +106,7 @@ fs_handle_t *fs_open(fs_mount_t *mount, const char *path) {
 	fs_handle_t *handle;
 
 	if(!mount) {
-		if(!(mount = current_disk->fs)) {
+		if(!(mount = current_device->fs)) {
 			return NULL;
 		}
 	}

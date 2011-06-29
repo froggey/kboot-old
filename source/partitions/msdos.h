@@ -48,6 +48,6 @@ typedef struct msdos_mbr {
 	uint16_t signature;
 } __packed msdos_mbr_t;
 
-extern bool msdos_partition_probe(disk_t *disk);
+extern partition_map_ops_t msdos_partition_map_ops;
 
 #endif /* __PARTITIONS_MSDOS_H */

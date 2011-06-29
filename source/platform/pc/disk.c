@@ -140,7 +140,7 @@ static disk_ops_t bios_disk_ops = {
 
 /** Get the number of disks in the system.
  * @return		Number of BIOS hard disks. */
-static uint8_t platform_disk_count(void) {
+static uint8_t get_disk_count(void) {
 	bios_regs_t regs;
 
 	/* Use the Get Drive Parameters call. */
@@ -153,7 +153,7 @@ static uint8_t platform_disk_count(void) {
 
 /** Check if booted from CD.
  * @return		Whether booted from CD. */
-static bool platform_booted_from_cd(void) {
+static bool booted_from_cd(void) {
 	specification_packet_t *packet = (specification_packet_t *)BIOS_MEM_BASE;
 	bios_regs_t regs;
 
@@ -168,7 +168,7 @@ static bool platform_booted_from_cd(void) {
 
 /** Add the disk with the specified ID.
  * @param id		ID of the device. */
-static void platform_disk_add(uint8_t id) {
+static void add_disk(uint8_t id) {
 	drive_parameters_t *params = (drive_parameters_t *)BIOS_MEM_BASE;
 	bios_disk_t *data;
 	bios_regs_t regs;
@@ -178,13 +178,13 @@ static void platform_disk_add(uint8_t id) {
 	data = kmalloc(sizeof(bios_disk_t));
 	data->id = id;
 
-	/* Probe for information on the device. A big "FUCK YOU" to Intel and
+	/* Probe for information on the device. A big "F*CK YOU" to Intel and
 	 * AMI is required here. When booted from a CD, the INT 13 Extensions
 	 * Installation Check/Get Drive Parameters functions return an error
 	 * on Intel/AMI BIOSes, yet the Extended Read function still works.
 	 * Work around this by forcing use of extensions when booted from CD. */
-	if(id == boot_device_id && platform_booted_from_cd()) {
-		disk_add("cd0", 2048, ~0LL, &bios_disk_ops, data, NULL, true);
+	if(id == boot_device_id && booted_from_cd()) {
+		disk_add("cd0", 2048, ~0LL, &bios_disk_ops, data, true);
 		dprintf("disk: detected boot CD cd0 (id: 0x%x)\n", id);
 	} else {
 		bios_regs_init(&regs);
@@ -216,7 +216,7 @@ static void platform_disk_add(uint8_t id) {
 		/* Register the disk with the disk manager. */
 		sprintf(name, "hd%u", id - 0x80);
 		disk_add(name, params->sector_size, params->sector_count, &bios_disk_ops,
-		         data, NULL, id == boot_device_id);
+		         data, id == boot_device_id);
 		dprintf("disk: detected device %s (id: 0x%x, sector_size: %u, sector_count: %zu)\n",
 		        name, id, params->sector_size, params->sector_count);
 	}
@@ -237,7 +237,7 @@ void platform_disk_detect(void) {
 	}
 
 	/* Probe all hard disks. */
-	count = platform_disk_count();
+	count = get_disk_count();
 	for(id = 0x80; id < count + 0x80; id++) {
 		/* If this is the boot device, ignore it - it will be added
 		 * after the loop is completed. This is done because this loop
@@ -247,12 +247,12 @@ void platform_disk_detect(void) {
 			continue;
 		}
 
-		platform_disk_add(id);
+		add_disk(id);
 	}
 
 	/* If not booted from PXE, add the boot device. */
 	if(!pxe_detect()) {
-		platform_disk_add(boot_device_id);
+		add_disk(boot_device_id);
 	}
 }
 

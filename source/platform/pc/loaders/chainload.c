@@ -45,23 +45,24 @@ static void __noreturn chain_loader_load(environ_t *env) {
 	disk_t *parent;
 	uint8_t id;
 
-	/* Get the ID of the disk we're booting from. */
-	id = bios_disk_id(current_disk);
-	dprintf("loader: chainloading from device %s (id: 0x%x)\n", current_disk->name, id);
+	/* Get the ID of the disk we're booting from.
+	 * FIXME: What if this isn't a disk? */
+	id = bios_disk_id(current_device->disk);
+	dprintf("loader: chainloading from device %s (id: 0x%x)\n", current_device->name, id);
 
 	/* Load the boot sector. */
-	if(!disk_read(current_disk, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0)) {
+	if(!disk_read(current_device->disk, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0)) {
 		boot_error("Could not read boot sector");
 	}
 
 	/* If booting a partition, we must give partition information to it. */
-	if((parent = disk_parent(current_disk)) != current_disk) {
+	if((parent = disk_parent(current_device->disk)) != current_device->disk) {
 		if(!disk_read(parent, (void *)PARTITION_TABLE_ADDR, PARTITION_TABLE_SIZE,
 		              PARTITION_TABLE_OFFSET)) {
 			boot_error("Could not read partition table");
 		}
 
-		part_addr = PARTITION_TABLE_ADDR + (current_disk->id << 4);
+		part_addr = PARTITION_TABLE_ADDR + (current_device->disk->id << 4);
 	}
 
 	/* Try to disable the A20 line. */

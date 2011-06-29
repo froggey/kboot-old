@@ -305,7 +305,7 @@ static __noreturn void kboot_loader_load(environ_t *env) {
 
 	/* Record the boot device. */
 	bootdev = allocate_tag(data, KBOOT_TAG_BOOTDEV, sizeof(*bootdev));
-	strncpy(bootdev->uuid, current_disk->fs->uuid, sizeof(bootdev->uuid));
+	strncpy(bootdev->uuid, current_device->fs->uuid, sizeof(bootdev->uuid));
 	bootdev->uuid[sizeof(bootdev->uuid) - 1] = 0;
 
 	/* Load modules. */

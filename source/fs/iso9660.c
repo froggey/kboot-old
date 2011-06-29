@@ -290,8 +290,7 @@ static bool iso9660_mount(fs_mount_t *mount) {
 	} else {
 		mount->root = iso9660_handle_create(mount, (iso9660_directory_record_t *)&pri->root_dir_record);
 	}
-	dprintf("iso9660: disk %s mounted (label: %s, joliet: %d, uuid: %s)\n",
-	        mount->disk->name, mount->label, joliet, mount->uuid);
+	dprintf("iso9660: mounted %s (joliet: %d, uuid: %s)\n", mount->label, joliet, mount->uuid);
 	ret = true;
 out:
 	if(pri) {
