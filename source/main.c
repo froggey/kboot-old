@@ -94,7 +94,7 @@ void loader_main(void) {
 	/* Perform early architecture/platform initialisation. */
 	arch_early_init();
 	platform_early_init();
-	internal_error("Meow");
+
 	/* Detect hardware details. */
 	memory_init();
 #if CONFIG_KBOOT_HAVE_DISK
