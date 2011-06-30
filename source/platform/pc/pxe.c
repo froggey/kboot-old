@@ -50,7 +50,7 @@ static pxe_ip4_t pxe_server_ip;
 static pxe_ip4_t pxe_gateway_ip;
 
 /** Current TFTP handle. */
-static fs_handle_t *current_tftp_file = NULL;
+static file_handle_t *current_tftp_file = NULL;
 
 /** PXE entry point. */
 pxe_segoff_t pxe_entry_point;
@@ -66,7 +66,7 @@ static int pxe_call(int func, void *linear) {
 /** Set the current TFTP file.
  * @param handle	Handle to set to. If NULL, current will be closed.
  * @return		Whether successful. */
-static bool tftp_set_current(fs_handle_t *handle) {
+static bool tftp_set_current(file_handle_t *handle) {
 	tftp_handle_t *data;
 
 	if(current_tftp_file) {
@@ -99,8 +99,8 @@ static bool tftp_set_current(fs_handle_t *handle) {
  * @param mount		Mount to open from.
  * @param path		Path to file/directory to open.
  * @return		Pointer to handle on success, NULL on failure. */
-static fs_handle_t *tftp_open(fs_mount_t *mount, const char *path) {
-	fs_handle_t *handle;
+static file_handle_t *tftp_open(mount_t *mount, const char *path) {
+	file_handle_t *handle;
 	tftp_handle_t *data;
 	size_t len;
 
@@ -112,9 +112,9 @@ static fs_handle_t *tftp_open(fs_mount_t *mount, const char *path) {
 	/* Create a handle structure then try to set it as the current. */
 	data = kmalloc(sizeof(tftp_handle_t) + len + 1);
 	strcpy(data->path, path);
-	handle = fs_handle_create(mount, false, data);
+	handle = file_handle_create(mount, false, data);
 	if(!tftp_set_current(handle)) {
-		fs_close(handle);
+		file_close(handle);
 		return NULL;
 	}
 
@@ -123,7 +123,7 @@ static fs_handle_t *tftp_open(fs_mount_t *mount, const char *path) {
 
 /** Close a TFTP handle.
  * @param handle	Handle to close. */
-static void tftp_close(fs_handle_t *handle) {
+static void tftp_close(file_handle_t *handle) {
 	if(current_tftp_file == handle) {
 		tftp_set_current(NULL);
 	}
@@ -154,7 +154,7 @@ static bool tftp_read_packet(tftp_handle_t *data) {
  * @param count		Number of bytes to read.
  * @param offset	Offset into the file.
  * @return		Whether read successfully. */
-static bool tftp_read(fs_handle_t *handle, void *buf, size_t count, offset_t offset) {
+static bool tftp_read(file_handle_t *handle, void *buf, size_t count, offset_t offset) {
 	tftp_handle_t *data = handle->data;
 	uint32_t start, end, i, size;
 
@@ -219,7 +219,7 @@ static bool tftp_read(fs_handle_t *handle, void *buf, size_t count, offset_t off
 /** Get the size of a TFTP file.
  * @param handle	Handle to the file.
  * @return		Size of the file. */
-static offset_t tftp_size(fs_handle_t *handle) {
+static offset_t tftp_size(file_handle_t *handle) {
 	tftp_handle_t *data = handle->data;
 
 	/* I'm not actually sure whether it's necessary to do this, but I'm
@@ -249,7 +249,7 @@ static fs_type_t tftp_fs_type = {
 bool pxe_detect(void) {
 	pxenv_get_cached_info_t ci;
 	pxenv_boot_player_t *bp;
-	fs_mount_t *mount;
+	mount_t *mount;
 	bios_regs_t regs;
 	pxenv_t *pxenv;
 	pxe_t *pxe;
@@ -300,8 +300,8 @@ bool pxe_detect(void) {
 	        bp->gateway_ip.a[2], bp->gateway_ip.a[3]);
 
 	/* Mount a TFTP filesystem and add a device with it on. */
-	mount = kmalloc(sizeof(fs_mount_t));
-	memset(mount, 0, sizeof(fs_mount_t));
+	mount = kmalloc(sizeof(mount_t));
+	memset(mount, 0, sizeof(mount_t));
 	mount->type = &tftp_fs_type;
 	mount->label = kstrdup("PXE");
 	mount->uuid = kstrdup("PXE");

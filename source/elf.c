@@ -23,7 +23,7 @@
 
 /** Define an ELF note iteration function. */
 #define ELF_NOTE_ITERATE(_bits) \
-	static bool elf_note_iterate##_bits(fs_handle_t *handle, elf_note_iterate_t cb, void *data) { \
+	static bool elf_note_iterate##_bits(file_handle_t *handle, elf_note_iterate_cb_t cb, void *data) { \
 		Elf##_bits##_Phdr *phdrs; \
 		Elf##_bits##_Ehdr ehdr; \
 		elf_note_t *note; \
@@ -31,12 +31,12 @@
 		size_t i, offset; \
 		void *buf, *desc; \
 		\
-		if(!fs_file_read(handle, &ehdr, sizeof(ehdr), 0)) { \
+		if(!file_read(handle, &ehdr, sizeof(ehdr), 0)) { \
 			return false; \
 		} \
 		\
 		phdrs = kmalloc(sizeof(*phdrs) * ehdr.e_phnum); \
-		if(!fs_file_read(handle, phdrs, ehdr.e_phnum * ehdr.e_phentsize, ehdr.e_phoff)) { \
+		if(!file_read(handle, phdrs, ehdr.e_phnum * ehdr.e_phentsize, ehdr.e_phoff)) { \
 			return false; \
 		} \
 		\
@@ -46,7 +46,7 @@
 			} \
 			\
 			buf = kmalloc(phdrs[i].p_filesz); \
-			if(!fs_file_read(handle, buf, phdrs[i].p_filesz, phdrs[i].p_offset)) { \
+			if(!file_read(handle, buf, phdrs[i].p_filesz, phdrs[i].p_offset)) { \
 				return false; \
 			} \
 			for(offset = 0; offset < phdrs[i].p_filesz; ) { \
@@ -77,7 +77,7 @@ ELF_NOTE_ITERATE(64);
  * @param cb		Callback function.
  * @param data		Data pointer to pass to callback.
  * @return		Whether the file is an ELF file. */
-bool elf_note_iterate(fs_handle_t *handle, elf_note_iterate_t cb, void *data) {
+bool elf_note_iterate(file_handle_t *handle, elf_note_iterate_cb_t cb, void *data) {
 	if(elf_check(handle, ELFCLASS32, ELF_EM_NONE)) {
 		return elf_note_iterate32(handle, cb, data);
 	} else if(elf_check(handle, ELFCLASS64, ELF_EM_NONE)) {

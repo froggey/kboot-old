@@ -46,7 +46,7 @@ typedef struct ext2_mount {
  * @param buf		Buffer to read into.
  * @param num		Block number.
  * @return		Whether successful. */
-static bool ext2_block_read(fs_mount_t *mount, void *buf, uint32_t num) {
+static bool ext2_block_read(mount_t *mount, void *buf, uint32_t num) {
 	ext2_mount_t *data = mount->data;
 	return disk_read(mount->disk, buf, data->block_size, (uint64_t)num * data->block_size);
 }
@@ -57,7 +57,7 @@ static bool ext2_block_read(fs_mount_t *mount, void *buf, uint32_t num) {
  * @param block		Block number to get.
  * @param buf		Temporary buffer to use.
  * @return		Pointer to header for leaf, NULL on failure. */
-static ext4_extent_header_t *ext4_find_leaf(fs_mount_t *mount, ext4_extent_header_t *header,
+static ext4_extent_header_t *ext4_find_leaf(mount_t *mount, ext4_extent_header_t *header,
                                             uint32_t block, void *buf) {
 	ext4_extent_idx_t *index;
 	uint16_t i;
@@ -94,7 +94,7 @@ static ext4_extent_header_t *ext4_find_leaf(fs_mount_t *mount, ext4_extent_heade
  * @param block		Block number within the inode to get.
  * @param nump		Where to store raw block number.
  * @return		Whether successful. */
-static bool ext2_inode_block_get(fs_handle_t *handle, uint32_t block, uint32_t *nump) {
+static bool ext2_inode_block_get(file_handle_t *handle, uint32_t block, uint32_t *nump) {
 	uint32_t *i_block = NULL, *bi_block = NULL, num;
 	ext2_mount_t *mount = handle->mount->data;
 	ext2_inode_t *inode = handle->data;
@@ -216,7 +216,7 @@ out:
  * @param buf		Buffer to read into.
  * @param block		Starting block number.
  * @return		Whether read successfully. */
-static bool ext2_inode_block_read(fs_handle_t *handle, void *buf, uint32_t block) {
+static bool ext2_inode_block_read(file_handle_t *handle, void *buf, uint32_t block) {
 	ext2_mount_t *mount = handle->mount->data;
 	ext2_inode_t *inode = handle->data;
 	uint32_t raw = 0;
@@ -240,7 +240,7 @@ static bool ext2_inode_block_read(fs_handle_t *handle, void *buf, uint32_t block
  * @param mount		Mount to read from.
  * @param id		ID of node.
  * @return		Pointer to handle to inode on success, NULL on failure. */
-static fs_handle_t *ext2_inode_get(fs_mount_t *mount, uint32_t id) {
+static file_handle_t *ext2_inode_get(mount_t *mount, uint32_t id) {
 	ext2_mount_t *data = mount->data;
 	ext2_inode_t *inode;
 	size_t group, size;
@@ -267,13 +267,13 @@ static fs_handle_t *ext2_inode_get(fs_mount_t *mount, uint32_t id) {
 	}
 
 	directory = (le16_to_cpu(inode->i_mode) & EXT2_S_IFMT) == EXT2_S_IFDIR;
-	return fs_handle_create(mount, directory, inode);
+	return file_handle_create(mount, directory, inode);
 }
 
 /** Create an instance of an Ext2 filesystem.
  * @param mount		Mount structure to fill in.
  * @return		Whether succeeded in mounting. */
-static bool ext2_mount(fs_mount_t *mount) {
+static bool ext2_mount(mount_t *mount) {
 	ext2_mount_t *data;
 	offset_t offset;
 	size_t size;
@@ -334,7 +334,7 @@ fail:
 
 /** Close a handle.
  * @param handle	Handle to close. */
-static void ext2_close(fs_handle_t *handle) {
+static void ext2_close(file_handle_t *handle) {
 	kfree(handle->data);
 }
 
@@ -344,7 +344,7 @@ static void ext2_close(fs_handle_t *handle) {
  * @param count		Number of bytes to read.
  * @param offset	Offset into the file.
  * @return		Whether read successfully. */
-static bool ext2_read(fs_handle_t *handle, void *buf, size_t count, offset_t offset) {
+static bool ext2_read(file_handle_t *handle, void *buf, size_t count, offset_t offset) {
 	ext2_mount_t *mount = handle->mount->data;
 	size_t blksize = mount->block_size;
 	uint32_t start, end, i, size;
@@ -407,22 +407,22 @@ static bool ext2_read(fs_handle_t *handle, void *buf, size_t count, offset_t off
 /** Get the size of a file.
  * @param handle	Handle to the file.
  * @return		Size of the file. */
-static offset_t ext2_size(fs_handle_t *handle) {
+static offset_t ext2_size(file_handle_t *handle) {
 	ext2_inode_t *inode = handle->data;
 	return le32_to_cpu(inode->i_size);
 }
 
-/** Read directory entries.
+/** Iterate over directory entries.
  * @param handle	Handle to directory.
  * @param cb		Callback to call on each entry.
  * @param arg		Data to pass to callback.
  * @return		Whether read successfully. */
-static bool ext2_read_dir(fs_handle_t *handle, fs_dir_read_cb_t cb, void *arg) {
+static bool ext2_iterate(file_handle_t *handle, dir_iterate_cb_t cb, void *arg) {
 	ext2_inode_t *inode = handle->data;
 	char *buf = NULL, *name = NULL;
 	ext2_dirent_t *dirent;
 	uint32_t current = 0;
-	fs_handle_t *child;
+	file_handle_t *child;
 	bool ret = false;
 
 	/* Allocate buffers to read the data into. */
@@ -446,11 +446,11 @@ static bool ext2_read_dir(fs_handle_t *handle, fs_dir_read_cb_t cb, void *arg) {
 			if(!(child = ext2_inode_get(handle->mount, le32_to_cpu(dirent->inode)))) {
 				goto out;
 			} else if(!cb(name, child, arg)) {
-				fs_close(child);
+				file_close(child);
 				break;
 			}
 
-			fs_close(child);
+			file_close(child);
 		} else if(!le16_to_cpu(dirent->rec_len)) {
 			break;
 		}
@@ -473,5 +473,5 @@ fs_type_t ext2_fs_type = {
 	.close = ext2_close,
 	.read = ext2_read,
 	.size = ext2_size,
-	.read_dir = ext2_read_dir,
+	.iterate = ext2_iterate,
 };

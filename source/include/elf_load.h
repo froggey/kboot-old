@@ -44,10 +44,10 @@
  * @param bitsize	ELF class definition.
  * @param machine	ELF machine definition.
  * @return		Whether the file is this type. */
-static inline bool elf_check(fs_handle_t *handle, uint8_t bitsize, uint8_t machine) {
+static inline bool elf_check(file_handle_t *handle, uint8_t bitsize, uint8_t machine) {
 	Elf32_Ehdr ehdr;
 
-	if(!fs_file_read(handle, &ehdr, sizeof(ehdr), 0)) {
+	if(!file_read(handle, &ehdr, sizeof(ehdr), 0)) {
 		return false;
 	} else if(strncmp((const char *)ehdr.e_ident, ELF_MAGIC, 4) != 0) {
 		return false;
@@ -74,16 +74,16 @@ typedef Elf32_Note elf_note_t;
  * @param desc		Note data.
  * @param data		Data pointer passed to elf_note_iterate().
  * @return		Whether to continue iteration. */
-typedef bool (*elf_note_iterate_t)(elf_note_t *note, const char *name, void *desc, void *data);
+typedef bool (*elf_note_iterate_cb_t)(elf_note_t *note, const char *name, void *desc, void *data);
 
-extern bool elf_note_iterate(fs_handle_t *handle, elf_note_iterate_t cb, void *data);
+extern bool elf_note_iterate(file_handle_t *handle, elf_note_iterate_cb_t cb, void *data);
 
 /** Macro expanding to a function to load an ELF kernel.
  * @param _name		Name to give the function.
  * @param _bits		32 or 64.
  * @param _alignment	Alignment for physical memory allocations. */
 #define DEFINE_ELF_LOADER(_name, _bits, _alignment)	\
-	static inline void _name(fs_handle_t *handle, mmu_context_t *ctx, Elf##_bits##_Addr *entryp, \
+	static inline void _name(file_handle_t *handle, mmu_context_t *ctx, Elf##_bits##_Addr *entryp, \
 			phys_ptr_t *physp) { \
 		Elf##_bits##_Addr virt_base = 0, virt_end = 0; \
 		Elf##_bits##_Phdr *phdrs; \
@@ -92,12 +92,12 @@ extern bool elf_note_iterate(fs_handle_t *handle, elf_note_iterate_t cb, void *d
 		ptr_t dest; \
 		size_t i; \
 		\
-		if(!fs_file_read(handle, &ehdr, sizeof(ehdr), 0)) { \
+		if(!file_read(handle, &ehdr, sizeof(ehdr), 0)) { \
 			boot_error("Could not read kernel image"); \
 		} \
 		\
 		phdrs = kmalloc(sizeof(*phdrs) * ehdr.e_phnum); \
-		if(!fs_file_read(handle, phdrs, ehdr.e_phnum * ehdr.e_phentsize, ehdr.e_phoff)) { \
+		if(!file_read(handle, phdrs, ehdr.e_phnum * ehdr.e_phentsize, ehdr.e_phoff)) { \
 			boot_error("Could not read kernel image"); \
 		} \
 		\
@@ -125,10 +125,8 @@ extern bool elf_note_iterate(fs_handle_t *handle, elf_note_iterate_t cb, void *d
 			} \
 			\
 			dest = (ptr_t)(phys + (phdrs[i].p_vaddr - virt_base)); \
-			if(phdrs[i].p_filesz) { \
-				if(!fs_file_read(handle, (void *)dest, phdrs[i].p_filesz, phdrs[i].p_offset)) { \
-					boot_error("Could not read kernel image"); \
-				} \
+			if(!file_read(handle, (void *)dest, phdrs[i].p_filesz, phdrs[i].p_offset)) { \
+				boot_error("Could not read kernel image"); \
 			} \
 			\
 			memset((void *)(dest + (ptr_t)phdrs[i].p_filesz), 0, phdrs[i].p_memsz - phdrs[i].p_filesz); \

@@ -207,17 +207,17 @@ static char *iso9660_make_uuid(iso9660_primary_volume_desc_t *pri) {
  * @param mount		Mount the node is from.
  * @param rec		Record to create from.
  * @return		Pointer to handle. */
-static fs_handle_t *iso9660_handle_create(fs_mount_t *mount, iso9660_directory_record_t *rec) {
+static file_handle_t *iso9660_handle_create(mount_t *mount, iso9660_directory_record_t *rec) {
 	iso9660_handle_t *data = kmalloc(sizeof(iso9660_handle_t));
 	data->data_len = le32_to_cpu(rec->data_len_le);
 	data->extent = le32_to_cpu(rec->extent_loc_le);
-	return fs_handle_create(mount, (rec->file_flags & (1<<1)), data);
+	return file_handle_create(mount, (rec->file_flags & (1<<1)), data);
 }
 
 /** Mount an ISO9660 filesystem.
  * @param mount		Mount structure to fill in.
  * @return		Whether the file contains the FS. */
-static bool iso9660_mount(fs_mount_t *mount) {
+static bool iso9660_mount(mount_t *mount) {
 	iso9660_primary_volume_desc_t *pri = NULL;
 	iso9660_supp_volume_desc_t *sup = NULL;
 	iso9660_volume_desc_t *desc;
@@ -305,7 +305,7 @@ out:
 
 /** Close an ISO9660 handle.
  * @param handle	Handle to close. */
-static void iso9660_close(fs_handle_t *handle) {
+static void iso9660_close(file_handle_t *handle) {
 	kfree(handle->data);
 }
 
@@ -315,7 +315,7 @@ static void iso9660_close(fs_handle_t *handle) {
  * @param count		Number of bytes to read.
  * @param offset	Offset to read from.
  * @return		Whether the read succeeded. */
-static bool iso9660_read(fs_handle_t *handle, void *buf, size_t count, offset_t offset) {
+static bool iso9660_read(file_handle_t *handle, void *buf, size_t count, offset_t offset) {
 	iso9660_handle_t *data = handle->data;
 
 	if(!count || offset >= data->data_len) {
@@ -330,23 +330,23 @@ static bool iso9660_read(fs_handle_t *handle, void *buf, size_t count, offset_t 
 /** Get the size of an ISO9660 file.
  * @param handle	Handle to the file.
  * @return		Size of the file. */
-static offset_t iso9660_size(fs_handle_t *handle) {
+static offset_t iso9660_size(file_handle_t *handle) {
 	iso9660_handle_t *data = handle->data;
 	return data->data_len;
 }
 
-/** Read directory entries.
+/** Iterate over directory entries.
  * @param handle	Handle to directory.
  * @param cb		Callback to call on each entry.
  * @param arg		Data to pass to callback.
  * @return		Whether read successfully. */
-static bool iso9660_read_dir(fs_handle_t *handle, fs_dir_read_cb_t cb, void *arg) {
+static bool iso9660_iterate(file_handle_t *handle, dir_iterate_cb_t cb, void *arg) {
 	iso9660_mount_t *mount = handle->mount->data;
 	iso9660_handle_t *data = handle->data;
 	iso9660_directory_record_t *rec;
 	char name[ISO9660_NAME_SIZE];
 	uint32_t offset = 0;
-	fs_handle_t *child;
+	file_handle_t *child;
 	char *buf;
 	bool ret;
 
@@ -381,7 +381,7 @@ static bool iso9660_read_dir(fs_handle_t *handle, fs_dir_read_cb_t cb, void *arg
 
 		child = iso9660_handle_create(handle->mount, rec);
 		ret = cb(name, child, arg);
-		fs_close(child);
+		file_close(child);
 		if(!ret) {
 			break;
 		}
@@ -397,5 +397,5 @@ fs_type_t iso9660_fs_type = {
 	.close = iso9660_close,
 	.read = iso9660_read,
 	.size = iso9660_size,
-	.read_dir = iso9660_read_dir,
+	.iterate = iso9660_iterate,
 };

@@ -466,28 +466,28 @@ static bool config_parse(const char *buf, const char *path) {
  * @param mount		Mount that the file is on.
  * @param path		Path of the file.
  * @return		Whether the file was loaded successfully. */
-static bool config_load(fs_mount_t *mount, const char *path) {
-	fs_handle_t *handle;
+static bool config_load(mount_t *mount, const char *path) {
+	file_handle_t *handle;
 	size_t size;
 	char *buf;
 	bool ret;
 
-	if(!(handle = fs_open(mount, path))) {
+	if(!(handle = file_open(mount, path))) {
 		return false;
 	}
 
-	size = fs_file_size(handle);
+	size = file_size(handle);
 	buf = kmalloc(size + 1);
-	if(!fs_file_read(handle, buf, size, 0)) {
+	if(!file_read(handle, buf, size, 0)) {
 		kfree(buf);
-		fs_close(handle);
+		file_close(handle);
 		return false;
 	}
 	buf[size] = 0;
 
 	ret = config_parse(buf, path);
 	kfree(buf);
-	fs_close(handle);
+	file_close(handle);
 	return ret;
 }
 

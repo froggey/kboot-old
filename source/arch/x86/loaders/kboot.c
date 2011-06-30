@@ -30,7 +30,7 @@
 #include <kboot.h>
 #include <system.h>
 
-extern mmu_context_t *kboot_arch_load(fs_handle_t *handle, phys_ptr_t *physp);
+extern mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp);
 extern void kboot_arch_enter(mmu_context_t *ctx, phys_ptr_t tags) __noreturn;
 extern void kboot_arch_enter64(phys_ptr_t tags, ptr_t cr3, uint64_t entry) __noreturn;
 extern void kboot_arch_enter32(phys_ptr_t tags, ptr_t cr3, uint32_t entry) __noreturn;
@@ -67,7 +67,7 @@ static inline bool have_long_mode(void) {
  * @param handle	Handle to image.
  * @param physp		Where to store physical address of kernel image.
  * @return		Created MMU context for kernel. */
-static mmu_context_t *kboot_arch_load64(fs_handle_t *handle, phys_ptr_t *physp) {
+static mmu_context_t *kboot_arch_load64(file_handle_t *handle, phys_ptr_t *physp) {
 	mmu_context_t *ctx;
 
 	/* Check for 64-bit support. */
@@ -90,7 +90,7 @@ static mmu_context_t *kboot_arch_load64(fs_handle_t *handle, phys_ptr_t *physp) 
  * @param handle	Handle to image.
  * @param physp		Where to store physical address of kernel image.
  * @return		Created MMU context for kernel. */
-static mmu_context_t *kboot_arch_load32(fs_handle_t *handle, phys_ptr_t *physp) {
+static mmu_context_t *kboot_arch_load32(file_handle_t *handle, phys_ptr_t *physp) {
 	mmu_context_t *ctx;
 
 	/* Create the MMU context. */
@@ -107,7 +107,7 @@ static mmu_context_t *kboot_arch_load32(fs_handle_t *handle, phys_ptr_t *physp) 
  * @param handle	Handle to image.
  * @param physp		Where to store physical address of kernel image.
  * @return		Created MMU context for kernel. */
-mmu_context_t *kboot_arch_load(fs_handle_t *handle, phys_ptr_t *physp) {
+mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp) {
 	mmu_context_t *ctx;
 	unative_t flags;
 

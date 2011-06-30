@@ -24,7 +24,7 @@
 
 #include <lib/list.h>
 
-struct fs_mount;
+struct mount;
 struct disk;
 
 /** Structure containing details of a device. */
@@ -32,7 +32,7 @@ typedef struct device {
 	list_t header;			/**< Link to device list. */
 
 	char *name;			/**< Name of the device. */
-	struct fs_mount *fs;		/**< Filesystem that resides on the device. */
+	struct mount *fs;		/**< Filesystem that resides on the device. */
 
 	union {
 #if CONFIG_KBOOT_HAVE_DISK
