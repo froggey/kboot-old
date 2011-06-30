@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2011 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,12 @@
 
 /**
  * @file
- * @brief		x86 core definitions.
+ * @brief		ARM architecture core definitions.
  */
 
 #ifndef __ARCH_SYSTEM_H
 #define __ARCH_SYSTEM_H
 
-extern void cpu_init(void);
 extern void arch_early_init(void);
 
 #endif /* __ARCH_SYSTEM_H */

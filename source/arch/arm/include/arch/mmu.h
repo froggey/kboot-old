@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2011 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,20 @@
 
 /**
  * @file
- * @brief		x86 core definitions.
+ * @brief		ARM MMU functions.
  */
 
-#ifndef __ARCH_SYSTEM_H
-#define __ARCH_SYSTEM_H
+#ifndef __ARCH_MMU_H
+#define __ARCH_MMU_H
 
-extern void cpu_init(void);
-extern void arch_early_init(void);
+#include <types.h>
 
-#endif /* __ARCH_SYSTEM_H */
+/** ARM MMU context structure. */
+typedef struct mmu_context {
+	phys_ptr_t ttbr0;		/**< Value loaded into TTBR0. */
+} mmu_context_t;
+
+extern bool mmu_map(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys, size_t size);
+extern mmu_context_t *mmu_create(void);
+
+#endif /* __ARCH_MMU_H */

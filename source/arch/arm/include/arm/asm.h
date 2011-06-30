@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2011 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,34 @@
 
 /**
  * @file
- * @brief		x86 core definitions.
+ * @brief		ARM assembly code definitions.
  */
 
-#ifndef __ARCH_SYSTEM_H
-#define __ARCH_SYSTEM_H
+#ifndef __ARM_ASM_H
+#define __ARM_ASM_H
 
-extern void cpu_init(void);
-extern void arch_early_init(void);
+#ifndef __ASM__
+# error "What are you doing?"
+#endif
 
-#endif /* __ARCH_SYSTEM_H */
+/** Macro to define the beginning of a global function. */
+#define FUNCTION_START(name)		\
+	.global name; \
+	.type name, %function; \
+	name:
+
+/** Macro to define the beginning of a private function. */
+#define PRIVATE_FUNCTION_START(name)	\
+	.type name, %function; \
+	name:
+
+/** Macro to define the end of a function. */
+#define FUNCTION_END(name)		\
+	.size name, . - name
+
+/** Macro to define a global symbol. */
+#define SYMBOL(name)			\
+	.global name; \
+	name:
+
+#endif /* __ARM_ASM_H */

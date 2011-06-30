@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2011 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,26 +16,62 @@
 
 /**
  * @file
- * @brief		Core definitions.
+ * @brief		OMAP3 loader linker script.
  */
 
-#ifndef __SYSTEM_H
-#define __SYSTEM_H
-
-#include <arch/system.h>
-
+#include <arch/page.h>
 #include <platform/system.h>
 
-#include <types.h>
+OUTPUT_ARCH("arm")
 
-extern int kvprintf(const char *fmt, va_list args);
-extern int kprintf(const char *fmt, ...) __printf(1, 2);
-extern int dvprintf(const char *fmt, va_list args);
-extern int dprintf(const char *fmt, ...) __printf(1, 2);
+SECTIONS {
+	. = LOADER_LOAD_ADDR;
+	__start = .;
 
-extern void backtrace(int (*printfn)(const char *fmt, ...));
+	.text : {
+		__text_start = .;
+		*(.init.text)
+		*(.text)
+		*(.text.*)
+		__text_end = .;
+	}
 
-extern void internal_error(const char *fmt, ...) __printf(1, 2) __noreturn;
-extern void boot_error(const char *fmt, ...) __printf(1, 2) __noreturn;
+	.rodata ALIGN(32) : {
+		__rodata_start = .;
+		*(.rodata)
+		*(.rodata.*)
+		__rodata_end = .;
+	}
 
-#endif /* __SYSTEM_H */
+	.data ALIGN(32) : {
+		__data_start = .;
+		*(.data)
+		*(.data.*)
+
+		__commands_start = .;
+		*(.commands)
+		__commands_end = .;
+
+		__data_end = .;
+	}
+
+	__exidx_start = .;
+	.ARM.exidx : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
+	__exidx_end = .;
+
+	.bss ALIGN(32) : {
+		__bss_start = .;
+		*(.bss)
+		*(.bss.*)
+		*(COMMON)
+		__bss_end = .;
+	}
+
+	. = ALIGN(PAGE_SIZE);
+	__end = .;
+
+	/DISCARD/ : {
+		*(.note.GNU-stack)
+		*(.comment*)
+	}
+}

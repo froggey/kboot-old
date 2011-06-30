@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2011 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,13 @@
 
 /**
  * @file
- * @brief		x86 core definitions.
+ * @brief		ARM backtrace function.
  */
 
-#ifndef __ARCH_SYSTEM_H
-#define __ARCH_SYSTEM_H
+#include <system.h>
 
-extern void cpu_init(void);
-extern void arch_early_init(void);
-
-#endif /* __ARCH_SYSTEM_H */
+/** Print out a backtrace.
+ * @param printfn	Print function to use. */
+void backtrace(int (*printfn)(const char *fmt, ...)) {
+	// TODO
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2011 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,26 @@
 
 /**
  * @file
- * @brief		x86 core definitions.
+ * @brief		ARM architecture initialisation functions.
  */
 
-#ifndef __ARCH_SYSTEM_H
-#define __ARCH_SYSTEM_H
+#include <arm/atag.h>
 
-extern void cpu_init(void);
-extern void arch_early_init(void);
+#include <system.h>
 
-#endif /* __ARCH_SYSTEM_H */
+/** Address of the ATAG list. */
+atag_t *atag_list = NULL;
+
+/** Perform early architecture initialisation. */
+void arch_early_init(void) {
+	/* Verify that the list is valid: it must begin with an ATAG_CORE tag. */
+	if(atag_list->hdr.tag != ATAG_CORE) {
+		internal_error("ATAG list is not valid (%p)", atag_list);
+	}
+
+	/* The boot image is passed to us as an initial ramdisk. */
+	//ATAG_ITERATE(tag, ATAG_INITRD2) {
+	//	tar_mount((void *)tag->initrd.start, tag->initrd.size);
+	//	break;
+	//}
+}

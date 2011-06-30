@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2011 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,16 @@
 
 /**
  * @file
- * @brief		x86 core definitions.
+ * @brief		ARM paging definitions.
  */
 
-#ifndef __ARCH_SYSTEM_H
-#define __ARCH_SYSTEM_H
+#ifndef __ARCH_PAGE_H
+#define __ARCH_PAGE_H
 
-extern void cpu_init(void);
-extern void arch_early_init(void);
+/** Page size definitions. */
+#define PAGE_WIDTH		12		/**< Width of a page in bits. */
+#define PAGE_SIZE		0x1000		/**< Size of a page (4KB). */
+#define LARGE_PAGE_WIDTH	20		/**< Width of a large page in bits. */
+#define LARGE_PAGE_SIZE		0x100000	/**< Size of large page (1MB). */
 
-#endif /* __ARCH_SYSTEM_H */
+#endif /* __ARCH_PAGE_H */
