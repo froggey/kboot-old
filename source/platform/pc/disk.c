@@ -23,6 +23,7 @@
 #include <lib/utility.h>
 
 #include <pc/bios.h>
+#include <pc/disk.h>
 #include <pc/multiboot.h>
 #include <pc/pxe.h>
 
@@ -30,37 +31,6 @@
 #include <disk.h>
 #include <memory.h>
 #include <system.h>
-
-/** Drive parameters structure. We only care about the EDD 1.x fields. */
-typedef struct drive_parameters {
-	uint16_t size;
-	uint16_t flags;
-	uint32_t cylinders;
-	uint32_t heads;
-	uint32_t spt;
-	uint64_t sector_count;
-	uint16_t sector_size;
-} __packed drive_parameters_t;
-
-/** Disk address packet structure. */
-typedef struct disk_address_packet {
-	uint8_t size;
-	uint8_t reserved1;
-	uint16_t block_count;
-	uint16_t buffer_offset;
-	uint16_t buffer_segment;
-	uint64_t start_lba;
-} __packed disk_address_packet_t;
-
-/** Bootable CD-ROM Specification Packet. */
-typedef struct specification_packet {
-        uint8_t size;
-        uint8_t media_type;
-        uint8_t drive_number;
-        uint8_t controller_num;
-        uint32_t image_lba;
-        uint16_t device_spec;
-} __packed specification_packet_t;
 
 /** Structure used to store details of a BIOS disk. */
 typedef struct bios_disk {
@@ -117,7 +87,7 @@ static bool bios_disk_read(disk_t *disk, void *buf, uint64_t lba, size_t count) 
 
 		/* Perform the transfer. */
 		bios_regs_init(&regs);
-		regs.eax = 0x4200;
+		regs.eax = INT13_EXT_READ;
 		regs.edx = data->id;
 		regs.esi = BIOS_MEM_BASE;
 		bios_interrupt(0x13, &regs);
@@ -145,7 +115,7 @@ static uint8_t get_disk_count(void) {
 
 	/* Use the Get Drive Parameters call. */
 	bios_regs_init(&regs);
-	regs.eax = 0x800;
+	regs.eax = INT13_GET_DRIVE_PARAMETERS;
 	regs.edx = 0x80;
 	bios_interrupt(0x13, &regs);
 	return (regs.eflags & X86_FLAGS_CF) ? 0 : (regs.edx & 0xFF);
@@ -159,7 +129,7 @@ static bool booted_from_cd(void) {
 
 	/* Use the bootable CD-ROM status function. */
 	bios_regs_init(&regs);
-	regs.eax = 0x4B01;
+	regs.eax = INT13_CDROM_GET_STATUS;
 	regs.edx = boot_device_id;
 	regs.esi = BIOS_MEM_BASE;
 	bios_interrupt(0x13, &regs);
@@ -185,10 +155,10 @@ static void add_disk(uint8_t id) {
 	 * Work around this by forcing use of extensions when booted from CD. */
 	if(id == boot_device_id && booted_from_cd()) {
 		disk_add("cd0", 2048, ~0LL, &bios_disk_ops, data, true);
-		dprintf("disk: detected boot CD cd0 (id: 0x%x)\n", id);
+		dprintf("disk: added boot CD cd0 (id: 0x%x)\n", id);
 	} else {
 		bios_regs_init(&regs);
-		regs.eax = 0x4100;
+		regs.eax = INT13_EXT_INSTALL_CHECK;
 		regs.ebx = 0x55AA;
 		regs.edx = id;
 		bios_interrupt(0x13, &regs);
@@ -204,7 +174,7 @@ static void add_disk(uint8_t id) {
 		memset(params, 0, sizeof(drive_parameters_t));
 		params->size = sizeof(drive_parameters_t);
 		bios_regs_init(&regs);
-		regs.eax = 0x4800;
+		regs.eax = INT13_EXT_GET_DRIVE_PARAMETERS;
 		regs.edx = id;
 		regs.esi = BIOS_MEM_BASE;
 		bios_interrupt(0x13, &regs);
@@ -217,7 +187,7 @@ static void add_disk(uint8_t id) {
 		sprintf(name, "hd%u", id - 0x80);
 		disk_add(name, params->sector_size, params->sector_count, &bios_disk_ops,
 		         data, id == boot_device_id);
-		dprintf("disk: detected device %s (id: 0x%x, sector_size: %u, sector_count: %zu)\n",
+		dprintf("disk: added device %s (id: 0x%x, sector_size: %u, sector_count: %zu)\n",
 		        name, id, params->sector_size, params->sector_count);
 	}
 }

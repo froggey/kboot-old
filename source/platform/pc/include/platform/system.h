@@ -36,10 +36,6 @@
 
 #ifndef __ASM__
 
-struct disk;
-
-extern uint8_t bios_disk_id(struct disk *disk);
-
 extern void platform_early_init(void);
 extern void platform_reboot(void);
 

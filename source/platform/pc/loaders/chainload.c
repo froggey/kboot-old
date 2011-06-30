@@ -22,6 +22,7 @@
 #include <arch/io.h>
 
 #include <pc/bios.h>
+#include <pc/disk.h>
 
 #include <config.h>
 #include <loader.h>
