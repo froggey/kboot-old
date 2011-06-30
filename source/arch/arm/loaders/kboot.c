@@ -22,6 +22,8 @@
 #include <arch/mmu.h>
 #include <arch/page.h>
 
+#include <platform/system.h>
+
 #include <elf_load.h>
 #include <kboot.h>
 #include <loader.h>
@@ -54,6 +56,9 @@ mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp) {
 	load_elf_kernel(handle, ctx, &kernel_entry, physp);
 	dprintf("kboot: 32-bit kernel entry point is 0x%lx, TTBR0 is %p\n",
 	        kernel_entry, ctx->ttbr0);
+
+	/* Identity map the loader. */
+	mmu_map(ctx, LOADER_LOAD_ADDR, LOADER_LOAD_ADDR, 0x100000);
 	return ctx;
 }
 
