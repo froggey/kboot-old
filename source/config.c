@@ -57,7 +57,7 @@ static void value_list_destroy(value_list_t *list);
 static value_list_t *value_list_copy(value_list_t *source);
 static command_list_t *command_list_copy(command_list_t *source);
 static void command_list_destroy(command_list_t *list);
-static command_list_t *parse_command_list(char endch);
+static command_list_t *parse_command_list(int endch);
 
 /** Temporary buffer to collect strings in. */
 static char temp_buf[TEMP_BUF_LEN];
@@ -87,7 +87,7 @@ environ_t *root_environ = NULL;
 
 /** Read a character from the input file.
  * @return		Character read. */
-static char get_next_char(void) {
+static int get_next_char(void) {
 	char ch;
 
 	if(current_file_offset < current_file_size) {
@@ -255,7 +255,7 @@ static void command_list_destroy(command_list_t *list) {
  * @param intp		Where to store integer parsed.
  * @return		Whether successful. */
 static bool parse_integer(uint64_t *intp) {
-	char ch;
+	int ch;
 
 	while(true) {
 		ch = get_next_char();
@@ -274,7 +274,8 @@ static bool parse_integer(uint64_t *intp) {
  * @return		Pointer to string on success, NULL on failure. */
 static char *parse_string(void) {
 	bool escaped = false;
-	char *ret, ch;
+	char *ret;
+	int ch;
 
 	while(true) {
 		ch = get_next_char();
@@ -300,11 +301,11 @@ static char *parse_string(void) {
 /** Parse an value list.
  * @param endch		End character for the list.
  * @return		Pointer to list on success, NULL on failure. */
-static value_list_t *parse_value_list(char endch) {
+static value_list_t *parse_value_list(int endch) {
 	bool need_space = false;
 	value_list_t *list;
 	value_t *value;
-	char ch;
+	int ch;
 
 	list = kmalloc(sizeof(value_list_t));
 	list->values = NULL;
@@ -378,11 +379,11 @@ fail:
 /** Parse a command list.
  * @param endch		Character signalling the end of the list.
  * @return		Pointer to list on success, NULL on failure. */
-static command_list_t *parse_command_list(char endch) {
+static command_list_t *parse_command_list(int endch) {
 	command_list_entry_t *command;
 	bool in_comment = false;
 	command_list_t *list;
-	char ch;
+	int ch;
 
 	list = kmalloc(sizeof(command_list_t));
 	list_init(list);
