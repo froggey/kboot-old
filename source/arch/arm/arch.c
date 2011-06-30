@@ -22,6 +22,7 @@
 #include <arm/atag.h>
 
 #include <system.h>
+#include <tar.h>
 
 /** Address of the ATAG list. */
 atag_t *atag_list = NULL;
@@ -34,8 +35,8 @@ void arch_early_init(void) {
 	}
 
 	/* The boot image is passed to us as an initial ramdisk. */
-	//ATAG_ITERATE(tag, ATAG_INITRD2) {
-	//	tar_mount((void *)tag->initrd.start, tag->initrd.size);
-	//	break;
-	//}
+	ATAG_ITERATE(tag, ATAG_INITRD2) {
+		tar_mount((void *)tag->initrd.start, tag->initrd.size);
+		break;
+	}
 }

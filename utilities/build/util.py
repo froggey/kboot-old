@@ -26,7 +26,10 @@ def FeatureSources(config, files):
 	output = []
 	for f in files:
 		if type(f) == tuple:
-			if config[f[0]]:
+			if f[0][0] == '!':
+				if not config[f[0][1:]]:
+					output.append(File(f[1]))
+			elif config[f[0]]:
 				output.append(File(f[1]))
 		else:
 			output.append(File(f))
