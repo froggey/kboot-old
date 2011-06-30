@@ -240,9 +240,17 @@ PRIVATE_FUNCTION_START(__loader_entry)
 	push	$0
 	popf
 
+	/* Zero the BSS section. */
+	movl	$__bss_start, %eax
+	movl	$__bss_end, %edx
+	subl	%eax, %edx
+	push	%edx
+	push	$0
+	push	%eax
+	call	memset
+
 	/* Call the main function. */
-	call	loader_main
-1:	jmp	1b
+	jmp	loader_main
 FUNCTION_END(__loader_entry)
 
 .section .data, "aw", @progbits

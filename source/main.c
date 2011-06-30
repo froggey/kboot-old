@@ -88,16 +88,13 @@ void loader_main(void) {
 	value_t *value;
 	device_t *device;
 
-	/* Zero BSS. */
-	memset(__bss_start, 0, __bss_end - __bss_start);
-
 	/* Initialise the console. */
 	console_init();
 
 	/* Perform early architecture/platform initialisation. */
 	arch_early_init();
 	platform_early_init();
-
+	internal_error("Meow");
 	/* Detect hardware details. */
 	memory_init();
 #if CONFIG_KBOOT_HAVE_DISK
