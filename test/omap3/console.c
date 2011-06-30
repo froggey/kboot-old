@@ -19,19 +19,26 @@
  * @brief		Test kernel console functions.
  */
 
+#include <arch/page.h>
+
 #include <omap3/omap3.h>
 #include <omap3/uart.h>
 
+#include <kboot.h>
 #include <system.h>
 
 extern void console_putc(char ch);
 static bool have_inited = false;
 
+KBOOT_MAPPING(0xC1000000, OMAP3_UART1_BASE, PAGE_SIZE);
+KBOOT_MAPPING(0xC1001000, OMAP3_UART2_BASE, PAGE_SIZE);
+KBOOT_MAPPING(0xC1002000, OMAP3_UART3_BASE, PAGE_SIZE);
+
 /** UART port definitions. */
 static volatile uint8_t *uarts[] = {
-	(volatile uint8_t *)OMAP3_UART1_BASE,
-	(volatile uint8_t *)OMAP3_UART2_BASE,
-	(volatile uint8_t *)OMAP3_UART3_BASE,
+	(volatile uint8_t *)0xC1000000,
+	(volatile uint8_t *)0xC1001000,
+	(volatile uint8_t *)0xC1002000,
 };
 
 /** Read a register from a UART.
