@@ -26,6 +26,7 @@
 #include <fs.h>
 #include <memory.h>
 
+#if CONFIG_KBOOT_HAVE_DISK
 /** Array of filesystem implementations. */
 static fs_type_t *filesystem_types[] = {
 #if CONFIG_KBOOT_FS_EXT2
@@ -36,6 +37,7 @@ static fs_type_t *filesystem_types[] = {
 #endif
 	NULL,
 };
+#endif
 
 /** Create a file handle.
  * @param path		Path to filesystem entry.
@@ -52,6 +54,7 @@ file_handle_t *file_handle_create(mount_t *mount, bool directory, void *data) {
 	return handle;
 }
 
+#if CONFIG_KBOOT_HAVE_DISK
 /** Probe a disk for filesystems.
  * @param disk		Disk to probe.
  * @return		Pointer to mount if detected, NULL if not. */
@@ -72,6 +75,7 @@ mount_t *fs_probe(disk_t *disk) {
 	kfree(mount);
 	return NULL;
 }
+#endif
 
 /** Structure containing data for file_open(). */
 typedef struct file_open_data {

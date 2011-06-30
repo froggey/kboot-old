@@ -79,7 +79,9 @@ typedef struct mount {
 	fs_type_t *type;		/**< Type structure for the filesystem. */
 	struct file_handle *root;	/**< Handle to root of FS (not needed if open() implemented). */
 	void *data;			/**< Implementation-specific data pointer. */
+#if CONFIG_KBOOT_HAVE_DISK
 	disk_t *disk;			/**< Disk that the filesystem resides on. */
+#endif
 	char *label;			/**< Label of the filesystem. */
 	char *uuid;			/**< UUID of the filesystem. */
 } mount_t;
@@ -97,7 +99,9 @@ extern fs_type_t iso9660_fs_type;
 
 extern file_handle_t *file_handle_create(mount_t *mount, bool directory, void *data);
 
+#if CONFIG_KBOOT_HAVE_DISK
 extern mount_t *fs_probe(disk_t *disk);
+#endif
 
 extern file_handle_t *file_open(mount_t *mount, const char *path);
 extern void file_close(file_handle_t *handle);
