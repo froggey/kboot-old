@@ -16,14 +16,16 @@
 
 /**
  * @file
- * @brief		OMAP3 UART console implementation.
+ * @brief		Test kernel console functions.
  */
 
 #include <omap3/omap3.h>
 #include <omap3/uart.h>
 
-#include <console.h>
 #include <system.h>
+
+extern void console_putc(char ch);
+static bool have_inited = false;
 
 /** UART port definitions. */
 static volatile uint8_t *uarts[] = {
@@ -102,19 +104,11 @@ static void uart_putch(int port, unsigned char ch) {
 
 /** Write a character to the UART console.
  * @param ch		Character to write. */
-static void uart_console_putch(char ch) {
+void console_putc(char ch) {
+	if(!have_inited) {
+		uart_init_port(DEBUG_UART, 115200);
+		uart_putch(DEBUG_UART, '\n');
+		have_inited = true;
+	}
 	uart_putch(DEBUG_UART, ch);
-}
-
-/** UART console object. */
-static console_t uart_console = {
-	.putch = uart_console_putch,
-};
-
-/** Initialise the UART console. */
-void console_init() {
-	/* Initialise the debug port and set it as the debug console. */
-	uart_init_port(DEBUG_UART, 115200);
-	debug_console = &uart_console;
-	uart_console_putch('\n');
 }

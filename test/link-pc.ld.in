@@ -36,25 +36,6 @@ SECTIONS {
 		__text_end = .;
 	}
 
-	.init ALIGN(PAGE_SIZE) : {
-		__init_start = .;
-		*(.init.data)
-		*(.init.text)
-
-		. = ALIGN(32);
-		__initcall_start = .;
-		*(.init.initcalls)
-		__initcall_end = .;
-
-		. = ALIGN(32);
-		__ap_trampoline_start = .;
-		*(.init.trampoline)
-		__ap_trampoline_end = .;
-
-		. = ALIGN(PAGE_SIZE);
-		__init_end = .;
-	}
-
 	.rodata ALIGN(PAGE_SIZE) : {
 		__rodata_start = .;
 		*(.rodata)

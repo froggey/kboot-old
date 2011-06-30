@@ -19,40 +19,15 @@
  * @brief		Test kernel support functions.
  */
 
-#include <arch/io.h>
 #include <lib/string.h>
 #include <system.h>
 
-/** Serial port to use. */
-#define SERIAL_PORT		0x3F8
-
-static bool have_inited = false;
-
-/** Initialise the serial port. */
-static inline void init_serial_port(void) {
-	out8(SERIAL_PORT + 1, 0x00);  /* Disable all interrupts */
-	out8(SERIAL_PORT + 3, 0x80);  /* Enable DLAB (set baud rate divisor) */
-	out8(SERIAL_PORT + 0, 0x03);  /* Set divisor to 3 (lo byte) 38400 baud */
-	out8(SERIAL_PORT + 1, 0x00);  /*                  (hi byte) */
-	out8(SERIAL_PORT + 3, 0x03);  /* 8 bits, no parity, one stop bit */
-	out8(SERIAL_PORT + 2, 0xC7);  /* Enable FIFO, clear them, with 14-byte threshold */
-	out8(SERIAL_PORT + 4, 0x0B);  /* IRQs enabled, RTS/DSR set */
-	have_inited = true;
-}
+extern void console_putc(char ch);
 
 /** Print a character.
  * @param ch		Character to print. */
 static inline void printf_print_char(char ch) {
-	if(!have_inited) {
-		init_serial_port();
-	}
-
-	while(!(in8(SERIAL_PORT + 5) & 0x20));
-	if(ch == '\n') {
-		while(!(in8(SERIAL_PORT + 5) & 0x20));
-		out8(SERIAL_PORT, '\r');
-	}
-	out8(SERIAL_PORT, ch);
+	console_putc(ch);
 }
 
 /** Print a string.

@@ -14,16 +14,17 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env')
+Import('env', 'config')
 
 # List of our own sources.
 sources = map(File, [
+	'%s/console.c' % (config['PLATFORM']),
 	'main.c',
 	'support.c',
 ])
 
 # Link the test kernel.
-target = env.LDScript('link.ld', 'link.ld.in')
+target = env.LDScript('link.ld', 'link-%s.ld.in' % (config['PLATFORM']))
 env.Program('test.elf', map(env.Object, sources), LINKFLAGS = env['LINKFLAGS'] + ["-Wl,-T,${File('link.ld')}"])
 Depends('test.elf', target)
 
