@@ -4,7 +4,7 @@ scons
 scons test
 
 mkdir -p isobuild/boot
-cat build/x86-pc/source/platform/pc/cdboot build/x86-pc/source/loader > isobuild/boot/cdboot.img
+cat build/x86-pc/source/platform/pc/stage1/cdboot build/x86-pc/source/loader > isobuild/boot/cdboot.img
 cp build/x86-pc/test/test.elf isobuild/
 
 cat > isobuild/boot/loader.cfg << EOF

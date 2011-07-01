@@ -132,6 +132,15 @@
 	(EXT2_FEATURE_INCOMPAT_FILETYPE | \
 	 EXT2_FEATURE_INCOMPAT_META_BG)
 
+/** Structure sizes (for use in ASM code). */
+#define EXT2_SUPERBLOCK_SIZE		1024
+#define EXT2_INODE_SIZE			128
+#define EXT2_GROUP_DESC_SIZE		32
+#define EXT2_DIRENT_SIZE		8
+
+/** Structure offsets (for use in ASM code). */
+#define EXT2_SUPERBLOCK_OFF_MAGIC	56
+
 #ifndef __ASM__
 
 #include <types.h>

@@ -5,6 +5,11 @@ SECTIONS {
 	.text : {
 		*(.text)
 	}
+	.bss : {
+		*(.bss)
+		*(.bss.*)
+		*(COMMON)
+	}
 	/DISCARD/ : {
 		*(.note.GNU-stack)
 		*(.comment*)
