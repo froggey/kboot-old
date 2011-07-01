@@ -22,8 +22,6 @@
 #ifndef __EXT2_H
 #define __EXT2_H
 
-#include <types.h>
-
 /** Ext2 filesystem magic number. */
 #define EXT2_MAGIC		0xEF53
 
@@ -133,6 +131,10 @@
 #define EXT2_FEATURE_INCOMPAT_SUPP	\
 	(EXT2_FEATURE_INCOMPAT_FILETYPE | \
 	 EXT2_FEATURE_INCOMPAT_META_BG)
+
+#ifndef __ASM__
+
+#include <types.h>
 
 /** Superblock of an Ext2 filesystem. */
 typedef struct ext2_superblock {
@@ -286,4 +288,5 @@ typedef struct ext4_extent_header {
 	uint32_t eh_generation;
 } __packed ext4_extent_header_t;
 
+#endif /* __ASM__ */
 #endif /* __EXT2_H */

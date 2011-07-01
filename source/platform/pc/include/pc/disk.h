@@ -22,6 +22,17 @@
 #ifndef __PC_DISK_H
 #define __PC_DISK_H
 
+/** INT13 function definitions. */
+#define INT13_GET_DRIVE_PARAMETERS	0x0800	/**< Get Drive Parameters. */
+#define INT13_EXT_INSTALL_CHECK		0x4100	/**< INT13 Extensions - Installation Check. */
+#define INT13_EXT_READ			0x4200	/**< INT13 Extensions - Extended Read. */
+#define INT13_EXT_GET_DRIVE_PARAMETERS	0x4800	/**< INT13 Extensions - Get Drive Parameters. */
+#define INT13_CDROM_GET_STATUS		0x4B01	/**< Bootable CD-ROM - Get Status. */
+
+#ifndef __ASM__
+
+#include <types.h>
+
 struct disk;
 
 /** Drive parameters structure. We only care about the EDD 1.x fields. */
@@ -55,13 +66,7 @@ typedef struct specification_packet {
         uint16_t device_spec;
 } __packed specification_packet_t;
 
-/** INT13 function definitions. */
-#define INT13_GET_DRIVE_PARAMETERS	0x0800	/**< Get Drive Parameters. */
-#define INT13_EXT_INSTALL_CHECK		0x4100	/**< INT13 Extensions - Installation Check. */
-#define INT13_EXT_READ			0x4200	/**< INT13 Extensions - Extended Read. */
-#define INT13_EXT_GET_DRIVE_PARAMETERS	0x4800	/**< INT13 Extensions - Get Drive Parameters. */
-#define INT13_CDROM_GET_STATUS		0x4B01	/**< Bootable CD-ROM - Get Status. */
-
 extern uint8_t bios_disk_id(struct disk *disk);
 
+#endif /* __ASM__ */
 #endif /* __PC_DISK_H */

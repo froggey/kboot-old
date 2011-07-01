@@ -30,7 +30,7 @@ sources = map(File, [
 ])
 
 # Build the stage 1 loaders.
-stage1s = ['cdboot', 'pxeboot']
+stage1s = ['cdboot', 'ext2boot', 'pxeboot']
 for f in stage1s:
 	env.Program('stage1/%s.elf' % (f), 'stage1/%s.S' % (f), LIBS = [], LINKFLAGS = env['LINKFLAGS'] + [
 		'-Wl,-T,${SOURCE.srcdir}/stage1.ld',
