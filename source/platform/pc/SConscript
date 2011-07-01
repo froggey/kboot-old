@@ -32,12 +32,12 @@ sources = map(File, [
 # Build the stage 1 loaders.
 stage1s = ['cdboot', 'pxeboot']
 for f in stage1s:
-	env.Program('%s.elf' % (f), '%s.S' % (f), LIBS = [], LINKFLAGS = env['LINKFLAGS'] + [
-		'-Wl,-T,source/platform/pc/stage1.ld',
+	env.Program('stage1/%s.elf' % (f), 'stage1/%s.S' % (f), LIBS = [], LINKFLAGS = env['LINKFLAGS'] + [
+		'-Wl,-T,${SOURCE.srcdir}/stage1.ld',
 		'-Wl,-N'
 	])
-	Depends('%s.elf' % (f), File('stage1.ld'))
-	target = env.Command(f, '%s.elf' % (f), Action(
+	Depends('stage1/%s.elf' % (f), File('stage1/stage1.ld'))
+	target = env.Command('stage1/%s' % (f), 'stage1/%s.elf' % (f), Action(
 		"$OBJCOPY -O binary --strip-all -R '.note.*' -R .comment $SOURCE $TARGET",
 		'$GENCOMSTR'
 	))
