@@ -94,10 +94,14 @@ static void printf_number_helper(uint64_t num, long width, long precision, int b
 	}
 
 	/* Write the number out to the temporary buffer, in reverse order. */
-	while(num != 0) {
-		tmp = (uint32_t)(num % base);
-		num /= base;
-		buffer[i++] = (flags & PRINTF_LOW_CASE) ? printf_digits_lower[tmp] : printf_digits_upper[tmp];
+	if(num == 0) {
+		buffer[i++] = '0';
+	} else {
+		while(num != 0) {
+			tmp = (uint32_t)(num % base);
+			num /= base;
+			buffer[i++] = (flags & PRINTF_LOW_CASE) ? printf_digits_lower[tmp] : printf_digits_upper[tmp];
+		}
 	}
 
 	/* Modify precision to store the number of actual digits we are going
