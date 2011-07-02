@@ -25,8 +25,8 @@
  * Since the MBR only loads 512 bytes for us, we are split into 2 sections, and
  * we load the second half early on in the main function.
  *
- * The start LBA (32-bit) of the boot partition should be written to offset 506.
- * The default value is 63, i.e. the first partition on the disk.
+ * The start LBA (32-bit) of the boot partition should be written to offset 502.
+ * The inode number of the loader itself should be written to offset 506.
  *
  * Current limitations:
  *  - Only uses INT13 Extensions. This is also the case with the loader itself,
@@ -34,6 +34,9 @@
  *  - Uses 32-bit LBAs, meaning we only support disks up to 2TB.
  *  - Assumes EXT2_DYNAMIC_REV. The loader itself requires this at the moment,
  *    if that changes we should add support for it here too.
+ *  - Only supports up to the indirect block. I doubt any greater will be
+ *    needed here, unless we have to deal with very large directories or
+ *    something.
  */
 
 #include <platform/system.h>
@@ -41,21 +44,31 @@
 
 #include "../../../fs/ext2.h"
 
-/** Various definitions. */
-#define STACK_OFFSET		0x6000		/**< Address of the stack. */
+/** Address of the stack. */
+#define STACK_OFFSET		0x6000
 
-/** Print an error message and halt . */
+/** Segment that inode data is loaded to. */
+#define LOAD_SEGMENT		(LOADER_LOAD_ADDR >> 4)
+
+/** Print a message. */
+#define PRINT(s)		\
+	movw	$s, %si; \
+	call	puts
+
+/** Print an error message and halt. */
 #define ERROR(s)		\
 	movw	$s, %si; \
-	jmp	error
+	call 	puts; \
+	hlt
+
+#define pushad			data32 pusha
+#define popad			data32 popa
 
 .section .text
 .code16
 
 /** Main function. */
 FUNCTION_START(_start)
-	cli
-
 	/* Set up the stack and other segment registers. */
 	xorw	%ax, %ax
 	movw	%ax, %ss
@@ -63,10 +76,12 @@ FUNCTION_START(_start)
 	movw	%ax, %ds
 	movw	%ax, %es
 
+	PRINT(msg_loading)
+
 	/* Save drive ID. */
 	mov	%dl, bios_drive_id
 
-	/* Read in our second half and the superblock (3 blocks total). */
+	/* Read in our second half and the superblock (3 sectors total). */
 	movb	$3, %cl
 	xorl	%eax, %eax
 	inc	%eax
@@ -76,31 +91,44 @@ FUNCTION_START(_start)
 	/* Check whether this is a valid Ext2 filesystem. */
 	movw	(superblock + EXT2_SUPERBLOCK_OFF_MAGIC), %ax
 	cmpw	$EXT2_MAGIC, %ax
-	je	1f
+	je	.Lvalid_fs
+
 	ERROR(msg_not_ext2)
-1:
+.Lvalid_fs:
 	/* Compute and save the block size. Although s_log_block_size is a
 	 * 32-bit field in the superblock, in reality it'll never even be
 	 * greater than 10, so just treat it as a byte. */
 	movl	$1024, %eax
 	movb	(superblock + EXT2_SUPERBLOCK_OFF_LOG_BLOCK_SIZE), %cl
 	shl	%cl, %eax
+	xorl	%edx, %edx
 	movl	%eax, block_size
+	movl	$512, %ecx
+	div	%ecx
+	movl	%eax, sectors_per_block
 
 	/* Compute and save the group table start LBA. */
 	movl	(superblock + EXT2_SUPERBLOCK_OFF_FIRST_DATA_BLOCK), %ecx
 	inc	%ecx
-	mul	%ecx
-	xorl	%edx, %edx
-	movl	$512, %ecx
-	div	%ecx
+	xchg	%eax, %ecx
+	mull	%ecx
 	movl	%eax, group_table_offset
 
-	/* Read the root inode. */
-	movl	$EXT2_ROOT_INO, %eax
+	/* Read in our inode. */
+	movl	inode_number, %eax
 	call	read_inode
+	movl	(inode + EXT2_INODE_OFF_SIZE), %eax
 
-	ERROR(hello)
+	/* Read in the inode data. */
+	call	read_inode_data
+
+	PRINT(msg_ok)
+
+	/* Execute the bootloader. */
+	mov	bios_drive_id, %dl
+	movl	partition_lba, %ebx
+	xorl	%ecx, %ecx
+	ljmp	$(LOADER_LOAD_ADDR >> 4), $0
 FUNCTION_END(_start)
 
 /** Read a single sector from the boot partition.
@@ -116,7 +144,7 @@ FUNCTION_END(read_disk_sector)
  * @param %eax		Start offset.
  * @param %es:%di	Destination buffer. */
 PRIVATE_FUNCTION_START(read_disk_sectors)
-	pusha
+	pushad
 
 	/* Get the real offset. */
 	add	partition_lba, %eax
@@ -137,37 +165,25 @@ PRIVATE_FUNCTION_START(read_disk_sectors)
 	movb	$0x42, %ah
 	int	$0x13
 	jc	1f
-	popa
+	popad
 	ret
 1:	ERROR(msg_read_failed)
 FUNCTION_END(read_disk_sectors)
 
-/** Display an error string on the screen and halt.
- * @param %ds:%si	String to display. */
-PRIVATE_FUNCTION_START(error)
-	cld
-1:	lodsb
-	test	%al, %al
-	jz	2f
-	movb	$0x0E, %ah
-	movw	$1, %bx
-	int	$0x10
-	jmp	1b
-2:	hlt
-FUNCTION_END(error)
-
 /** Read an inode into the inode buffer.
  * @param %eax		Inode to read. */
 PRIVATE_FUNCTION_START(read_inode)
-	pusha
+	pushad
 
 	/* Compute the group number in EAX, and inode table offset in EDX. */
 	dec	%eax
 	xorl	%edx, %edx
 	divl	(superblock + EXT2_SUPERBLOCK_OFF_INODES_PER_GROUP)
-	xchg	%eax, %edx
+	push	%eax
+	movl	%edx, %eax
 	movzxw	(superblock + EXT2_SUPERBLOCK_OFF_INODE_SIZE), %ecx
 	mul	%ecx
+	pop	%edx
 	xchg	%eax, %edx
 	push	%edx
 
@@ -198,30 +214,159 @@ PRIVATE_FUNCTION_START(read_inode)
 
 	/* Copy the inode to the inode buffer. */
 	cld
-	movzxw	(superblock + EXT2_SUPERBLOCK_OFF_INODE_SIZE), %ecx
-	mov	$inode, %edi
-	mov	$temp_buffer, %esi
-	addl	%edx, %esi
+	movw	$EXT2_INODE_SIZE, %cx
+	movw	$inode, %di
+	movw	$temp_buffer, %si
+	addw	%dx, %si
 	rep movsb
 
-	popa
+	popad
 	ret
 FUNCTION_END(read_inode)
 
+/** Read a filesystem block.
+ * @param %eax		Raw block number to read.
+ * @param %es:%di	Location to read to. */
+PRIVATE_FUNCTION_START(read_block)
+	push	%eax
+	push	%ecx
+
+	/* Check for sparse blocks (raw block number 0). */
+	test	%eax, %eax
+	jz	.Lsparse_block
+
+	/* Read sectors in from the disk. */
+	movl	sectors_per_block, %ecx
+	mul	%ecx
+	call	read_disk_sectors
+	jmp	.Lret
+.Lsparse_block:
+	push	%es
+	push	%di
+
+	/* Fill block with zeros. */
+	movl	block_size, %ecx
+	xorb	%al, %al
+	rep stosb
+
+	pop	%di
+	pop	%es
+.Lret:
+	pop	%ecx
+	pop	%eax
+	ret
+FUNCTION_END(read_block)
+
+/** Display a string on the screen.
+ * @param %ds:%si	String to display. */
+PRIVATE_FUNCTION_START(puts)
+	pushw	%ax
+	cld
+1:	lodsb
+	test	%al, %al
+	jz	2f
+	pushw	%bx
+	movb	$0x0E, %ah
+	movw	$1, %bx
+	int	$0x10
+	popw	%bx
+	jmp	1b
+2:	popw	%ax
+	ret
+FUNCTION_END(puts)
+
 /** Error strings. */
-msg_read_failed:	.asciz "Read failed"
-msg_not_ext2:		.asciz "Unrecognised FS"
-hello:			.asciz "H"
+msg_loading:		.asciz "Loading... "
+msg_read_failed:	.asciz "Read failed!\r\n"
+msg_not_ext2:		.asciz "Unrecognised FS!\r\n"
+msg_ok:			.asciz "OK\r\n"
 
 /* Pad up to the end of the first 512 bytes, with space for the partition LBA
  * and the boot signature at the end. */
-. = _start + 0x1FA
-partition_lba:		.long 63
+. = _start + 0x1F6
+partition_lba:		.long 0
+inode_number:		.long 0
 boot_signature:		.word 0xAA55
 
 second_half:
 
+/** Read all data for the inode to LOADER_LOAD_ADDR. */
+PRIVATE_FUNCTION_START(read_inode_data)
+	pushad
 
+	/* Set the new segment and start data address. */
+	push	%es
+	push	$(LOADER_LOAD_ADDR >> 4)
+	pop	%es
+	xorw	%di, %di
+
+	/* Get total inode data size, divide it by block size and increment if
+	 * there is a remainder, to get the total number of blocks we need to
+	 * read. */
+	movl	(inode + EXT2_INODE_OFF_SIZE), %eax
+	xorl	%edx, %edx
+	divl	block_size
+	test	%edx, %edx
+	jz	1f
+	inc	%eax
+1:
+	/* Read each block to the destination.
+	 * EAX = current block number, ECX = total blocks to read. */
+	xorl	%ecx, %ecx
+	xchg	%eax, %ecx
+2:	push	%eax
+	call	get_raw_block
+	call	read_block
+
+	/* Increment data buffer, handle overflowing into the next segment. */
+	addw	block_size, %di
+	jnc	3f
+	push	%es
+	addw	$0x1000, (%esp)
+	pop	%es
+3:	pop	%eax
+	inc	%eax
+	dec	%ecx
+	jnz	2b
+
+	pop	%es
+	popad
+	ret
+FUNCTION_END(read_inode_data)
+
+/** Look up a raw block number in the current inode.
+ * @param %eax		Block number.
+ * @return		Raw block number in %eax. */
+PRIVATE_FUNCTION_START(get_raw_block)
+	cmp	$EXT2_NDIR_BLOCKS, %eax
+	jae	.Lindirect
+
+	/* Raw block number is stored in the inode. */
+	shl	$2, %eax
+	movl	(inode + EXT2_INODE_OFF_BLOCK)(%eax), %eax
+	ret
+.Lindirect:
+	sub	$EXT2_NDIR_BLOCKS, %eax
+	shl	$2, %eax
+	cmp	block_size, %eax
+	jae	.Lnotsupp
+
+	/* Read in the indirect block. */
+	push	%eax
+	movl	(inode + EXT2_INODE_OFF_BLOCK + (EXT2_IND_BLOCK * 4)), %eax
+	call	read_block
+	pop	%eax
+	push	%di
+	addw	%ax, %di
+	movl	%es:(%di), %eax
+	pop	%di
+	ret
+.Lnotsupp:
+	ERROR(msg_not_implemented)
+FUNCTION_END(get_raw_block)
+
+/** More error strings. */
+msg_not_implemented:	.asciz "File too large!\r\n"
 
 /** Pad up to 1KB. */
 . = _start + 0x3FF
@@ -235,7 +380,7 @@ superblock:		.fill EXT2_SUPERBLOCK_SIZE
 /** Current inode buffer. */
 inode:			.fill EXT2_INODE_SIZE
 
-/** Temporary sector buffer. */
+/** Temporary buffer. */
 temp_buffer:		.fill 512
 
 /** Disk address packet. */
@@ -253,4 +398,5 @@ bios_drive_id:		.byte 0
 
 /** Pre-computed FS information. */
 block_size:		.long 0
+sectors_per_block:	.long 0
 group_table_offset:	.long 0

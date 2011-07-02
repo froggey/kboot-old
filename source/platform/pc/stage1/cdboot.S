@@ -130,7 +130,7 @@ FUNCTION_END(puts)
 msg_loading:		.asciz "Loading... "
 msg_info_invalid:	.asciz "Boot information is invalid!\r\n"
 msg_read_failed:	.asciz "Read failed!\r\n"
-msg_ok:			.asciz "OK!\r\n"
+msg_ok:			.asciz "OK\r\n"
 
 /** Disk address packet. */
 .align 4

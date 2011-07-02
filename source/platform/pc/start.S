@@ -38,7 +38,7 @@ FUNCTION_START(_start)
 	movw	%ax, %ds
 	movw	%ax, %es
 
-	/* Save the boot device/partition offset. */
+	/* Save the boot device/partition offset LBA. */
 	addr32 movb	%dl, (boot_device_id - LOADER_LOAD_ADDR)
 	addr32 movl	%ebx, (boot_part_offset - LOADER_LOAD_ADDR)
 	addr32 movl	%ecx, (boot_part_offset - LOADER_LOAD_ADDR) + 4
@@ -264,7 +264,7 @@ SYMBOL(loader_gdtp)
 SYMBOL(boot_device_id)
 	.byte 0
 
-/** Boot partition offset. */
+/** Boot partition offset LBA. */
 SYMBOL(boot_part_offset)
 	.quad 0
 
