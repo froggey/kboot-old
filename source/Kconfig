@@ -52,6 +52,22 @@ config KBOOT_FS_ISO9660
 endmenu
 #######
 
+############################
+menu "Partition map support"
+	depends on KBOOT_HAVE_DISK
+############################
+
+config KBOOT_PARTITION_MAP_MSDOS
+	bool "MS-DOS (MBR) partition support"
+	default y
+	help
+	  Enable support for MS-DOS/MBR partition tables. You probably want
+	  this.
+
+#######
+endmenu
+#######
+
 if PLATFORM_PC
 source "source/platform/pc/Kconfig"
 endif

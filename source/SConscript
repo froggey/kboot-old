@@ -29,7 +29,7 @@ sources = FeatureSources(config, [
 
 	'loaders/kboot.c',
 
-	('KBOOT_HAVE_DISK', 'partitions/msdos.c'),
+	('KBOOT_PARTITION_MAP_MSDOS', 'partitions/msdos.c'),
 
 	'config.c',
 	'console.c',
