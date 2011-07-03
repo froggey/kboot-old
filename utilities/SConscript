@@ -16,4 +16,7 @@
 
 Import('env')
 
+# Build kconfig.
 SConscript(dirs = ['kconfig'], exports = ['env'])
+
+Default(env.Program('installboot.c'))
