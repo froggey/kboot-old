@@ -338,6 +338,10 @@ FUNCTION_END(read_inode_data)
  * @param %eax		Block number.
  * @return		Raw block number in %eax. */
 PRIVATE_FUNCTION_START(get_raw_block)
+	/* Test for extents. */
+	testl	$EXT4_EXTENTS_FL, (inode + EXT2_INODE_OFF_FLAGS)
+	jnz	.Lnotsupp
+
 	cmp	$EXT2_NDIR_BLOCKS, %eax
 	jae	.Lindirect
 
@@ -366,7 +370,7 @@ PRIVATE_FUNCTION_START(get_raw_block)
 FUNCTION_END(get_raw_block)
 
 /** More error strings. */
-msg_not_implemented:	.asciz "File too large!\r\n"
+msg_not_implemented:	.asciz "Not implemented!\r\n"
 
 /** Pad up to 1KB. */
 . = _start + 0x3FF
