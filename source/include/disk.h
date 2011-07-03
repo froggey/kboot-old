@@ -23,6 +23,7 @@
 #define __DISK_H
 
 #include <device.h>
+#include <system.h>
 
 #if CONFIG_KBOOT_HAVE_DISK
 
@@ -47,6 +48,12 @@ typedef struct partition_map_ops {
 	 *			this type. */
 	bool (*iterate)(struct disk *disk, partition_map_iterate_cb_t cb, void *data);
 } partition_map_ops_t;
+
+/** Define a builtin partition map type. */
+#define BUILTIN_PARTITION_MAP(name) 	\
+	static partition_map_ops_t name; \
+	DEFINE_BUILTIN(BUILTIN_TYPE_PARTITION_MAP, name); \
+	static partition_map_ops_t name
 
 /** Operations for a disk device. */
 typedef struct disk_ops {

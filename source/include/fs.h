@@ -23,6 +23,7 @@
 #define __FS_H
 
 #include <disk.h>
+#include <system.h>
 
 struct mount;
 struct file_handle;
@@ -74,6 +75,12 @@ typedef struct fs_type {
 	bool (*iterate)(struct file_handle *handle, dir_iterate_cb_t cb, void *arg);
 } fs_type_t;
 
+/** Define a builtin filesystem type. */
+#define BUILTIN_FS_TYPE(name) 	\
+	static fs_type_t name; \
+	DEFINE_BUILTIN(BUILTIN_TYPE_FS, name); \
+	static fs_type_t name
+
 /** Structure representing a mounted filesystem. */
 typedef struct mount {
 	fs_type_t *type;		/**< Type structure for the filesystem. */
@@ -93,9 +100,6 @@ typedef struct file_handle {
 	void *data;			/**< Implementation-specific data pointer. */
 	int count;			/**< Reference count. */
 } file_handle_t;
-
-extern fs_type_t ext2_fs_type;
-extern fs_type_t iso9660_fs_type;
 
 extern file_handle_t *file_handle_create(mount_t *mount, bool directory, void *data);
 

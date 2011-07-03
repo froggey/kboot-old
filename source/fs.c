@@ -26,19 +26,6 @@
 #include <fs.h>
 #include <memory.h>
 
-#if CONFIG_KBOOT_HAVE_DISK
-/** Array of filesystem implementations. */
-static fs_type_t *filesystem_types[] = {
-#if CONFIG_KBOOT_FS_EXT2
-	&ext2_fs_type,
-#endif
-#if CONFIG_KBOOT_FS_ISO9660
-	&iso9660_fs_type,
-#endif
-	NULL,
-};
-#endif
-
 /** Create a file handle.
  * @param path		Path to filesystem entry.
  * @param mount		Mount the entry resides on.
@@ -60,13 +47,13 @@ file_handle_t *file_handle_create(mount_t *mount, bool directory, void *data) {
  * @return		Pointer to mount if detected, NULL if not. */
 mount_t *fs_probe(disk_t *disk) {
 	mount_t *mount;
-	size_t i;
 
 	mount = kmalloc(sizeof(mount_t));
-	for(i = 0; filesystem_types[i]; i++) {
+
+	BUILTIN_ITERATE(BUILTIN_TYPE_FS, fs_type_t, type) {
 		memset(mount, 0, sizeof(mount_t));
 		mount->disk = disk;
-		mount->type = filesystem_types[i];
+		mount->type = type;
 		if(mount->type->mount(mount)) {
 			return mount;
 		}

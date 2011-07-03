@@ -104,4 +104,4 @@ static bool config_cmd_chainload(value_list_t *args, environ_t *env) {
 	loader_type_set(env, &chain_loader_type);
 	return true;
 }
-DEFINE_COMMAND("chainload", config_cmd_chainload);
+BUILTIN_COMMAND("chainload", config_cmd_chainload);

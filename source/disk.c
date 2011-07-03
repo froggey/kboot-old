@@ -27,14 +27,7 @@
 #include <memory.h>
 #include <system.h>
 
-#include "partitions/msdos.h"
-
 static void probe_disk(device_t *device);
-
-/** Array of partition map types. */
-static partition_map_ops_t *partition_map_types[] = {
-	&msdos_partition_map_ops,
-};
 
 /** Read from a disk.
  * @param disk		Disk to read from.
@@ -165,11 +158,9 @@ static void add_partition(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blo
 /** Probe a disk for filesystems/partitions.
  * @param device	Device to probe. */
 static void probe_disk(device_t *device) {
-	size_t i;
-
 	if(!(device->fs = fs_probe(device->disk))) {
-		for(i = 0; i < ARRAYSZ(partition_map_types); i++) {
-			if(partition_map_types[i]->iterate(device->disk, add_partition, device)) {
+		BUILTIN_ITERATE(BUILTIN_TYPE_PARTITION_MAP, partition_map_ops_t, type) {
+			if(type->iterate(device->disk, add_partition, device)) {
 				return;
 			}
 		}

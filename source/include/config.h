@@ -16,14 +16,16 @@
 
 /**
  * @file
- * @brief		Boot configuration system.
+ * @brief		Configuration system.
  */
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
 #include <lib/list.h>
+
 #include <fs.h>
+#include <system.h>
 
 struct value;
 struct command;
@@ -78,11 +80,12 @@ typedef struct command {
 } command_t;
 
 /** Define a command, to be automatically added to the command list. */
-#define DEFINE_COMMAND(name, func) \
-	static command_t __command_##func __section(".commands") __used = { \
+#define BUILTIN_COMMAND(name, func) \
+	static command_t __command_##func __used = { \
 		name, \
 		func \
-	}
+	}; \
+	DEFINE_BUILTIN(BUILTIN_TYPE_COMMAND, __command_##func)
 
 extern char *config_file_override;
 extern environ_t *root_environ;

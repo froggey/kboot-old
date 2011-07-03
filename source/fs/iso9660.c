@@ -392,7 +392,7 @@ static bool iso9660_iterate(file_handle_t *handle, dir_iterate_cb_t cb, void *ar
 }
 
 /** ISO9660 filesystem operations structure. */
-fs_type_t iso9660_fs_type = {
+BUILTIN_FS_TYPE(iso9660_fs_type) = {
 	.mount = iso9660_mount,
 	.close = iso9660_close,
 	.read = iso9660_read,

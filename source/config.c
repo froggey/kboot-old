@@ -51,8 +51,6 @@ typedef struct environ_entry {
 /** Character returned from get_next_char() for end-of-file. */
 #define EOF			-1
 
-extern command_t __commands_start[], __commands_end[];
-
 static void value_list_destroy(value_list_t *list);
 static value_list_t *value_list_copy(value_list_t *source);
 static command_list_t *command_list_copy(command_list_t *source);
@@ -497,11 +495,9 @@ static bool config_load(mount_t *mount, const char *path) {
  * @param env		Environment to execute command in.
  * @return		Whether successful. */
 static bool command_exec(command_list_entry_t *entry, environ_t *env) {
-	int i;
-
-	for(i = 0; i < (__commands_end - __commands_start); i++) {
-		if(strcmp(__commands_start[i].name, entry->name) == 0) {
-			return __commands_start[i].func(entry->args, env);
+	BUILTIN_ITERATE(BUILTIN_TYPE_COMMAND, command_t, command) {
+		if(strcmp(command->name, entry->name) == 0) {
+			return command->func(entry->args, env);
 		}
 	}
 
@@ -597,7 +593,7 @@ static bool config_cmd_set(value_list_t *args, environ_t *env) {
 	environ_insert(env, args->values[0].string, &args->values[1]);
 	return true;
 }
-DEFINE_COMMAND("set", config_cmd_set);
+BUILTIN_COMMAND("set", config_cmd_set);
 
 /** Set up the configuration system and load the configuration file. */
 void config_init(void) {

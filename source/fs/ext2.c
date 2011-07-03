@@ -468,7 +468,7 @@ out:
 }
 
 /** Ext2 filesystem operations structure. */
-fs_type_t ext2_fs_type = {
+BUILTIN_FS_TYPE(ext2_fs_type) = {
 	.mount = ext2_mount,
 	.close = ext2_close,
 	.read = ext2_read,

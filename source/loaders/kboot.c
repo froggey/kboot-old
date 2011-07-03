@@ -463,4 +463,4 @@ static bool config_cmd_kboot(value_list_t *args, environ_t *env) {
 	elf_note_iterate(data->kernel, add_options, data);
 	return true;
 }
-DEFINE_COMMAND("kboot", config_cmd_kboot);
+BUILTIN_COMMAND("kboot", config_cmd_kboot);

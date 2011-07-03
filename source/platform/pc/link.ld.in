@@ -49,9 +49,9 @@ SECTIONS {
 		*(.data)
 		*(.data.*)
 
-		__commands_start = .;
-		*(.commands)
-		__commands_end = .;
+		__builtins_start = .;
+		*(.builtins)
+		__builtins_end = .;
 
 		__data_end = .;
 	}
