@@ -19,7 +19,6 @@
  * @brief		ARM KBoot kernel loader.
  */
 
-#include <arch/mmu.h>
 #include <arch/page.h>
 
 #include <platform/system.h>
@@ -27,6 +26,7 @@
 #include <elf_load.h>
 #include <kboot.h>
 #include <loader.h>
+#include <mmu.h>
 
 extern mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp);
 extern void kboot_arch_enter(mmu_context_t *ctx, phys_ptr_t tags) __noreturn;
@@ -50,7 +50,7 @@ mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp) {
 	}
 
 	/* Create the MMU context. */
-	ctx = mmu_create();
+	ctx = mmu_context_create();
 
 	/* Load the kernel. */
 	load_elf_kernel(handle, ctx, &kernel_entry, physp);

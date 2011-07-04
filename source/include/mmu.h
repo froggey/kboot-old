@@ -16,20 +16,14 @@
 
 /**
  * @file
- * @brief		x86 MMU functions.
+ * @brief		MMU functions.
  */
 
-#ifndef __ARCH_MMU_H
-#define __ARCH_MMU_H
+#ifndef __MMU_H
+#define __MMU_H
 
-#include <types.h>
+#include <arch/mmu.h>
 
-/** x86 MMU context structure. */
-typedef struct mmu_context {
-	phys_ptr_t cr3;			/**< Value loaded into CR3. */
-	bool is64;			/**< Whether this is a 64-bit context. */
-} mmu_context_t;
+extern bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size_t size);
 
-extern mmu_context_t *mmu_context_create(bool is64);
-
-#endif /* __ARCH_MMU_H */
+#endif /* __MMU_H */

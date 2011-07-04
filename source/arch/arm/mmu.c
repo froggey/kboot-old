@@ -19,13 +19,13 @@
  * @brief		ARM MMU functions.
  */
 
-#include <arch/mmu.h>
 #include <arch/page.h>
 
 #include <lib/string.h>
 
 #include <assert.h>
 #include <memory.h>
+#include <mmu.h>
 #include <system.h>
 
 /** Allocate a paging structure. */
@@ -80,7 +80,7 @@ static void map_small(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys) {
  * @param phys		Physical address to map to.
  * @param size		Size of the mapping to create.
  * @return		Whether created successfully. */
-bool mmu_map(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys, size_t size) {
+bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size_t size) {
 	uint32_t i;
 
 	if(virt % PAGE_SIZE || phys % PAGE_SIZE || size % PAGE_SIZE) {
@@ -117,7 +117,7 @@ bool mmu_map(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys, size_t size) {
 
 /** Create a new MMU context.
  * @return		Pointer to context. */
-mmu_context_t *mmu_create(void) {
+mmu_context_t *mmu_context_create(void) {
 	mmu_context_t *ctx;
 
 	ctx = kmalloc(sizeof(*ctx));

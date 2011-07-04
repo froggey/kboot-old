@@ -29,7 +29,6 @@ typedef struct mmu_context {
 	phys_ptr_t ttbr0;		/**< Value loaded into TTBR0. */
 } mmu_context_t;
 
-extern bool mmu_map(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys, size_t size);
-extern mmu_context_t *mmu_create(void);
+extern mmu_context_t *mmu_context_create(void);
 
 #endif /* __ARCH_MMU_H */

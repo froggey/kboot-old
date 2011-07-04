@@ -67,4 +67,9 @@ typedef unsigned long ptr_t;
 /** Integer type that can represent a physical address. */
 typedef uint64_t phys_ptr_t;
 
+/** Integer type that can represent a pointer on the loaded system.
+ * @note		64-bit as we support both 32- and 64-bit kernels. */
+typedef uint64_t target_ptr_t;
+typedef uint64_t target_size_t;
+
 #endif /* __ARCH_TYPES_H */

@@ -19,7 +19,6 @@
  * @brief		x86 MMU functions.
  */
 
-#include <arch/mmu.h>
 #include <arch/page.h>
 
 #include <x86/cpu.h>
@@ -29,6 +28,7 @@
 
 #include <assert.h>
 #include <memory.h>
+#include <mmu.h>
 #include <system.h>
 
 /** Allocate a paging structure. */
@@ -237,7 +237,7 @@ static bool mmu_map32(mmu_context_t *ctx, uint32_t virt, uint32_t phys, uint32_t
  * @param phys		Physical address to map to.
  * @param size		Size of the mapping to create.
  * @return		Whether created successfully. */
-bool mmu_map(mmu_context_t *ctx, uint64_t virt, phys_ptr_t phys, uint64_t size) {
+bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size_t size) {
 	if(virt % PAGE_SIZE || phys % PAGE_SIZE || size % PAGE_SIZE) {
 		return false;
 	}
@@ -257,7 +257,7 @@ bool mmu_map(mmu_context_t *ctx, uint64_t virt, phys_ptr_t phys, uint64_t size) 
 
 /** Create a new MMU context.
  * @param is64		Whether to create a 64-bit context. */
-mmu_context_t *mmu_create(bool is64) {
+mmu_context_t *mmu_context_create(bool is64) {
 	mmu_context_t *ctx;
 
 	ctx = kmalloc(sizeof(*ctx));

@@ -23,7 +23,6 @@
 #define __ELF_LOAD_H
 
 #include <arch/endian.h>
-#include <arch/mmu.h>
 
 #include <lib/string.h>
 #include <lib/utility.h>
@@ -31,6 +30,7 @@
 #include <elf.h>
 #include <fs.h>
 #include <memory.h>
+#include <mmu.h>
 #include <system.h>
 
 #ifdef LITTLE_ENDIAN

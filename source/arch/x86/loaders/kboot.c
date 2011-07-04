@@ -21,13 +21,12 @@
  * @todo		Only use large pages if supported.
  */
 
-#include <arch/mmu.h>
-
 #include <x86/cpu.h>
 
 #include <elf_load.h>
 #include <fs.h>
 #include <kboot.h>
+#include <mmu.h>
 #include <system.h>
 
 extern mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp);
@@ -76,7 +75,7 @@ static mmu_context_t *kboot_arch_load64(file_handle_t *handle, phys_ptr_t *physp
 	}
 
 	/* Create the MMU context. */
-	ctx = mmu_create(true);
+	ctx = mmu_context_create(true);
 
 	/* Load the kernel. */
 	load_elf64_kernel(handle, ctx, &kernel_entry64, physp);
@@ -94,7 +93,7 @@ static mmu_context_t *kboot_arch_load32(file_handle_t *handle, phys_ptr_t *physp
 	mmu_context_t *ctx;
 
 	/* Create the MMU context. */
-	ctx = mmu_create(false);
+	ctx = mmu_context_create(false);
 
 	/* Load the kernel. */
 	load_elf32_kernel(handle, ctx, &kernel_entry32, physp);
