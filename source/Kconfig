@@ -14,14 +14,6 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-config DEBUG
-	bool "Debug build"
-	default y
-	help
-	  Enable various sections of debugging code and extra checks. This will
-	  increase the size of the final loader binaries, so don't enable it
-	  unless necessary.
-
 config KBOOT_UI
 	bool "Menu/configuration interface"
 	default y
