@@ -61,8 +61,8 @@ endmenu
 #######
 
 if PLATFORM_PC
-source "source/platform/pc/Kconfig"
+source "platform/pc/Kconfig"
 endif
 if PLATFORM_OMAP3
-source "source/platform/omap3/Kconfig"
+source "platform/omap3/Kconfig"
 endif
