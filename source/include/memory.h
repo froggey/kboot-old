@@ -31,7 +31,7 @@
 #define PHYS_MEMORY_RECLAIMABLE	KBOOT_MEMORY_RECLAIMABLE
 #define PHYS_MEMORY_RESERVED	KBOOT_MEMORY_RESERVED
 #define PHYS_MEMORY_UNUSABLE	KBOOT_MEMORY_UNUSABLE
-#define PHYS_MEMORY_INTERNAL	4
+#define PHYS_MEMORY_INTERNAL	5
 
 extern void *kmalloc(size_t size);
 extern void *krealloc(void *addr, size_t size);
