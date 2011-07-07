@@ -49,7 +49,7 @@ sources = FeatureSources(config, [
 # not the source tree).
 env['CPPPATH'] = [
 	Dir('include'),
-	Dir('arch/%s/include' % (config['ARCH'])),
+	Dir('arch/%s/include' % (config['SRCARCH'])),
 	Dir('platform/%s/include' % (config['PLATFORM'])),
 ]
 env['CCFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config['PLATFORM'])]
