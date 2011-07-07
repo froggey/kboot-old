@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env')
+Import('env', 'defaults')
 
 sources = map(File, [
 	'loaders/chainload.c',
@@ -41,7 +41,7 @@ for f in stage1s:
 		"$OBJCOPY -O binary --strip-all -R '.note.*' -R .comment $SOURCE $TARGET",
 		'$GENCOMSTR'
 	))
-	Default(target)
+	defaults.append(target)
 
 # Set the linker script path.
 env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')

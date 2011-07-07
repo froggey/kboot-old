@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env', 'config')
+Import('env', 'config', 'defaults')
 from util import FeatureSources
 
 # List of our own sources.
@@ -56,8 +56,8 @@ env['CCFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config[
 env['ASFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config['PLATFORM'])]
 
 # Get the list of source files from the architecture/platform.
-arch_sources = SConscript(dirs = ['arch/' + config['SRCARCH']], exports = ['env'])
-platform_sources = SConscript(dirs = ['platform/' + config['PLATFORM']], exports = ['env'])
+arch_sources = SConscript(dirs = ['arch/' + config['SRCARCH']], exports = ['env', 'defaults'])
+platform_sources = SConscript(dirs = ['platform/' + config['PLATFORM']], exports = ['env', 'defaults'])
 sources = arch_sources + platform_sources + sources
 
 # Link the bootloader.
@@ -71,4 +71,4 @@ target = env.Command(['loader', 'loader.lst', 'loader.rde', 'loader.sym'], 'load
 	Action('$READELF -a $SOURCE > ${TARGETS[2]}', None),
 	Action('$NM -C $SOURCE | sort > ${TARGETS[3]}', None),
 ])
-Default(target)
+defaults.append(target)

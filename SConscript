@@ -14,7 +14,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('config', 'dirs', 'env')
+Import('config', 'dirs', 'env', 'defaults')
 
 # Generate the configuration header. We don't generate with Kconfig because its
 # too much of a pain to get SCons to do it properly.
@@ -29,4 +29,4 @@ for (k, v) in config.items():
                 raise Exception, "Unsupported type %s in config" % (type(v))
 f.close()
 
-SConscript(dirs = dirs, exports = ['env'])
+SConscript(dirs = dirs, exports = ['env', 'defaults'])

@@ -60,9 +60,13 @@ host_env = env.Clone()
 host_env['CCFLAGS'] = ['-pipe']
 host_env['CFLAGS'] = ['-std=gnu99']
 
+# Don't use the Default function for compatibility with the main Kiwi
+# build system.
+defaults = []
+
 # Build host system utilities.
 SConscript('SConscript', variant_dir = os.path.join('build', 'host'),
-	exports = {'env': host_env, 'dirs': ['utilities']})
+	exports = {'env': host_env, 'dirs': ['utilities'], 'defaults': defaults})
 
 # Add targets to run the configuration interface.
 Alias('config', host_env.ConfigMenu('__config', ['Kconfig']))
@@ -117,4 +121,6 @@ env['ASFLAGS'] += ['-isystem', incdir]
 Decider('MD5-timestamp')
 
 SConscript('SConscript', variant_dir = os.path.join('build', '%s-%s' % (config['ARCH'], config['PLATFORM'])),
-	exports = {'env': env, 'dirs': ['source', 'test']})
+	exports = {'env': env, 'dirs': ['source', 'test'], 'defaults': defaults})
+
+Default(defaults)
