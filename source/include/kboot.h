@@ -84,6 +84,7 @@ typedef struct kboot_tag_memory {
 #define KBOOT_MEMORY_ALLOCATED		1	/**< Allocated memory. */
 #define KBOOT_MEMORY_RECLAIMABLE	2	/**< Memory reclaimable when boot information is no longer needed. */
 #define KBOOT_MEMORY_RESERVED		3	/**< Reserved memory, never usable. */
+#define KBOOT_MEMORY_UNUSABLE		4	/**< Memory in which errors were found. Not usable. */
 
 /** Tag describing a boot module. */
 typedef struct kboot_tag_module {

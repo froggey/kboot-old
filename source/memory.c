@@ -232,6 +232,9 @@ static void phys_memory_dump(void) {
 		case PHYS_MEMORY_RESERVED:
 			dprintf("Reserved\n");
 			break;
+		case PHYS_MEMORY_UNUSABLE:
+			dprintf("Unusable\n");
+			break;
 		case PHYS_MEMORY_INTERNAL:
 			dprintf("Internal\n");
 			break;
