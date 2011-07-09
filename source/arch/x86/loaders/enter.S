@@ -26,6 +26,8 @@
 
 #include <platform/system.h>
 
+#include <kboot.h>
+
 .section .text, "ax", @progbits
 
 /** Enter a 64-bit KBoot kernel.
@@ -72,7 +74,8 @@ FUNCTION_START(kboot_arch_enter64)
         mov     %esp, %esp
 
 	/* Retreive the tag list address and entry point. */
-	movq	4(%rsp), %rdi
+	movq	$KBOOT_MAGIC, %rdi
+	movq	4(%rsp), %rsi
 	movq	16(%rsp), %rax
 
 	/* Set the stack pointer to the top of the stack. */
@@ -108,7 +111,7 @@ FUNCTION_START(kboot_arch_enter32)
 	orl	$X86_CR0_PG, %ecx
 	movl	%ecx, %cr0
 
-	/* Retreive the tag list address and entry point. */
+	/* Retreive the tag list address (phys_ptr_t, 64-bit) and entry point. */
 	movl	4(%esp), %edi
 	movl	8(%esp), %esi
 	movl	16(%esp), %eax
@@ -125,5 +128,6 @@ FUNCTION_START(kboot_arch_enter32)
 	/* Call the kernel. */
 	push	%esi
 	push	%edi
+	push	$KBOOT_MAGIC
 	call	*%eax
 FUNCTION_END(kboot_arch_enter32)

@@ -22,13 +22,14 @@
 #include <kboot.h>
 #include <system.h>
 
-extern void kmain(phys_ptr_t tags);
+extern void kmain(uint32_t magic, phys_ptr_t tags);
 
 KBOOT_IMAGE(0);
 
 /** Entry point of the test kernel.
+ * @param magic		KBoot magic number.
  * @param tags		Tag list address. */
-void kmain(phys_ptr_t tags) {
-	kprintf("Hello World!\n");
+void kmain(uint32_t magic, phys_ptr_t tags) {
+	kprintf("Hello World! magic: %x, tags: %x\n", magic, tags);
 	while(1);
 }

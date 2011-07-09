@@ -29,6 +29,11 @@
 #ifndef __KBOOT_H
 #define __KBOOT_H
 
+/** Magic number passed to the entry point of a KBoot kernel. */
+#define KBOOT_MAGIC			0xB007CAFE
+
+#ifndef __ASM__
+
 #include <types.h>
 
 /** KBoot information tag header structure. */
@@ -235,4 +240,5 @@ typedef struct kboot_itag_mapping {
 		"   .popsection\n" \
 	)
 
+#endif /* __ASM__ */
 #endif /* __KBOOT_H */
