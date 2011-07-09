@@ -18,7 +18,7 @@
 warning_flags = [
         '-Wall', '-Wextra', '-Werror', '-Wno-variadic-macros',
         '-Wno-unused-parameter', '-Wwrite-strings', '-Wmissing-declarations',
-        '-Wredundant-decls', '-Wno-format',
+        '-Wredundant-decls', '-Wno-format', '-Wno-unused-but-set-variable',
 ]
 
 import os, sys, SCons.Errors
