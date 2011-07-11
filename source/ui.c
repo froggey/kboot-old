@@ -717,7 +717,9 @@ static input_result_t ui_textbox_editor_input(ui_window_t *window, uint16_t key)
 
 		ch = key & 0xFF;
 		if(ch == '\b') {
-			textbox_edit_len--;
+			if(textbox_edit_len) {
+				textbox_edit_len--;
+			}
 		} else if(textbox_edit_len < ARRAYSZ(textbox_edit_buf)) {
 			textbox_edit_buf[textbox_edit_len++] = ch;
 		}
