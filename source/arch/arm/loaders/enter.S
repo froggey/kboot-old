@@ -55,7 +55,7 @@ FUNCTION_START(kboot_arch_enter_real)
 	isb
 
 	/* Call the kernel. */
-	mov	r0, r1
+	mov	r1, r0
 	ldr	r0, =KBOOT_MAGIC
 	mov	pc, r2
 FUNCTION_END(kboot_arch_enter_real)
