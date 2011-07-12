@@ -27,6 +27,9 @@
  * @param ttbr0		Address to load into TTBR0.
  * @param entry		Kernel entry point. */
 FUNCTION_START(kboot_arch_enter_real)
+	/* Ensure that IRQs/FIQs are disabled. */
+	cpsid	if
+
 	/* Write the first level descriptor table address to TTBR0. */
 	mcr	p15, 0, r1, c2, c0, 0
 
