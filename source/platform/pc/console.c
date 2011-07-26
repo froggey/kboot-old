@@ -289,12 +289,11 @@ static console_t pc_console = {
 /** Write a character to the serial console.
  * @param ch		Character to write. */
 static void serial_console_putch(char ch) {
-	while(!(in8(SERIAL_PORT + 5) & 0x20));
 	if(ch == '\n') {
-		while(!(in8(SERIAL_PORT + 5) & 0x20));
-		out8(SERIAL_PORT, '\r');
+		serial_console_putch('\r');
 	}
 	out8(SERIAL_PORT, ch);
+	while(!(in8(SERIAL_PORT + 5) & 0x20));
 }
 
 /** Debug console. */
@@ -318,6 +317,10 @@ void console_init(void) {
 		out8(SERIAL_PORT + 3, 0x03);  /* 8 bits, no parity, one stop bit */
 		out8(SERIAL_PORT + 2, 0xC7);  /* Enable FIFO, clear them, with 14-byte threshold */
 		out8(SERIAL_PORT + 4, 0x0B);  /* IRQs enabled, RTS/DSR set */
+
+		/* Wait for transmit to be empty. */
+		while(!(in8(SERIAL_PORT + 5) & 0x20));
+
 		debug_console = &serial_console;
 	}
 #endif
