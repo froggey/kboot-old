@@ -41,4 +41,7 @@
 #define OMAP3_UART2_BASE	(OMAP3_L4_BASE + 0x6C000)
 #define OMAP3_UART3_BASE	(OMAP3_L4_PER_BASE + 0x20000)
 
+/** DSS base address. */
+#define OMAP3_DSS_BASE		(OMAP3_L4_BASE + 0x50400)
+
 #endif /* __OMAP3_OMAP3_H */
