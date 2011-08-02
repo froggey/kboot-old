@@ -31,5 +31,5 @@ KBOOT_IMAGE(0);
  * @param tags		Tag list address. */
 void kmain(uint32_t magic, phys_ptr_t tags) {
 	kprintf("Hello World! magic: %x, tags: %x\n", magic, tags);
-	while(1);
+	while(true);
 }
