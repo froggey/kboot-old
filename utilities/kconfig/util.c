@@ -37,7 +37,7 @@ struct file *file_lookup(FILE *stream, const char *name)
 
 	/* Work out the directory path. */
 	tmp = strdup(name);
-	file->dirfd = open(dirname(tmp), O_DIRECTORY | O_RDONLY);
+	file->dirfd = open(dirname(tmp), O_RDONLY);
 	if (file->dirfd < 0) {
 		perror("open");
 		exit(1);
