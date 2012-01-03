@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011 Alex Smith
+# Copyright (C) 2011-2012 Alex Smith
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -14,9 +14,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env', 'defaults')
+Import('env', 'defaults', 'config')
+from util import FeatureSources
 
-sources = map(File, [
+sources = FeatureSources(config, [
 	'loaders/chainload.c',
 	'loaders/enter.S',
 	'bios.S',
@@ -30,7 +31,9 @@ sources = map(File, [
 ])
 
 # Build the stage 1 loaders.
-stage1s = ['cdboot', 'ext2boot', 'pxeboot']
+stage1s = ['cdboot', 'pxeboot']
+if config['KBOOT_FS_EXT2']:
+	stage1s += ['ext2boot']
 for f in stage1s:
 	env.Program('stage1/%s.elf' % (f), 'stage1/%s.S' % (f), LIBS = [], LINKFLAGS = env['LINKFLAGS'] + [
 		'-Wl,-T,${SOURCE.srcdir}/stage1.ld',
