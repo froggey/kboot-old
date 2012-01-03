@@ -42,19 +42,40 @@ extern void chain_loader_enter(uint8_t id, ptr_t part) __noreturn;
  * @param env		Environment for the OS. */
 static void __noreturn chain_loader_load(environ_t *env) {
 	ptr_t part_addr = 0;
+	file_handle_t *file;
 	bios_regs_t regs;
 	disk_t *parent;
 	uint8_t id;
+	char *path;
 
-	/* Get the ID of the disk we're booting from.
-	 * FIXME: What if this isn't a disk? */
+	if(!current_device->disk) {
+		boot_error("Cannot chainload from non-disk device");
+	}
+
+	path = loader_data_get(env);
+	if(path) {
+		/* Loading from a file. */
+		file = file_open(path);
+		if(!file) {
+			boot_error("Could not read boot file");
+		}
+
+		/* Read in the boot sector. */
+		if(!file_read(file, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0)) {
+			boot_error("Could not read boot sector");
+		}
+
+		file_close(file);
+	} else {
+		/* Loading the boot sector from the disk. */
+		if(!disk_read(current_device->disk, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0)) {
+			boot_error("Could not read boot sector");
+		}
+	}
+
+	/* Get the ID of the disk we're booting from. */
 	id = bios_disk_id(current_device->disk);
 	dprintf("loader: chainloading from device %s (id: 0x%x)\n", current_device->name, id);
-
-	/* Load the boot sector. */
-	if(!disk_read(current_device->disk, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0)) {
-		boot_error("Could not read boot sector");
-	}
 
 	/* If booting a partition, we must give partition information to it. */
 	if((parent = disk_parent(current_device->disk)) != current_device->disk) {
@@ -96,12 +117,24 @@ static loader_type_t chain_loader_type = {
  * @param env		Environment to use.
  * @return		Whether successful. */
 static bool config_cmd_chainload(value_list_t *args, environ_t *env) {
-	if(args->count != 0) {
+	char *path = NULL;
+
+	if(args->count != 0 && args->count != 1) {
 		dprintf("config: chainload: invalid arguments\n");
 		return false;
 	}
 
+	if(args->count == 1) {
+		if(args->values[0].type != VALUE_TYPE_STRING) {
+			dprintf("config: chainload: invalid arguments\n");
+			return false;
+		}
+
+		path = kstrdup(args->values[0].string);
+	}
+
 	loader_type_set(env, &chain_loader_type);
+	loader_data_set(env, path);
 	return true;
 }
 BUILTIN_COMMAND("chainload", config_cmd_chainload);
