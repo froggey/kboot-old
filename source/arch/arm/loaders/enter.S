@@ -57,6 +57,10 @@ FUNCTION_START(kboot_arch_enter_real)
 	/* Ensure that changes made are visible to any following instructions. */
 	isb
 
+	/* Clear the stack frame pointer (R11), in case the kernel is using the
+	 * APCS stack backtrace method. */
+	mov	fp, #0
+
 	/* Call the kernel. */
 	mov	r1, r0
 	ldr	r0, =KBOOT_MAGIC
