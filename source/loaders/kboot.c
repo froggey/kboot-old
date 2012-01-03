@@ -135,7 +135,7 @@ static void load_module_list(kboot_data_t *data, value_list_t *list) {
 	size_t i;
 
 	for(i = 0; i < list->count; i++) {
-		handle = file_open(NULL, list->values[i].string);
+		handle = file_open(list->values[i].string);
 		if(!handle) {
 			boot_error("Could not open module %s", list->values[i].string);
 		}
@@ -161,7 +161,7 @@ static bool load_modules_cb(const char *name, file_handle_t *handle, void *arg) 
 static void load_module_dir(kboot_data_t *data, const char *path) {
 	file_handle_t *handle;
 
-	if(!(handle = file_open(NULL, path))) {
+	if(!(handle = file_open(path))) {
 		boot_error("Could not find module directory %s", path);
 	} else if(!handle->directory) {
 		boot_error("Module directory %s not directory", path);
@@ -453,7 +453,7 @@ static bool config_cmd_kboot(value_list_t *args, environ_t *env) {
 #endif
 
 	/* Open the kernel image. */
-	data->kernel = file_open(NULL, args->values[0].string);
+	data->kernel = file_open(args->values[0].string);
 	if(!data->kernel) {
 		/* The error will be reported when the user tries to boot. */
 		return true;

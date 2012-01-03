@@ -88,18 +88,16 @@ static bool file_open_cb(const char *name, file_handle_t *handle, void *_data) {
 }
 
 /** Open a handle to a file/directory.
- * @param mount		Mount to open from. If NULL, current device will be used.
- * @param path		Path to entry to open.
+ * @param path		Path to entry on the current device to open.
  * @return		Pointer to handle on success, NULL on failure. */
-file_handle_t *file_open(mount_t *mount, const char *path) {
+file_handle_t *file_open(const char *path) {
 	char *dup, *orig, *tok;
 	file_open_data_t data;
 	file_handle_t *handle;
+	mount_t *mount;
 
-	if(!mount) {
-		if(!(mount = current_device->fs)) {
-			return NULL;
-		}
+	if(!(mount = current_device->fs)) {
+		return NULL;
 	}
 
 	/* Use the provided open() implementation if any. */

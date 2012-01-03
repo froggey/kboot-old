@@ -462,16 +462,15 @@ static bool config_parse(const char *buf, const char *path) {
 }
 
 /** Load a configuration file.
- * @param mount		Mount that the file is on.
  * @param path		Path of the file.
  * @return		Whether the file was loaded successfully. */
-static bool config_load(mount_t *mount, const char *path) {
+static bool config_load(const char *path) {
 	file_handle_t *handle;
 	size_t size;
 	char *buf;
 	bool ret;
 
-	if(!(handle = file_open(mount, path))) {
+	if(!(handle = file_open(path))) {
 		return false;
 	}
 
@@ -603,13 +602,13 @@ void config_init(void) {
 	root_environ = environ_create();
 
 	if(config_file_override) {
-		if(!config_load(NULL, config_file_override)) {
+		if(!config_load(config_file_override)) {
 			boot_error("Specified configuration file does not exist");
 		}
 	} else {
 		/* Try the various paths. */
 		for(i = 0; i < ARRAYSZ(config_file_paths); i++) {
-			if(config_load(NULL, config_file_paths[i])) {
+			if(config_load(config_file_paths[i])) {
 				return;
 			}
 		}

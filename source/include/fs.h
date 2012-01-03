@@ -107,7 +107,7 @@ extern file_handle_t *file_handle_create(mount_t *mount, bool directory, void *d
 extern mount_t *fs_probe(disk_t *disk);
 #endif
 
-extern file_handle_t *file_open(mount_t *mount, const char *path);
+extern file_handle_t *file_open(const char *path);
 extern void file_close(file_handle_t *handle);
 extern bool file_read(file_handle_t *handle, void *buf, size_t count, offset_t offset);
 extern offset_t file_size(file_handle_t *handle);
