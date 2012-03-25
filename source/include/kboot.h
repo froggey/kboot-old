@@ -36,9 +36,18 @@
 
 #include <types.h>
 
+/** Type used to store a physical address. */
+#if defined(__x86_64__) || defined(__i386__)
+typedef uint64_t kboot_paddr_t;
+#elif defined(__arm__)
+typedef uint32_t kboot_paddr_t;
+#else
+# error "Unsupported architecture"
+#endif
+
 /** KBoot information tag header structure. */
 typedef struct kboot_tag {
-	phys_ptr_t next;			/**< Address of next tag, 0 if last tag. */
+	kboot_paddr_t next;			/**< Address of next tag, 0 if last tag. */
 	uint32_t type;				/**< Type of the tag. */
 	uint32_t size;				/**< Total size of the tag data. */
 } __packed kboot_tag_t;
@@ -55,7 +64,7 @@ typedef struct kboot_tag {
 typedef struct kboot_tag_core {
 	kboot_tag_t header;			/**< Tag header. */
 
-	phys_ptr_t kernel_phys;			/**< Physical address of the kernel image. */
+	kboot_paddr_t kernel_phys;			/**< Physical address of the kernel image. */
 } __packed kboot_tag_core_t;
 
 /** Maximum length of fields in the option tag. */
@@ -79,8 +88,8 @@ typedef struct kboot_tag_option {
 typedef struct kboot_tag_memory {
 	kboot_tag_t header;			/**< Tag header. */
 
-	phys_ptr_t start;			/**< Start of the memory range. */
-	phys_ptr_t end;				/**< End of the memory range. */
+	kboot_paddr_t start;			/**< Start of the memory range. */
+	kboot_paddr_t end;			/**< End of the memory range. */
 	uint32_t type;				/**< Type of the memory range. */
 } __packed kboot_tag_memory_t;
 
@@ -95,7 +104,7 @@ typedef struct kboot_tag_memory {
 typedef struct kboot_tag_module {
 	kboot_tag_t header;			/**< Tag header. */
 
-	phys_ptr_t addr;			/**< Address of the module. */
+	kboot_paddr_t addr;			/**< Address of the module. */
 	uint32_t size;				/**< Size of the module. */
 } __packed kboot_tag_module_t;
 
@@ -116,7 +125,7 @@ typedef struct kboot_tag_lfb {
 	uint16_t width;				/**< Width of the display. */
 	uint16_t height;			/**< Height of the display. */
 	uint8_t depth;				/**< Bits per pixel. */
-	phys_ptr_t addr;			/**< Physical address of the framebuffer. */
+	kboot_paddr_t addr;			/**< Physical address of the framebuffer. */
 } __packed kboot_tag_lfb_t;
 
 /** KBoot ELF note name. */
