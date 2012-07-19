@@ -68,7 +68,7 @@ SECTIONS {
 	__end = .;
 
 	/DISCARD/ : {
-		*(.note.GNU-stack)
+		*(.note.*)
 		*(.comment*)
 		*(.eh_frame*)
 	}

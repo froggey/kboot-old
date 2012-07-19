@@ -61,7 +61,10 @@ platform_sources = SConscript(dirs = ['platform/' + config['PLATFORM']], exports
 sources = arch_sources + platform_sources + sources
 
 # Link the bootloader.
-env.Program('loader.elf', map(env.Object, sources), LINKFLAGS = env['LINKFLAGS'] + ['-Wl,-T,$LDSCRIPT'])
+env.Program('loader.elf', map(env.Object, sources), LINKFLAGS = env['LINKFLAGS'] + [
+	'-Wl,-T,$LDSCRIPT',
+	'-Wl,--build-id=none',
+])
 Depends('loader.elf', env['LDSCRIPT'])
 
 # Generate various information files and the stripped boot loader image.

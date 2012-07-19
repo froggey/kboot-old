@@ -11,7 +11,7 @@ SECTIONS {
 		*(COMMON)
 	}
 	/DISCARD/ : {
-		*(.note.GNU-stack)
+		*(.note.*)
 		*(.comment*)
 	}
 }
