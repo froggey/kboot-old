@@ -42,9 +42,9 @@ console_t *debug_console = NULL;
  * @param data		Console to use.
  * @param total		Pointer to total character count. */
 static void kvprintf_helper(char ch, void *data, int *total) {
-	if(main_console) {
+	if(main_console)
 		main_console->putch(ch);
-	}
+
 	*total = *total + 1;
 }
 
@@ -76,13 +76,14 @@ int kprintf(const char *fmt, ...) {
  * @param data		Console to use.
  * @param total		Pointer to total character count. */
 static void dvprintf_helper(char ch, void *data, int *total) {
-	if(debug_console) {
+	if(debug_console)
 		debug_console->putch(ch);
-	}
+
 	if(debug_log_offset < (DEBUG_LOG_SIZE - 1)) {
 		debug_log[debug_log_offset++] = ch;
 		debug_log[debug_log_offset] = 0;
 	}
+
 	*total = *total + 1;
 }
 

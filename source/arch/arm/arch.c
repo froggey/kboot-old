@@ -30,9 +30,8 @@ atag_t *atag_list = NULL;
 /** Perform early architecture initialisation. */
 void arch_early_init(void) {
 	/* Verify that the list is valid: it must begin with an ATAG_CORE tag. */
-	if(atag_list->hdr.tag != ATAG_CORE) {
+	if(atag_list->hdr.tag != ATAG_CORE)
 		internal_error("ATAG list is not valid (%p)", atag_list);
-	}
 
 	/* The boot image is passed to us as an initial ramdisk. */
 	ATAG_ITERATE(tag, ATAG_INITRD2) {

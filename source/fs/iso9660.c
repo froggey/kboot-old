@@ -74,9 +74,8 @@ static int utf8_wctomb(uint8_t *s, uint32_t wc, size_t max) {
 		j = 2;
 	}
 
-	if(j > max) {
+	if(j > max)
 		return -1;
-	}
 
 	*s |= (unsigned char)(wc >> bits);
 	for(k = 1; k < j; k++) {
@@ -112,6 +111,7 @@ static int wcsntombs_be(uint8_t *s, uint8_t *pwcs, int inlen, int maxlen) {
 		ip += 2;
 		inlen--;
 	}
+
 	return op - s;
 }
 
@@ -121,7 +121,8 @@ static int wcsntombs_be(uint8_t *s, uint8_t *pwcs, int inlen, int maxlen) {
 static void iso9660_parse_name(iso9660_directory_record_t *record, char *buf) {
 	uint32_t i, len;
 
-	len = (record->file_ident_len < ISO9660_MAX_NAME_LEN) ? record->file_ident_len : ISO9660_MAX_NAME_LEN;
+	len = (record->file_ident_len < ISO9660_MAX_NAME_LEN)
+		? record->file_ident_len : ISO9660_MAX_NAME_LEN;
 
 	for(i = 0; i < len; i++) {
 		if(record->file_ident[i] == ISO9660_SEPARATOR2) {
@@ -131,9 +132,8 @@ static void iso9660_parse_name(iso9660_directory_record_t *record, char *buf) {
 		}
 	}
 
-	if(i && buf[i - 1] == ISO9660_SEPARATOR1) {
+	if(i && buf[i - 1] == ISO9660_SEPARATOR1)
 		i--;
-	}
 	buf[i] = 0;
 }
 
@@ -145,15 +145,13 @@ static void iso9660_parse_joliet_name(iso9660_directory_record_t *record, char *
 		(uint8_t *)buf,
 		record->file_ident,
 		record->file_ident_len >> 1,
-		ISO9660_NAME_SIZE
-	);
-	if((len > 2) && (buf[len - 2] == ';') && (buf[len - 1] == '1')) {
-		len -= 2;
-	}
+		ISO9660_NAME_SIZE);
 
-	while(len >= 2 && (buf[len - 1] == '.')) {
+	if((len > 2) && (buf[len - 2] == ';') && (buf[len - 1] == '1'))
+		len -= 2;
+
+	while(len >= 2 && (buf[len - 1] == '.'))
 		len--;
-	}
 
 	buf[len] = 0;
 }
@@ -163,11 +161,12 @@ static void iso9660_parse_joliet_name(iso9660_directory_record_t *record, char *
  * @return		Length of string with all whitespace removed. */
 static size_t strlennospace(const char *str) {
 	size_t len = 0;
+
 	while(*str) {
-		if(!isspace(*(str++))) {
+		if(!isspace(*(str++)))
 			len++;
-		}
 	}
+
 	return len;
 }
 
@@ -179,9 +178,8 @@ static void strcpynospace(char *dest, const char *src) {
 
 	while(*src) {
 		ch = *(src++);
-		if(!isspace(ch)) {
+		if(!isspace(ch))
 			*(dest++) = ch;
-		}
 	}
 
 	*dest = 0;
@@ -231,15 +229,13 @@ static bool iso9660_mount(mount_t *mount) {
 	 * descriptors - I just put in a sane one so we don't loop for ages. */
 	buf = kmalloc(ISO9660_BLOCK_SIZE);
 	for(i = ISO9660_DATA_START; i < 128; i++) {
-		if(!disk_read(mount->disk, buf, ISO9660_BLOCK_SIZE, i * ISO9660_BLOCK_SIZE)) {
+		if(!disk_read(mount->disk, buf, ISO9660_BLOCK_SIZE, i * ISO9660_BLOCK_SIZE))
 			goto out;
-		}
 
 		/* Check that the identifier is valid. */
 		desc = (iso9660_volume_desc_t *)buf;
-		if(strncmp((char *)desc->ident, "CD001", 5) != 0) {
+		if(strncmp((char *)desc->ident, "CD001", 5) != 0)
 			goto out;
-		}
 
 		if(desc->type == ISO9660_VOL_DESC_PRIMARY) {
 			pri = kmalloc(sizeof(iso9660_primary_volume_desc_t));
@@ -269,9 +265,8 @@ static bool iso9660_mount(mount_t *mount) {
 	}
 
 	/* Check whether a descriptor was found. */
-	if(!pri) {
+	if(!pri)
 		goto out;
-	}
 
 	/* Store details of the filesystem in the mount structure. */
 	data = mount->data = kmalloc(sizeof(iso9660_mount_t));
@@ -286,9 +281,11 @@ static bool iso9660_mount(mount_t *mount) {
 	/* Retreive the root node. */
 	if(joliet) {
 		assert(sup);
-		mount->root = iso9660_handle_create(mount, (iso9660_directory_record_t *)&sup->root_dir_record);
+		mount->root = iso9660_handle_create(mount,
+			(iso9660_directory_record_t *)&sup->root_dir_record);
 	} else {
-		mount->root = iso9660_handle_create(mount, (iso9660_directory_record_t *)&pri->root_dir_record);
+		mount->root = iso9660_handle_create(mount,
+			(iso9660_directory_record_t *)&pri->root_dir_record);
 	}
 	dprintf("iso9660: mounted %s (joliet: %d, uuid: %s)\n", mount->label, joliet, mount->uuid);
 	ret = true;
@@ -324,7 +321,8 @@ static bool iso9660_read(file_handle_t *handle, void *buf, size_t count, offset_
 		return false;
 	}
 
-	return disk_read(handle->mount->disk, buf, count, (data->extent * ISO9660_BLOCK_SIZE) + offset);
+	return disk_read(handle->mount->disk, buf, count,
+		(data->extent * ISO9660_BLOCK_SIZE) + offset);
 }
 
 /** Get the size of an ISO9660 file.
@@ -367,9 +365,8 @@ static bool iso9660_iterate(file_handle_t *handle, dir_iterate_cb_t cb, void *ar
 		} else if(rec->file_flags & (1<<0)) {
 			continue;
 		} else if(rec->file_flags & (1<<1) && rec->file_ident_len == 1) {
-			if(rec->file_ident[0] == 0 || rec->file_ident[0] == 1) {
+			if(rec->file_ident[0] == 0 || rec->file_ident[0] == 1)
 				continue;
-			}
 		}
 
 		/* Parse the name based on the Joliet level. */
@@ -382,9 +379,8 @@ static bool iso9660_iterate(file_handle_t *handle, dir_iterate_cb_t cb, void *ar
 		child = iso9660_handle_create(handle->mount, rec);
 		ret = cb(name, child, arg);
 		file_close(child);
-		if(!ret) {
+		if(!ret)
 			break;
-		}
 	}
 
 	kfree(buf);

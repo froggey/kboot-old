@@ -58,7 +58,8 @@ static bool ext2_block_read(mount_t *mount, void *buf, uint32_t num) {
  * @param buf		Temporary buffer to use.
  * @return		Pointer to header for leaf, NULL on failure. */
 static ext4_extent_header_t *ext4_find_leaf(mount_t *mount, ext4_extent_header_t *header,
-                                            uint32_t block, void *buf) {
+	uint32_t block, void *buf)
+{
 	ext4_extent_idx_t *index;
 	uint16_t i;
 
@@ -72,9 +73,8 @@ static ext4_extent_header_t *ext4_find_leaf(mount_t *mount, ext4_extent_header_t
 		}
 
 		for(i = 0; i < le16_to_cpu(header->eh_entries); i++) {
-			if(block < le32_to_cpu(index[i].ei_block)) {
+			if(block < le32_to_cpu(index[i].ei_block))
 				break;
-			}
 		}
 
 		if(!i) {
@@ -107,20 +107,17 @@ static bool ext2_inode_block_get(file_handle_t *handle, uint32_t block, uint32_t
 	if(le32_to_cpu(inode->i_flags) & EXT4_EXTENTS_FL) {
 		buf = kmalloc(mount->block_size);
 		header = ext4_find_leaf(handle->mount, (ext4_extent_header_t *)inode->i_block, block, buf);
-		if(!header) {
+		if(!header)
 			goto out;
-		}
 
 		extent = (ext4_extent_t *)&header[1];
 		for(i = 0; i < le16_to_cpu(header->eh_entries); i++) {
-			if(block < le32_to_cpu(extent[i].ee_block)) {
+			if(block < le32_to_cpu(extent[i].ee_block))
 				break;
-			}
 		}
 
-		if(!i) {
+		if(!i)
 			goto out;
-		}
 
 		block -= le32_to_cpu(extent[i - 1].ee_block);
 		if(block >= le16_to_cpu(extent[i - 1].ee_len)) {
@@ -199,15 +196,9 @@ static bool ext2_inode_block_get(file_handle_t *handle, uint32_t block, uint32_t
 		goto out;
 	}
 out:
-	if(bi_block) {
-		kfree(bi_block);
-	}
-	if(i_block) {
-		kfree(i_block);
-	}
-	if(buf) {
-		kfree(buf);
-	}
+	kfree(bi_block);
+	kfree(i_block);
+	kfree(buf);
 	return ret;
 }
 
@@ -305,25 +296,23 @@ static bool ext2_mount(mount_t *mount) {
 	offset = data->block_size * (le32_to_cpu(data->sb.s_first_data_block) + 1);
 	size = ROUND_UP(data->block_groups * sizeof(ext2_group_desc_t), data->block_size);
 	data->group_tbl = kmalloc(size);
-	if(!disk_read(mount->disk, data->group_tbl, size, offset)) {
+	if(!disk_read(mount->disk, data->group_tbl, size, offset))
 		goto fail;
-	}
 
 	/* Now get the root inode (second inode in first group descriptor) */
-	if(!(mount->root = ext2_inode_get(mount, EXT2_ROOT_INO))) {
+	if(!(mount->root = ext2_inode_get(mount, EXT2_ROOT_INO)))
 		goto fail;
-	}
 
 	/* Store label and UUID. */
 	mount->label = kstrdup(data->sb.s_volume_name);
 	mount->uuid = kmalloc(37);
 	sprintf(mount->uuid, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-	        data->sb.s_uuid[0], data->sb.s_uuid[1], data->sb.s_uuid[2],
-	        data->sb.s_uuid[3], data->sb.s_uuid[4], data->sb.s_uuid[5],
-	        data->sb.s_uuid[6], data->sb.s_uuid[7], data->sb.s_uuid[8],
-	        data->sb.s_uuid[9], data->sb.s_uuid[10], data->sb.s_uuid[11],
-	        data->sb.s_uuid[12], data->sb.s_uuid[13], data->sb.s_uuid[14],
-	        data->sb.s_uuid[15]);
+		data->sb.s_uuid[0], data->sb.s_uuid[1], data->sb.s_uuid[2],
+		data->sb.s_uuid[3], data->sb.s_uuid[4], data->sb.s_uuid[5],
+		data->sb.s_uuid[6], data->sb.s_uuid[7], data->sb.s_uuid[8],
+		data->sb.s_uuid[9], data->sb.s_uuid[10], data->sb.s_uuid[11],
+		data->sb.s_uuid[12], data->sb.s_uuid[13], data->sb.s_uuid[14],
+		data->sb.s_uuid[15]);
 
 	dprintf("ext2: mounted %s (uuid: %s)\n", mount->label, mount->uuid);
 	return true;
@@ -351,9 +340,8 @@ static bool ext2_read(file_handle_t *handle, void *buf, size_t count, offset_t o
 	void *block = NULL;
 
 	/* Allocate a temporary buffer for partial transfers if required. */
-	if(offset % blksize || count % blksize) {
+	if(offset % blksize || count % blksize)
 		block = kmalloc(blksize);
-	}
 
 	/* Now work out the start block and the end block. Subtract one from
 	 * count to prevent end from going onto the next block when the offset
@@ -381,9 +369,7 @@ static bool ext2_read(file_handle_t *handle, void *buf, size_t count, offset_t o
 	for(i = 0; i < size; i++, buf += blksize, count -= blksize, start++) {
 		/* Read directly into the destination buffer. */
 		if(!ext2_inode_block_read(handle, buf, start)) {
-			if(block) {
-				kfree(block);
-			}
+			kfree(block);
 			return false;
 		}
 	}
@@ -398,9 +384,7 @@ static bool ext2_read(file_handle_t *handle, void *buf, size_t count, offset_t o
 		memcpy(buf, block, count);
 	}
 
-	if(block) {
-		kfree(block);
-	}
+	kfree(block);
 	return true;
 }
 
@@ -430,9 +414,8 @@ static bool ext2_iterate(file_handle_t *handle, dir_iterate_cb_t cb, void *arg) 
 	name = kmalloc(EXT2_NAME_MAX + 1);
 
 	/* Read in all the directory entries required. */
-	if(!ext2_read(handle, buf, le32_to_cpu(inode->i_size), 0)) {
+	if(!ext2_read(handle, buf, le32_to_cpu(inode->i_size), 0))
 		goto out;
-	}
 
 	while(current < le32_to_cpu(inode->i_size)) {
 		dirent = (ext2_dirent_t *)(buf + current);
@@ -458,12 +441,8 @@ static bool ext2_iterate(file_handle_t *handle, dir_iterate_cb_t cb, void *arg) 
 
 	ret = true;
 out:
-	if(buf) {
-		kfree(buf);
-	}
-	if(name) {
-		kfree(name);
-	}
+	kfree(buf);
+	kfree(name);
 	return ret;
 }
 

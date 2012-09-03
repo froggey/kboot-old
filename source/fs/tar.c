@@ -48,25 +48,21 @@ static void iterate_tar_file(mount_t *mount, iterate_cb_t cb, void *a1, void *a2
 		header = (tar_header_t *)(mount->data + offset);
 
 		/* Two NULL bytes in the name field indicates EOF. */
-		if(!header->name[0] && !header->name[1]) {
+		if(!header->name[0] && !header->name[1])
 			break;
-		}
 
 		/* Check validity of the header. */
-		if(strncmp(header->magic, "ustar", 5) != 0) {
+		if(strncmp(header->magic, "ustar", 5) != 0)
 			boot_error("Boot image is corrupted");
-		}
 
-		if(!cb(header, mount, a1, a2, a3)) {
+		if(!cb(header, mount, a1, a2, a3))
 			break;
-		}
 
 		/* 512 for the header, plus the file size if necessary. */
 		size = strtoul(header->size, NULL, 8);
 		offset += 512;
-		if(size) {
+		if(size)
 			offset += ROUND_UP(size, 512);
-		}
 	}
 }
 
@@ -77,12 +73,13 @@ static bool tar_open_cb(tar_header_t *header, mount_t *mount, void *a1, void *a2
 	size_t len;
 
 	name = header->name;
-	while(name[0] == '/') {
+	while(name[0] == '/')
 		name++;
-	}
 
 	len = strlen(path);
-	if(strncmp(name, path, len) == 0 && (name[len] == 0 || (name[len] == '/' && !name[len + 1]))) {
+	if(strncmp(name, path, len) == 0
+		&& (name[len] == 0 || (name[len] == '/' && !name[len + 1])))
+	{
 		*handlep = file_handle_create(mount, header->typeflag == DIRTYPE, header);
 		return false;
 	}
@@ -97,13 +94,11 @@ static bool tar_open_cb(tar_header_t *header, mount_t *mount, void *a1, void *a2
 static file_handle_t *tar_open(mount_t *mount, const char *path) {
 	file_handle_t *ret = NULL;
 
-	while(path[0] == '/') {
+	while(path[0] == '/')
 		path++;
-	}
 
-	if(!path[0]) {
+	if(!path[0])
 		return file_handle_create(mount, true, NULL);
-	}
 
 	iterate_tar_file(mount, tar_open_cb, (void *)path, &ret, NULL);
 	return ret;
@@ -156,9 +151,9 @@ static bool tar_iterate_cb(tar_header_t *header, mount_t *mount, void *a1, void 
 		}
 	} else {
 		name = header->name;
-		while(name[0] == '/') {
+		while(name[0] == '/')
 			name++;
-		}
+
 		goto found;
 	}
 
@@ -206,9 +201,8 @@ void tar_mount(void *addr, size_t size) {
 	mount_t *mount;
 	device_t *device;
 
-	if(strncmp(header->magic, "ustar", 5) != 0) {
+	if(strncmp(header->magic, "ustar", 5) != 0)
 		boot_error("Loaded boot image is invalid");
-	}
 
 	mount = kmalloc(sizeof(mount_t));
 	memset(mount, 0, sizeof(mount_t));

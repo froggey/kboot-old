@@ -41,9 +41,8 @@ loader_type_t *loader_type_get(environ_t *env) {
 	value_t *value;
 
 	value = environ_lookup(env, "loader_type");
-	if(!value || value->type != VALUE_TYPE_POINTER) {
+	if(!value || value->type != VALUE_TYPE_POINTER)
 		boot_error("No operating system loaded");
-	}
 
 	return value->pointer;
 }
@@ -101,9 +100,8 @@ void loader_main(void) {
 	disk_init();
 #endif
 	/* We must have a filesystem to boot from. */
-	if(!current_device || !current_device->fs) {
+	if(!current_device || !current_device->fs)
 		boot_error("Could not find boot filesystem");
-	}
 
 #if CONFIG_KBOOT_HAVE_VIDEO
 	video_init();
@@ -121,9 +119,9 @@ void loader_main(void) {
 
 	/* Set the current filesystem. */
 	if((value = environ_lookup(env, "device")) && value->type == VALUE_TYPE_STRING) {
-		if(!(device = device_lookup(value->string))) {
+		if(!(device = device_lookup(value->string)))
 			boot_error("Could not find device %s", value->string);
-		}
+
 		current_device = device;
 	}
 

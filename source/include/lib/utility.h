@@ -47,9 +47,8 @@
 	__extension__ \
 	({ \
 		typeof(val) __n = val; \
-		if(__n % (nearest)) { \
+		if(__n % (nearest)) \
 			__n -= __n % (nearest); \
-		} \
 		__n; \
 	})
 
@@ -79,9 +78,9 @@ static inline bool checksum_range(void *start, size_t size) {
 	uint8_t checksum = 0;
 	size_t i;
 
-	for(i = 0; i < size; i++) {
+	for(i = 0; i < size; i++)
 		checksum += range[i];
-	}
+
 	return (checksum == 0);
 }
 

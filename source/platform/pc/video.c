@@ -73,9 +73,8 @@ void video_init(void) {
 	dprintf(" capabilities: 0x%" PRIx32 "\n", info->capabilities);
 	dprintf(" mode pointer: 0x%" PRIx32 "\n", info->video_mode_ptr);
 	dprintf(" total memory: %" PRIu16 "KB\n", info->total_memory * 64);
-	if(info->vbe_version_major >= 2) {
+	if(info->vbe_version_major >= 2)
 		dprintf(" OEM revision: 0x%" PRIx16 "\n", info->oem_software_rev);
-	}
 
 	/* Iterate through the modes. 0xFFFF indicates the end of the list. */
 	location = (uint16_t *)SEGOFF2LIN(info->video_mode_ptr);
@@ -85,9 +84,8 @@ void video_init(void) {
 		regs.ecx = location[i];
 		regs.edi = BIOS_MEM_BASE + sizeof(vbe_info_t);
 		bios_interrupt(0x10, &regs);
-		if((regs.eax & 0xFF00) != 0) {
+		if((regs.eax & 0xFF00) != 0)
 			boot_error("Could not obtain VBE mode information (0x%x)", regs.eax & 0xFFFF);
-		}
 
 		/* Check if the mode is suitable. */
 		if(minfo->memory_model != 4 && minfo->memory_model != 6) {
@@ -126,11 +124,11 @@ void video_init(void) {
 	/* Try to find the mode to use. */
 	if(!video_mode_override || !(default_video_mode = video_mode_find_string(video_mode_override))) {
 		if(!(default_video_mode = video_mode_find(PREFERRED_MODE_WIDTH,
-		                                          PREFERRED_MODE_HEIGHT,
-		                                          0))) {
+			PREFERRED_MODE_HEIGHT, 0)))
+		{
 			if(!(default_video_mode = video_mode_find(FALLBACK_MODE_WIDTH,
-			                                          FALLBACK_MODE_HEIGHT,
-			                                          0))) {
+				FALLBACK_MODE_HEIGHT, 0)))
+			{
 				boot_error("Could not find a usable video mode");
 			}
 		}
@@ -151,5 +149,5 @@ void video_enable(video_mode_t *mode) {
 	bios_interrupt(0x10, &regs);
 
 	dprintf("video: set video mode %dx%dx%d (framebuffer: 0x%" PRIpp ")\n",
-	        mode->width, mode->height, mode->bpp, mode->addr);
+		mode->width, mode->height, mode->bpp, mode->addr);
 }

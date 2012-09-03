@@ -42,9 +42,8 @@ video_mode_t *video_mode_find(int width, int height, int depth) {
 		mode = list_entry(iter, video_mode_t, header);
 		if(mode->width == width && mode->height == height) {
 			if(depth) {
-				if(mode->bpp == depth) {
+				if(mode->bpp == depth)
 					return mode;
-				}
 			} else if(!ret || mode->bpp > ret->bpp) {
 				ret = mode;
 			}
@@ -62,15 +61,14 @@ video_mode_t *video_mode_find_string(const char *mode) {
 	char *dup, *orig, *tok;
 
 	dup = orig = kstrdup(mode);
-	if((tok = strsep(&dup, "x"))) {
+
+	if((tok = strsep(&dup, "x")))
 		width = strtol(tok, NULL, 0);
-	}
-	if((tok = strsep(&dup, "x"))) {
+	if((tok = strsep(&dup, "x")))
 		height = strtol(tok, NULL, 0);
-	}
-	if((tok = strsep(&dup, "x"))) {
+	if((tok = strsep(&dup, "x")))
 		depth = strtol(tok, NULL, 0);
-	}
+
 	kfree(orig);
 
 	return (width && height) ? video_mode_find(width, height, depth) : NULL;
@@ -97,6 +95,7 @@ ui_entry_t *video_mode_chooser(const char *label, value_t *value) {
 
 	LIST_FOREACH(&video_modes, iter) {
 		mode = list_entry(iter, video_mode_t, header);
+
 		ui_chooser_insert(chooser, mode->name, mode, mode == current);
 	}
 

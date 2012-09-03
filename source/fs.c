@@ -54,9 +54,8 @@ mount_t *fs_probe(disk_t *disk) {
 		memset(mount, 0, sizeof(mount_t));
 		mount->disk = disk;
 		mount->type = type;
-		if(mount->type->mount(mount)) {
+		if(mount->type->mount(mount))
 			return mount;
-		}
 	}
 
 	kfree(mount);
@@ -96,21 +95,18 @@ file_handle_t *file_open(const char *path) {
 	file_handle_t *handle;
 	mount_t *mount;
 
-	if(!(mount = current_device->fs)) {
+	if(!(mount = current_device->fs))
 		return NULL;
-	}
 
 	/* Use the provided open() implementation if any. */
-	if(mount->type->open) {
+	if(mount->type->open)
 		return mount->type->open(mount, path);
-	}
 
 	assert(mount->type->iterate);
 
 	/* Strip leading / characters from the path. */
-	while(*path == '/') {
+	while(*path == '/')
 		path++;
-	}
 
 	assert(mount->root);
 	handle = mount->root;
@@ -156,9 +152,9 @@ file_handle_t *file_open(const char *path) {
  * @param handle	Handle to close. */
 void file_close(file_handle_t *handle) {
 	if(--handle->count == 0) {
-		if(handle->mount->type->close) {
+		if(handle->mount->type->close)
 			handle->mount->type->close(handle);
-		}
+
 		kfree(handle);
 	}
 }
@@ -172,9 +168,8 @@ void file_close(file_handle_t *handle) {
 bool file_read(file_handle_t *handle, void *buf, size_t count, offset_t offset) {
 	assert(!handle->directory);
 
-	if(!count) {
+	if(!count)
 		return true;
-	}
 
 	return handle->mount->type->read(handle, buf, count, offset);
 }

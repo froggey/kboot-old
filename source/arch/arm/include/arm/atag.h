@@ -162,7 +162,7 @@ extern atag_t *atag_list;
 /** Iterate over the ATAG list. */
 #define ATAG_ITERATE(var, _type)	\
 	for(atag_t *var = atag_list; var->hdr.tag != ATAG_NONE; \
-	    var = (atag_t *)((ptr_t)var + (var->hdr.size * 4))) \
+			var = (atag_t *)((ptr_t)var + (var->hdr.size * 4))) \
 		if(var->hdr.tag == _type)
 
 #endif /* __ARM_ATAG_H */

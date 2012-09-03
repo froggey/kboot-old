@@ -155,8 +155,7 @@ typedef struct kboot_itag_image {
 		"1: .p2align 2\n" \
 		"2: .long " STRINGIFY(flags) "\n" \
 		"3: .p2align 2\n" \
-		"   .popsection\n" \
-	)
+		"   .popsection\n")
 
 /** Image tag containing an option description. */
 typedef struct kboot_itag_option {
@@ -183,8 +182,7 @@ typedef struct kboot_itag_option {
 		"4: .asciz \"" desc "\"\n" \
 		"5: .byte " STRINGIFY(default) "\n" \
 		"6: .p2align 2\n" \
-		"   .popsection\n" \
-	)
+		"   .popsection\n")
 
 /** Macro to declare an integer option itag. */
 #define KBOOT_INTEGER_OPTION(name, desc, default) \
@@ -203,8 +201,7 @@ typedef struct kboot_itag_option {
 		"4: .asciz \"" desc "\"\n" \
 		"5: .quad " STRINGIFY(default) "\n" \
 		"6: .p2align 2\n" \
-		"   .popsection\n" \
-	)
+		"   .popsection\n")
 
 /** Macro to declare an string option itag. */
 #define KBOOT_STRING_OPTION(name, desc, default) \
@@ -223,8 +220,7 @@ typedef struct kboot_itag_option {
 		"4: .asciz \"" desc "\"\n" \
 		"5: .asciz \"" default "\"\n" \
 		"6: .p2align 2\n" \
-		"   .popsection\n" \
-	)
+		"   .popsection\n")
 
 /** Image tag containing a virtual memory mapping description. */
 typedef struct kboot_itag_mapping {
@@ -246,8 +242,7 @@ typedef struct kboot_itag_mapping {
 		"   .quad " STRINGIFY(phys) "\n" \
 		"   .quad " STRINGIFY(size) "\n" \
 		"3: .p2align 2\n" \
-		"   .popsection\n" \
-	)
+		"   .popsection\n")
 
 #endif /* __ASM__ */
 #endif /* __KBOOT_H */

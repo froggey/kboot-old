@@ -36,7 +36,7 @@ struct disk;
  * @param blocks	Size in blocks.
  * @param data		Data argument passed to iterate. */
 typedef void (*partition_map_iterate_cb_t)(struct disk *disk, uint8_t id, uint64_t lba,
-                                           uint64_t blocks, void *data);
+	uint64_t blocks, void *data);
 
 /** Partition map operations. */
 typedef struct partition_map_ops {
@@ -101,7 +101,7 @@ typedef struct disk {
 
 extern bool disk_read(disk_t *disk, void *buf, size_t count, offset_t offset);
 extern void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *ops,
-                     void *data, bool boot);
+	void *data, bool boot);
 extern disk_t *disk_parent(disk_t *disk);
 
 extern void platform_disk_detect(void);

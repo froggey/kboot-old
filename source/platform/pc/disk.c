@@ -91,9 +91,8 @@ static bool bios_disk_read(disk_t *disk, void *buf, uint64_t lba, size_t count) 
 		regs.edx = data->id;
 		regs.esi = BIOS_MEM_BASE;
 		bios_interrupt(0x13, &regs);
-		if(regs.eflags & X86_FLAGS_CF) {
+		if(regs.eflags & X86_FLAGS_CF)
 			return false;
-		}
 
 		/* Copy the transferred blocks to the buffer. */
 		memcpy(buf, dest, disk->block_size * num);
@@ -186,9 +185,9 @@ static void add_disk(uint8_t id) {
 		/* Register the disk with the disk manager. */
 		sprintf(name, "hd%u", id - 0x80);
 		disk_add(name, params->sector_size, params->sector_count, &bios_disk_ops,
-		         data, id == boot_device_id);
+			data, id == boot_device_id);
 		dprintf("disk: added device %s (id: 0x%x, sector_size: %u, sector_count: %zu)\n",
-		        name, id, params->sector_size, params->sector_count);
+			name, id, params->sector_size, params->sector_count);
 	}
 }
 
@@ -200,10 +199,10 @@ void platform_disk_detect(void) {
 	 * boot partition rather than its offset. */
 	if(multiboot_magic == MB_LOADER_MAGIC) {
 		dprintf("disk: boot device ID is 0x%x, partition ID is %" PRIu64 "\n",
-		        boot_device_id, boot_part_offset);
+			boot_device_id, boot_part_offset);
 	} else {
 		dprintf("disk: boot device ID is 0x%x, partition offset is 0x%" PRIx64 "\n",
-		        boot_device_id, boot_part_offset);
+			boot_device_id, boot_part_offset);
 	}
 
 	/* Probe all hard disks. */
@@ -213,17 +212,15 @@ void platform_disk_detect(void) {
 		 * after the loop is completed. This is done because this loop
 		 * only probes hard disks, so in order to support CD's, etc,
 		 * we have to add the boot disk separately. */
-		if(id == boot_device_id) {
+		if(id == boot_device_id)
 			continue;
-		}
 
 		add_disk(id);
 	}
 
 	/* If not booted from PXE, add the boot device. */
-	if(!pxe_detect()) {
+	if(!pxe_detect())
 		add_disk(boot_device_id);
-	}
 }
 
 /** Get the ID of a disk.

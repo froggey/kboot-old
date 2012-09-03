@@ -45,14 +45,14 @@ typedef struct list {
  *			the next pointer from the entry before the loop body. */
 #define LIST_FOREACH_SAFE(list, iter)		\
 	for(list_t *iter = (list)->next, *_##iter = iter->next; \
-	    iter != (list); iter = _##iter, _##iter = _##iter->next)
+		iter != (list); iter = _##iter, _##iter = _##iter->next)
 
 /** Iterates over a list in reverse, setting iter to the list entry on each
  *  iteration.
  * @note		Safe to use when the loop may modify the list. */
 #define LIST_FOREACH_SAFE_R(list, iter)		\
 	for(list_t *iter = (list)->prev, *_##iter = iter->prev; \
-	    iter != (list); iter = _##iter, _##iter = _##iter->prev)
+		iter != (list); iter = _##iter, _##iter = _##iter->prev)
 
 /** Initialises a statically declared linked list. */
 #define LIST_INITIALISER(_var)			\

@@ -90,9 +90,8 @@ static void pc_console_putch(char ch) {
 			vga_cursor_x--;
 		} else {
 			vga_cursor_x = vga_region.x + vga_region.width - 1;
-			if(vga_cursor_y > vga_region.y) {
+			if(vga_cursor_y > vga_region.y)
 				vga_cursor_y--;
-			}
 		}
 		break;
 	case '\r':
@@ -109,9 +108,8 @@ static void pc_console_putch(char ch) {
 		break;
 	default:
 		/* If it is a non-printing character, ignore it. */
-		if(ch < ' ') {
+		if(ch < ' ')
 			break;
-		}
 
 		vga_mapping[(vga_cursor_y * VGA_COLS) + vga_cursor_x] &= 0xFF00;
 		vga_mapping[(vga_cursor_y * VGA_COLS) + vga_cursor_x] |= ch;
@@ -127,9 +125,9 @@ static void pc_console_putch(char ch) {
 
 	/* Scroll if we've reached the end of the draw region. */
 	if(vga_cursor_y >= (vga_region.y + vga_region.height)) {
-		if(vga_region.scrollable) {
+		if(vga_region.scrollable)
 			pc_console_scroll_down();
-		}
+
 		vga_cursor_y = vga_region.y + vga_region.height - 1;
 	}
 }
@@ -165,9 +163,8 @@ static void pc_console_clear(int x, int y, int width, int height) {
 	int i, j;
 
 	for(i = vga_region.y + y; i < (vga_region.y + y + height); i++) {
-		for(j = vga_region.x + x; j < (vga_region.x + x + width); j++) {
+		for(j = vga_region.x + x; j < (vga_region.x + x + width); j++)
 			vga_mapping[(i * VGA_COLS) + j] = ' ' | VGA_ATTRIB;
-		}
 	}
 }
 
@@ -195,8 +192,8 @@ static void pc_console_scroll_up(void) {
 	/* Shift down the content of the VGA memory. */
 	for(i = 0; i < (vga_region.height - 1); i++) {
 		memcpy(vga_mapping + vga_region.x + (VGA_COLS * (vga_region.y + vga_region.height - i - 1)),
-		       vga_mapping + vga_region.x + (VGA_COLS * (vga_region.y + vga_region.height - i - 2)),
-		       vga_region.width * 2);
+			vga_mapping + vga_region.x + (VGA_COLS * (vga_region.y + vga_region.height - i - 2)),
+			vga_region.width * 2);
 	}
 
 	/* Fill the first row with blanks. */
@@ -213,8 +210,8 @@ static void pc_console_scroll_down(void) {
 	/* Shift up the content of the VGA memory. */
 	for(i = 0; i < (vga_region.height - 1); i++) {
 		memcpy(vga_mapping + vga_region.x + (VGA_COLS * (vga_region.y + i)),
-		       vga_mapping + vga_region.x + (VGA_COLS * (vga_region.y + i + 1)),
-		       vga_region.width * 2);
+			vga_mapping + vga_region.x + (VGA_COLS * (vga_region.y + i + 1)),
+			vga_region.width * 2);
 	}
 
 	/* Fill the last row with blanks. */
@@ -289,9 +286,9 @@ static console_t pc_console = {
 /** Write a character to the serial console.
  * @param ch		Character to write. */
 static void serial_console_putch(char ch) {
-	if(ch == '\n') {
+	if(ch == '\n')
 		serial_console_putch('\r');
-	}
+
 	out8(SERIAL_PORT, ch);
 	while(!(in8(SERIAL_PORT + 5) & 0x20));
 }

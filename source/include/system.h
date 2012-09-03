@@ -54,8 +54,8 @@ extern builtin_t __builtins_start[], __builtins_end[];
 #define BUILTIN_ITERATE(btype, otype, vname) \
 	int __iter_##vname = 0; \
 	for(otype *vname = (otype *)__builtins_start[0].object; \
-	    __iter_##vname < (__builtins_end - __builtins_start); \
-	    vname = (otype *)__builtins_start[++__iter_##vname].object) \
+			__iter_##vname < (__builtins_end - __builtins_start); \
+			vname = (otype *)__builtins_start[++__iter_##vname].object) \
 		if(__builtins_start[__iter_##vname].type == btype)
 
 extern int kvprintf(const char *fmt, va_list args);

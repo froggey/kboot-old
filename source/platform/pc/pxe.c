@@ -82,9 +82,8 @@ static bool tftp_set_current(file_handle_t *handle) {
 		tftp_open_data.udp_port = cpu_to_be16(PXENV_TFTP_PORT);
 		tftp_open_data.packet_size = PXENV_TFTP_PACKET_SIZE;
 
-		if(pxe_call(PXENV_TFTP_OPEN, &tftp_open_data) != PXENV_EXIT_SUCCESS || tftp_open_data.status) {
+		if(pxe_call(PXENV_TFTP_OPEN, &tftp_open_data) != PXENV_EXIT_SUCCESS || tftp_open_data.status)
 			return false;
-		}
 
 		data->packet_size = tftp_open_data.packet_size;
 		data->packet_number = 0;
@@ -105,9 +104,8 @@ static file_handle_t *tftp_open(mount_t *mount, const char *path) {
 	size_t len;
 
 	/* Maximum path length is 128. */
-	if((len = strlen(path)) >= 128) {
+	if((len = strlen(path)) >= 128)
 		return NULL;
-	}
 
 	/* Create a handle structure then try to set it as the current. */
 	data = kmalloc(sizeof(tftp_handle_t) + len + 1);
@@ -124,9 +122,8 @@ static file_handle_t *tftp_open(mount_t *mount, const char *path) {
 /** Close a TFTP handle.
  * @param handle	Handle to close. */
 static void tftp_close(file_handle_t *handle) {
-	if(current_tftp_file == handle) {
+	if(current_tftp_file == handle)
 		tftp_set_current(NULL);
-	}
 
 	kfree(handle->data);
 }
@@ -140,9 +137,8 @@ static bool tftp_read_packet(tftp_handle_t *data) {
 
 	read.buffer.addr = BIOS_MEM_BASE;
 	read.buffer_size = data->packet_size;
-	if(pxe_call(PXENV_TFTP_READ, &read) != PXENV_EXIT_SUCCESS || read.status) {
+	if(pxe_call(PXENV_TFTP_READ, &read) != PXENV_EXIT_SUCCESS || read.status)
 		return false;
-	}
 
 	data->packet_number++;
 	return true;
@@ -162,9 +158,8 @@ static bool tftp_read(file_handle_t *handle, void *buf, size_t count, offset_t o
 	 * beginning of the file. If it is open, and the current packet is
 	 * greater than the start packet, we must re-open it. */
 	if(handle != current_tftp_file || data->packet_number > (offset / data->packet_size)) {
-		if(!tftp_set_current(handle)) {
+		if(!tftp_set_current(handle))
 			return false;
-		}
 	}
 
 	/* Now work out the start block and the end block. Subtract one from
@@ -187,9 +182,8 @@ static bool tftp_read(file_handle_t *handle, void *buf, size_t count, offset_t o
 	 * transfer on the initial block to get up to a block boundary. 
 	 * If the transfer only goes across one block, this will handle it. */
 	if(offset % data->packet_size) {
-		if(!tftp_read_packet(data)) {
+		if(!tftp_read_packet(data))
 			return false;
-		}
 
 		size = (start == end) ? count : data->packet_size - (size_t)(offset % data->packet_size);
 		memcpy(buf, (void *)(ptr_t)(BIOS_MEM_BASE + (offset % data->packet_size)), size);
@@ -199,17 +193,17 @@ static bool tftp_read(file_handle_t *handle, void *buf, size_t count, offset_t o
 	/* Handle any full blocks. */
 	size = count / data->packet_size;
 	for(i = 0; i < size; i++, buf += data->packet_size, count -= data->packet_size, start++) {
-		if(!tftp_read_packet(data)) {
+		if(!tftp_read_packet(data))
 			return false;
-		}
+
 		memcpy(buf, (void *)BIOS_MEM_BASE, data->packet_size);
 	}
 
 	/* Handle anything that's left. */
 	if(count > 0) {
-		if(!tftp_read_packet(data)) {
+		if(!tftp_read_packet(data))
 			return false;
-		}
+
 		memcpy(buf, (void *)BIOS_MEM_BASE, count);
 	}
 
@@ -230,9 +224,8 @@ static offset_t tftp_size(file_handle_t *handle) {
 	tftp_fsize_data.server_ip = pxe_server_ip;
 	tftp_fsize_data.gateway_ip = pxe_gateway_ip;
 
-	if(pxe_call(PXENV_TFTP_GET_FSIZE, &tftp_fsize_data) != PXENV_EXIT_SUCCESS || tftp_fsize_data.status) {
+	if(pxe_call(PXENV_TFTP_GET_FSIZE, &tftp_fsize_data) != PXENV_EXIT_SUCCESS || tftp_fsize_data.status)
 		return 0;
-	}
 
 	return tftp_fsize_data.file_size;
 }
@@ -265,39 +258,37 @@ bool pxe_detect(void) {
 
 	/* Get the PXENV+ structure. */
 	pxenv = (pxenv_t *)SEGOFF2LIN((regs.es << 16) | (regs.ebx & 0xFFFF));
-	if(strncmp((char *)pxenv->signature, "PXENV+", 6) != 0 || !checksum_range(pxenv, pxenv->length)) {
+	if(strncmp((char *)pxenv->signature, "PXENV+", 6) != 0 || !checksum_range(pxenv, pxenv->length))
 		boot_error("PXENV+ structure is corrupt");
-	}
 
 	/* Get the !PXE structure. */
 	pxe = (pxe_t *)SEGOFF2LIN(pxenv->pxe_ptr.addr);
-	if(strncmp((char *)pxe->signature, "!PXE", 4) != 0 || !checksum_range(pxe, pxe->length)) {
+	if(strncmp((char *)pxe->signature, "!PXE", 4) != 0 || !checksum_range(pxe, pxe->length))
 		boot_error("!PXE structure is corrupt");
-	}
 
 	/* Save the PXE entry point. */
 	pxe_entry_point = pxe->entry_point_16;
 	dprintf("pxe: booting via PXE, entry point at %04x:%04x (%p)\n", pxe_entry_point.segment,
-	        pxe_entry_point.offset, SEGOFF2LIN(pxe_entry_point.addr));
+		pxe_entry_point.offset, SEGOFF2LIN(pxe_entry_point.addr));
 
 	/* Obtain the server IP address for use with the TFTP calls. */
 	ci.packet_type = PXENV_PACKET_TYPE_DHCP_ACK;
 	ci.buffer.addr = 0;
 	ci.buffer_size = 0;
-	if(pxe_call(PXENV_GET_CACHED_INFO, &ci) != PXENV_EXIT_SUCCESS || ci.status) {
+	if(pxe_call(PXENV_GET_CACHED_INFO, &ci) != PXENV_EXIT_SUCCESS || ci.status)
 		boot_error("Failed to get PXE network information");
-	}
+
 	bp = (pxenv_boot_player_t *)SEGOFF2LIN(ci.buffer.addr);
 	pxe_your_ip = bp->your_ip;
 	pxe_server_ip = bp->server_ip;
 	pxe_gateway_ip = bp->gateway_ip;
 	dprintf("pxe: network information:\n");
 	dprintf(" your IP:    %d.%d.%d.%d\n", bp->your_ip.a[0], bp->your_ip.a[1],
-	        bp->your_ip.a[2], bp->your_ip.a[3]);
+		bp->your_ip.a[2], bp->your_ip.a[3]);
 	dprintf(" server IP:  %d.%d.%d.%d\n", bp->server_ip.a[0], bp->server_ip.a[1],
-	        bp->server_ip.a[2], bp->server_ip.a[3]);
+		bp->server_ip.a[2], bp->server_ip.a[3]);
 	dprintf(" gateway IP: %d.%d.%d.%d\n", bp->gateway_ip.a[0], bp->gateway_ip.a[1],
-	        bp->gateway_ip.a[2], bp->gateway_ip.a[3]);
+		bp->gateway_ip.a[2], bp->gateway_ip.a[3]);
 
 	/* Mount a TFTP filesystem and add a device with it on. */
 	mount = kmalloc(sizeof(mount_t));

@@ -23,6 +23,7 @@
 #define __MEMORY_H
 
 #include <arch/page.h>
+
 #include <kboot.h>
 
 /** Physical memory range types. */

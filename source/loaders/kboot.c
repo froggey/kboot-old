@@ -67,9 +67,8 @@ static void append_tag(kboot_data_t *data, phys_ptr_t tag) {
 	phys_ptr_t addr;
 
 	if(data->tags) {
-		for(addr = data->tags; addr; addr = exist->next) {
+		for(addr = data->tags; addr; addr = exist->next)
 			exist = (kboot_tag_t *)((ptr_t)addr);
-		}
 
 		exist->next = tag;
 	} else {
@@ -105,18 +104,16 @@ static void load_module(kboot_data_t *data, file_handle_t *handle, const char *n
 	phys_ptr_t addr;
 	offset_t size;
 
-	if(handle->directory) {
+	if(handle->directory)
 		return;
-	}
 
 	kprintf("Loading %s...\n", name);
 
 	/* Allocate a chunk of memory to load to. */
 	size = file_size(handle);
 	addr = phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), PAGE_SIZE, true);
-	if(!file_read(handle, (void *)((ptr_t)addr), size, 0)) {
+	if(!file_read(handle, (void *)((ptr_t)addr), size, 0))
 		boot_error("Could not read module %s", name);
-	}
 
 	/* Add the module to the tag list. */
 	tag = allocate_tag(data, KBOOT_TAG_MODULE, sizeof(*tag));
@@ -124,7 +121,7 @@ static void load_module(kboot_data_t *data, file_handle_t *handle, const char *n
 	tag->size = size;
 
 	dprintf("kboot: loaded module %s to 0x%" PRIpp " (size: %" PRIu64 ")\n",
-	        name, addr, size);
+		name, addr, size);
 }
 
 /** Load a list of modules.
@@ -136,9 +133,8 @@ static void load_module_list(kboot_data_t *data, value_list_t *list) {
 
 	for(i = 0; i < list->count; i++) {
 		handle = file_open(list->values[i].string);
-		if(!handle) {
+		if(!handle)
 			boot_error("Could not open module %s", list->values[i].string);
-		}
 
 		load_module(data, handle, strrchr(list->values[i].string, '/') + 1);
 		file_close(handle);
@@ -169,9 +165,8 @@ static void load_module_dir(kboot_data_t *data, const char *path) {
 		boot_error("Cannot use module directory on non-listable FS");
 	}
 
-	if(!dir_iterate(handle, load_modules_cb, data)) {
+	if(!dir_iterate(handle, load_modules_cb, data))
 		boot_error("Failed to iterate module directory");
-	}
 
 	file_close(handle);
 }
@@ -251,18 +246,16 @@ static bool set_options(elf_note_t *note, const char *name, void *desc, void *_d
 	kboot_data_t *data = _data;
 	kboot_itag_image_t *image;
 
-	if(strcmp(name, "KBoot") != 0) {
+	if(strcmp(name, "KBoot") != 0)
 		return true;
-	}
 
 	switch(note->n_type) {
 	case KBOOT_ITAG_IMAGE:
 		image = desc;
 #if CONFIG_KBOOT_HAVE_VIDEO
 		/* Set the video mode if requested. */
-		if(image->flags & KBOOT_IMAGE_LFB) {
+		if(image->flags & KBOOT_IMAGE_LFB)
 			set_video_mode(data);
-		}
 #endif
 		break;
 	case KBOOT_ITAG_OPTION:
@@ -271,9 +264,8 @@ static bool set_options(elf_note_t *note, const char *name, void *desc, void *_d
 		break;
 	case KBOOT_ITAG_MAPPING:
 		mapping = desc;
-		if(!mmu_map(data->mmu, mapping->virt, mapping->phys, mapping->size)) {
+		if(!mmu_map(data->mmu, mapping->virt, mapping->phys, mapping->size))
 			boot_error("Kernel specifies an invalid memory mapping");
-		}
 		break;
 	}
 
@@ -360,9 +352,8 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 	value_t *exist, value;
 	void *opt_default;
 
-	if(strcmp(name, "KBoot") != 0) {
+	if(strcmp(name, "KBoot") != 0)
 		return true;
-	}
 
 	switch(note->n_type) {
 	case KBOOT_ITAG_IMAGE:
@@ -377,9 +368,12 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 		/* If the kernel wants a video mode, add a video mode chooser. */
 		if(image->flags & KBOOT_IMAGE_LFB) {
 #if CONFIG_KBOOT_HAVE_VIDEO
-			if((exist = environ_lookup(data->env, "video_mode")) && exist->type == VALUE_TYPE_STRING) {
+			if((exist = environ_lookup(data->env, "video_mode"))
+				&& exist->type == VALUE_TYPE_STRING)
+			{
 				mode = video_mode_find_string(exist->string);
 			}
+
 			value.type = VALUE_TYPE_POINTER;
 			value.pointer = (mode) ? mode : default_video_mode;
 			environ_insert(data->env, "video_mode", &value);
@@ -415,9 +409,9 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 		}
 
 		exist = environ_lookup(data->env, opt_name);
-		if(!exist || exist->type != value.type) {
+		if(!exist || exist->type != value.type)
 			environ_insert(data->env, opt_name, &value);
-		}
+
 #if CONFIG_KBOOT_UI
 		ui_list_insert_env(data->config, data->env, opt_name, opt_desc, false);
 #endif
@@ -434,8 +428,9 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 static bool config_cmd_kboot(value_list_t *args, environ_t *env) {
 	kboot_data_t *data;
 
-	if(args->count != 2 || !vtype(args, 0, VALUE_TYPE_STRING) ||
-	   (!vtype(args, 1, VALUE_TYPE_LIST) && !vtype(args, 1, VALUE_TYPE_STRING))) {
+	if(args->count != 2 || !vtype(args, 0, VALUE_TYPE_STRING)
+		|| (!vtype(args, 1, VALUE_TYPE_LIST) && !vtype(args, 1, VALUE_TYPE_STRING)))
+	{
 		dprintf("kboot: invalid arguments\n");
 		return false;
 	}

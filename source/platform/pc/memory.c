@@ -71,17 +71,15 @@ void platform_memory_detect(void) {
 		 * allowed to return a non-zero continuation value in EBX and
 		 * return an error on next call to indicate that the end of the
 		 * list has been reached. */
-		if(regs.eflags & X86_FLAGS_CF) {
+		if(regs.eflags & X86_FLAGS_CF)
 			break;
-		}
 
 		count++;
 	} while(regs.ebx != 0);
 
 	/* FIXME: Should handle BIOSen that don't support this. */
-	if(count == 0) {
+	if(count == 0)
 		boot_error("BIOS does not support E820 memory map");
-	}
 
 	/* Iterate over the obtained memory map and add the entries to the
 	 * PMM. */
@@ -145,5 +143,5 @@ void platform_memory_detect(void) {
 
 	/* Mark the memory area we use for BIOS calls as internal. */
 	phys_memory_add(BIOS_MEM_BASE, BIOS_MEM_BASE + BIOS_MEM_SIZE + PAGE_SIZE,
-	                PHYS_MEMORY_INTERNAL);
+		PHYS_MEMORY_INTERNAL);
 }

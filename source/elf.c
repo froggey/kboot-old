@@ -31,24 +31,21 @@
 		size_t i, offset; \
 		void *buf, *desc; \
 		\
-		if(!file_read(handle, &ehdr, sizeof(ehdr), 0)) { \
+		if(!file_read(handle, &ehdr, sizeof(ehdr), 0)) \
 			return false; \
-		} \
 		\
 		phdrs = kmalloc(sizeof(*phdrs) * ehdr.e_phnum); \
-		if(!file_read(handle, phdrs, ehdr.e_phnum * ehdr.e_phentsize, ehdr.e_phoff)) { \
+		if(!file_read(handle, phdrs, ehdr.e_phnum * ehdr.e_phentsize, ehdr.e_phoff)) \
 			return false; \
-		} \
 		\
 		for(i = 0; i < ehdr.e_phnum; i++) { \
-			if(phdrs[i].p_type != ELF_PT_NOTE) { \
+			if(phdrs[i].p_type != ELF_PT_NOTE) \
 				continue; \
-			} \
 			\
 			buf = kmalloc(phdrs[i].p_filesz); \
-			if(!file_read(handle, buf, phdrs[i].p_filesz, phdrs[i].p_offset)) { \
+			if(!file_read(handle, buf, phdrs[i].p_filesz, phdrs[i].p_offset)) \
 				return false; \
-			} \
+			\
 			for(offset = 0; offset < phdrs[i].p_filesz; ) { \
 				note = (elf_note_t *)(buf + offset); \
 				offset += sizeof(elf_note_t); \
@@ -62,6 +59,7 @@
 					return true; \
 				} \
 			} \
+			\
 			kfree(buf); \
 		} \
 		\

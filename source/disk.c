@@ -46,14 +46,12 @@ bool disk_read(disk_t *disk, void *buf, size_t count, offset_t offset) {
 		return true;
 	}
 
-	if((offset + count) > (disk->blocks * blksize)) {
+	if((offset + count) > (disk->blocks * blksize))
 		internal_error("Reading beyond end of disk");
-	}
 
 	/* Allocate a temporary buffer for partial transfers if required. */
-	if(offset % blksize || count % blksize) {
+	if(offset % blksize || count % blksize)
 		block = kmalloc(blksize);
-	}
 
 	/* Now work out the start block and the end block. Subtract one from
 	 * count to prevent end from going onto the next block when the offset
@@ -80,11 +78,10 @@ bool disk_read(disk_t *disk, void *buf, size_t count, offset_t offset) {
 	size = count / blksize;
 	if(size) {
 		if(!disk->ops->read(disk, buf, start, size)) {
-			if(block) {
-				kfree(block);
-			}
+			kfree(block);
 			return false;
 		}
+
 		buf += (size * blksize);
 		count -= (size * blksize);
 		start += size;
@@ -100,9 +97,7 @@ bool disk_read(disk_t *disk, void *buf, size_t count, offset_t offset) {
 		memcpy(buf, block, count);
 	}
 
-	if(block) {
-		kfree(block);
-	}
+	kfree(block);
 	return true;
 }
 
@@ -149,9 +144,8 @@ static void add_partition(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blo
 
 	/* Set the device as the current if it is the boot partition. */
 	if(device->fs && parent->boot && parent->ops->is_boot_partition) {
-		if(parent->ops->is_boot_partition(parent, id, lba)) {
+		if(parent->ops->is_boot_partition(parent, id, lba))
 			current_device = device;
-		}
 	}
 }
 
@@ -160,9 +154,8 @@ static void add_partition(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blo
 static void probe_disk(device_t *device) {
 	if(!(device->fs = fs_probe(device->disk))) {
 		BUILTIN_ITERATE(BUILTIN_TYPE_PARTITION_MAP, partition_map_ops_t, type) {
-			if(type->iterate(device->disk, add_partition, device)) {
+			if(type->iterate(device->disk, add_partition, device))
 				return;
-			}
 		}
 	}
 }
@@ -177,7 +170,8 @@ static void probe_disk(device_t *device) {
  *			filesystem that cannot be autodetected, such as TFTP).
  * @param boot		Whether the disk is the boot disk. */
 void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *ops,
-              void *data, bool boot) {
+	void *data, bool boot)
+{
 	disk_t *disk = kmalloc(sizeof(disk_t));
 	device_t *device;
 
@@ -194,9 +188,8 @@ void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *
 	probe_disk(device);
 
 	/* Set the device as the current if it is the boot disk. */
-	if(device->fs && boot) {
+	if(device->fs && boot)
 		current_device = device;
-	}
 }
 
 /** Get the parent disk of a partition.
@@ -204,9 +197,8 @@ void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *
  * @return		Parent disk (if disk is already the top level, it will
  *			be returned). */
 disk_t *disk_parent(disk_t *disk) {
-	while(disk->ops == &partition_disk_ops) {
+	while(disk->ops == &partition_disk_ops)
 		disk = disk->parent;
-	}
 
 	return disk;
 }

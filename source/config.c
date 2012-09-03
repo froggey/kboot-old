@@ -161,19 +161,16 @@ void value_copy(value_t *source, value_t *dest) {
 void value_destroy(value_t *value) {
 	switch(value->type) {
 	case VALUE_TYPE_STRING:
-		if(value->string) {
+		if(value->string)
 			kfree(value->string);
-		}
 		break;
 	case VALUE_TYPE_LIST:
-		if(value->list) {
+		if(value->list)
 			value_list_destroy(value->list);
-		}
 		break;
 	case VALUE_TYPE_COMMAND_LIST:
-		if(value->cmds) {
+		if(value->cmds)
 			command_list_destroy(value->cmds);
-		}
 		break;
 	default:
 		break;
@@ -190,9 +187,8 @@ static value_list_t *value_list_copy(value_list_t *source) {
 	dest->count = source->count;
 	if(source->count) {
 		dest->values = kmalloc(sizeof(value_t) * source->count);
-		for(i = 0; i < source->count; i++) {
+		for(i = 0; i < source->count; i++)
 			value_copy(&source->values[i], &dest->values[i]);
-		}
 	} else {
 		dest->values = NULL;
 	}
@@ -204,9 +200,8 @@ static value_list_t *value_list_copy(value_list_t *source) {
 static void value_list_destroy(value_list_t *list) {
 	size_t i;
 
-	for(i = 0; i < list->count; i++) {
+	for(i = 0; i < list->count; i++)
 		value_destroy(&list->values[i]);
-	}
 
 	kfree(list->values);
 	kfree(list);
@@ -220,14 +215,17 @@ static command_list_t *command_list_copy(command_list_t *source) {
 	command_list_entry_t *entry, *copy;
 
 	list_init(dest);
+
 	LIST_FOREACH(source, iter) {
 		entry = list_entry(iter, command_list_entry_t, header);
+
 		copy = kmalloc(sizeof(command_list_entry_t));
 		list_init(&copy->header);
 		copy->name = kstrdup(entry->name);
 		copy->args = value_list_copy(entry->args);
 		list_append(dest, &copy->header);
 	}
+
 	return dest;
 }
 
@@ -238,10 +236,10 @@ static void command_list_destroy(command_list_t *list) {
 
 	LIST_FOREACH_SAFE(list, iter) {
 		command = list_entry(iter, command_list_entry_t, header);
+
 		list_remove(&command->header);
-		if(command->args) {
+		if(command->args)
 			value_list_destroy(command->args);
-		}
 		kfree(command->name);
 		kfree(command);
 	}
@@ -333,9 +331,9 @@ static value_list_t *parse_value_list(int endch) {
 			 * to the previous character before continuing. */
 			value->type = VALUE_TYPE_INTEGER;
 			rewind_input();
-			if(!parse_integer(&value->integer)) {
+			if(!parse_integer(&value->integer))
 				goto fail;
-			}
+
 			rewind_input();
 		} else if(ch == 't') {
 			value->type = VALUE_TYPE_BOOLEAN;
@@ -347,26 +345,24 @@ static value_list_t *parse_value_list(int endch) {
 		} else if(ch == 'f') {
 			value->type = VALUE_TYPE_BOOLEAN;
 			value->boolean = false;
-			if(get_next_char() != 'a' || get_next_char() != 'l' || get_next_char() != 's' ||
-			   get_next_char() != 'e') {
+			if(get_next_char() != 'a' || get_next_char() != 'l' || get_next_char() != 's'
+				|| get_next_char() != 'e')
+			{
 				syntax_error("unexpected character");
 				goto fail;
 			}
 		} else if(ch == '"') {
 			value->type = VALUE_TYPE_STRING;
-			if(!(value->string = parse_string())) {
+			if(!(value->string = parse_string()))
 				goto fail;
-			}
 		} else if(ch == '[') {
 			value->type = VALUE_TYPE_LIST;
-			if(!(value->list = parse_value_list(']'))) {
+			if(!(value->list = parse_value_list(']')))
 				goto fail;
-			}
 		} else if(ch == '{') {
 			value->type = VALUE_TYPE_COMMAND_LIST;
-			if(!(value->cmds = parse_command_list('}'))) {
+			if(!(value->cmds = parse_command_list('}')))
 				goto fail;
-			}
 		}
 	}
 fail:
@@ -389,9 +385,8 @@ static command_list_t *parse_command_list(int endch) {
 	while(true) {
 		ch = get_next_char();
 		if(in_comment) {
-			if(ch == '\n') {
+			if(ch == '\n')
 				in_comment = false;
-			}
 			continue;
 		} else if(ch == endch || isspace(ch)) {
 			if(temp_buf_idx == 0) {
@@ -420,9 +415,8 @@ static command_list_t *parse_command_list(int endch) {
 				command->args->values = NULL;
 				command->args->count = 0;
 			} else {
-				if(!(command->args = parse_value_list('\n'))) {
+				if(!(command->args = parse_value_list('\n')))
 					goto fail;
-				}
 			}
 		} else if(ch == EOF) {
 			syntax_error("unexpected end of file");
@@ -452,9 +446,8 @@ static bool config_parse(const char *buf, const char *path) {
 	current_line = 1;
 	current_col = 0;
 
-	if(!(list = parse_command_list(EOF))) {
+	if(!(list = parse_command_list(EOF)))
 		return false;
-	}
 
 	ret = command_list_exec(list, root_environ);
 	command_list_destroy(list);
@@ -470,9 +463,8 @@ static bool config_load(const char *path) {
 	char *buf;
 	bool ret;
 
-	if(!(handle = file_open(path))) {
+	if(!(handle = file_open(path)))
 		return false;
-	}
 
 	size = file_size(handle);
 	buf = kmalloc(size + 1);
@@ -495,9 +487,8 @@ static bool config_load(const char *path) {
  * @return		Whether successful. */
 static bool command_exec(command_list_entry_t *entry, environ_t *env) {
 	BUILTIN_ITERATE(BUILTIN_TYPE_COMMAND, command_t, command) {
-		if(strcmp(command->name, entry->name) == 0) {
+		if(strcmp(command->name, entry->name) == 0)
 			return command->func(entry->args, env);
-		}
 	}
 
 	dprintf("unknown command '%s'\n", entry->name);
@@ -513,9 +504,8 @@ bool command_list_exec(command_list_t *list, environ_t *env) {
 
 	LIST_FOREACH(list, iter) {
 		entry = list_entry(iter, command_list_entry_t, header);
-		if(!command_exec(entry, env)) {
+		if(!command_exec(entry, env))
 			return false;
-		}
 	}
 
 	return true;
@@ -546,9 +536,8 @@ value_t *environ_lookup(environ_t *env, const char *name) {
 
 	LIST_FOREACH(env, iter) {
 		entry = list_entry(iter, environ_entry_t, header);
-		if(strcmp(entry->name, name) == 0) {
+		if(strcmp(entry->name, name) == 0)
 			return &entry->value;
-		}
 	}
 
 	return NULL;
@@ -602,15 +591,13 @@ void config_init(void) {
 	root_environ = environ_create();
 
 	if(config_file_override) {
-		if(!config_load(config_file_override)) {
+		if(!config_load(config_file_override))
 			boot_error("Specified configuration file does not exist");
-		}
 	} else {
 		/* Try the various paths. */
 		for(i = 0; i < ARRAYSZ(config_file_paths); i++) {
-			if(config_load(config_file_paths[i])) {
+			if(config_load(config_file_paths[i]))
 				return;
-			}
 		}
 
 		boot_error("Could not load configuration file");

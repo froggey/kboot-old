@@ -44,12 +44,13 @@ static const char printf_digits_lower[] = "0123456789abcdef";
  * @param helper	Helper function.
  * @param data		Data for helper function.
  * @param total		Pointer to integer containing total characters printed. */
-static void printf_string_helper(const char *str, size_t len, printf_helper_t helper, void *data, int *total) {
+static void printf_string_helper(const char *str, size_t len, printf_helper_t helper,
+	void *data, int *total)
+{
 	size_t i;
 
-	for(i = 0; i < len; i++) {
+	for(i = 0; i < len; i++)
 		helper(str[i], data, total);
-	}
 }
 
 /** Helper to print a number.
@@ -62,7 +63,8 @@ static void printf_string_helper(const char *str, size_t len, printf_helper_t he
  * @param data		Data for helper function.
  * @param total		Pointer to integer containing total characters printed. */
 static void printf_number_helper(uint64_t num, long width, long precision, int base, int flags,
-                                 printf_helper_t helper, void *data, int *total) {
+	printf_helper_t helper, void *data, int *total)
+{
 	char buffer[64];
 	char sign = 0;
 	uint32_t tmp;
@@ -100,7 +102,8 @@ static void printf_number_helper(uint64_t num, long width, long precision, int b
 		while(num != 0) {
 			tmp = (uint32_t)(num % base);
 			num /= base;
-			buffer[i++] = (flags & PRINTF_LOW_CASE) ? printf_digits_lower[tmp] : printf_digits_upper[tmp];
+			buffer[i++] = (flags & PRINTF_LOW_CASE)
+				? printf_digits_lower[tmp] : printf_digits_upper[tmp];
 		}
 	}
 
@@ -109,59 +112,52 @@ static void printf_number_helper(uint64_t num, long width, long precision, int b
 	 * so if the digit count is higher than the precision, set precision
 	 * to the digit count. Width then becomes the amount of padding we
 	 * require. */
-	if(i > precision) {
+	if(i > precision)
 		precision = i;
-	}
 	width -= precision;
 
 	/* If we're not left aligned and require space padding, write it.
 	 * Do not handle zero padding here, sign and prefix characters must
 	 * be before zero padding but after space padding. */
 	if(!(flags & (PRINTF_LEFT_JUSTIFY | PRINTF_ZERO_PAD))) {
-		while(--width >= 0) {
+		while(--width >= 0)
 			helper(' ', data, total);
-		}
 	}
 
 	/* Write out the sign character, if any. */
-	if(sign) {
+	if(sign)
 		helper(sign, data, total);
-	}
 
 	/* Write out any prefix required. Base 8 has a '0' prefix, base 16
 	 * has a '0x' or '0X' prefix, depending on whether lower or upper
 	 * case. */
 	if(flags & PRINTF_PREFIX && (base == 8 || base == 16)) {
 		helper('0', data, total);
-		if(base == 16) {
+		if(base == 16)
 			helper((flags & PRINTF_LOW_CASE) ? 'x' : 'X', data, total);
-		}
 	}
 
 	/* Do zero padding. */
 	if(flags & PRINTF_ZERO_PAD) {
-		while(--width >= 0) {
+		while(--width >= 0)
 			helper('0', data, total);
-		}
 	}
-	while(i <= --precision) {
+	while(i <= --precision)
 		helper('0', data, total);
-	}
 
 	/* Write out actual digits, reversed to the correct direction. */
-	while(--i >= 0) {
+	while(--i >= 0)
 		helper(buffer[i], data, total);
-	}
 
 	/* Finally handle space padding caused by left justification. */
 	if(flags & (PRINTF_LEFT_JUSTIFY)) {
-		while(--width >= 0) {
+		while(--width >= 0)
 			helper(' ', data, total);
-		}
 	}
 }
 
-/** Internal implementation of printf()-style functions.
+/**
+ * Internal implementation of printf()-style functions.
  *
  * This function does the main work of printf()-style functions. It parses
  * the format string, and uses a supplied helper function to actually put
@@ -292,13 +288,11 @@ int do_printf(printf_helper_t helper, void *data, const char *fmt, va_list args)
 			ch = (unsigned char)va_arg(args, int);
 			if(flags & PRINTF_LEFT_JUSTIFY) {
 				helper(ch, data, &total);
-				while(--width > 0) {
+				while(--width > 0)
 					helper(' ', data, &total);
-				}
 			} else {
-				while(--width > 0) {
+				while(--width > 0)
 					helper(' ', data, &total);
-				}
 				helper(ch, data, &total);
 			}
 			continue;
@@ -315,18 +309,16 @@ int do_printf(printf_helper_t helper, void *data, const char *fmt, va_list args)
 			 * width was not specified, because I like it like
 			 * that. */
 			flags |= (PRINTF_LOW_CASE | PRINTF_PREFIX);
-			if(precision == -1) {
+			if(precision == -1)
 				precision = 1;
-			}
 			if(width == -1) {
 				width = (sizeof(void *) * 2) + 2;
 				flags |= PRINTF_ZERO_PAD;
 			}
 
 			/* Pointers should not go through number conversion. */
-			printf_number_helper((ptr_t)va_arg(args, void *),
-			                     width, precision, 16, flags,
-			                     helper, data, &total);
+			printf_number_helper((ptr_t)va_arg(args, void *), width, precision,
+				16, flags, helper, data, &total);
 			continue;
 		case 's':
 			/* We won't need the length modifier here, can use the
@@ -335,13 +327,11 @@ int do_printf(printf_helper_t helper, void *data, const char *fmt, va_list args)
 			len = strnlen(str, precision);
 			if(flags & PRINTF_LEFT_JUSTIFY) {
 				printf_string_helper(str, len, helper, data, &total);
-				while(len < width--) {
+				while(len < width--)
 					helper(' ', data, &total);
-				}
 			} else {
-				while(len < width--) {
+				while(len < width--)
 					helper(' ', data, &total);
-				}
 				printf_string_helper(str, len, helper, data, &total);
 			}
 			continue;
@@ -356,24 +346,21 @@ int do_printf(printf_helper_t helper, void *data, const char *fmt, va_list args)
 			/* Unknown character, go back and reprint what we
 			 * skipped over. */
 			helper('%', data, &total);
-			while(fmt[-1] != '%') {
+			while(fmt[-1] != '%')
 				fmt--;
-			}
 			continue;
 		}
 
 		/* Default precision for numbers should be 1. */
-		if(precision == -1) {
+		if(precision == -1)
 			precision = 1;
-		}
 
 		/* Perform conversions according to the length modifiers. */
 		switch(len & 0xff) {
 		case 'h':
 			num = (unsigned short)va_arg(args, int);
-			if(flags & PRINTF_SIGNED) {
+			if(flags & PRINTF_SIGNED)
 				num = (signed short)num;
-			}
 			break;			
 		case 'l':
 			/* Bit 8 is set to mean 'll' rather than 'l'. */
@@ -381,9 +368,8 @@ int do_printf(printf_helper_t helper, void *data, const char *fmt, va_list args)
 				num = va_arg(args, unsigned long long);
 			} else {
 				num = va_arg(args, unsigned long);
-				if(flags & PRINTF_SIGNED) {
+				if(flags & PRINTF_SIGNED)
 					num = (signed long)num;
-				}
 			}
 			break;
 		case 'z':
@@ -391,9 +377,8 @@ int do_printf(printf_helper_t helper, void *data, const char *fmt, va_list args)
 			break;
 		default:
 			num = va_arg(args, unsigned int);
-			if(flags & PRINTF_SIGNED) {
+			if(flags & PRINTF_SIGNED)
 				num = (signed int)num;
-			}
 		}
 
 		/* Print the number. */

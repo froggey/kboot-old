@@ -74,9 +74,8 @@ void *kmalloc(size_t size) {
 	heap_chunk_t *chunk = NULL, *new;
 	size_t total;
 
-	if(size == 0) {
+	if(size == 0)
 		internal_error("Zero-sized allocation!");
-	}
 
 	/* Align all allocations to 8 bytes. */
 	size = ROUND_UP(size, 8);
@@ -99,9 +98,8 @@ void *kmalloc(size_t size) {
 			}
 		}
 
-		if(!chunk) {
+		if(!chunk)
 			internal_error("Exhausted heap space (want %zu bytes)", size);
-		}
 	}
 
 	/* Resize the segment if it is too big. There must be space for a
@@ -113,6 +111,7 @@ void *kmalloc(size_t size) {
 		list_add_after(&chunk->header, &new->header);
 		chunk->size = total;
 	}
+
 	chunk->size |= (1<<0);
 	return ((char *)chunk + sizeof(heap_chunk_t));
 }
@@ -144,15 +143,13 @@ void *krealloc(void *addr, size_t size) {
 void kfree(void *addr) {
 	heap_chunk_t *chunk, *adj;
 
-	if(!addr) {
+	if(!addr)
 		return;
-	}
 
 	/* Get the chunk and free it. */
 	chunk = (heap_chunk_t *)((char *)addr - sizeof(heap_chunk_t));
-	if(heap_chunk_free(chunk)) {
+	if(heap_chunk_free(chunk))
 		internal_error("Double free on address %p", addr);
-	}
 	chunk->size &= ~(1<<0);
 
 	/* Coalesce adjacent free segments. */
@@ -268,9 +265,8 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type)
 	}
 
 	/* If the range has not been added, add it now. */
-	if(list_empty(&range->header)) {
+	if(list_empty(&range->header))
 		list_append(&memory_ranges, &range->header);
-	}
 
 	/* Check if the new range has overlapped part of the previous range. */
 	if(memory_ranges.next != &range->header) {
@@ -279,7 +275,7 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type)
 			if(other->ka.end > range->ka.end) {
 				/* Must split the range. */
 				split = memory_range_alloc(range->ka.end, other->ka.end, other->ka.type);
-                               	list_add_after(&range->header, &split->header);
+				list_add_after(&range->header, &split->header);
 			}
 			other->ka.end = range->ka.start;
 		}
@@ -287,9 +283,8 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type)
 
 	/* Swallow up any following ranges that the new range overlaps. */
 	LIST_FOREACH_SAFE(&range->header, iter) {
-		if(iter == &memory_ranges) {
+		if(iter == &memory_ranges)
 			break;
-		}
 
 		other = list_entry(iter, memory_range_t, header);
 		if(other->ka.start >= range->ka.end) {
@@ -315,7 +310,7 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type)
 void phys_memory_add(phys_ptr_t start, phys_ptr_t end, int type) {
 	phys_memory_add_internal(start, end, type);
 	dprintf("memory: added range 0x%" PRIpp "-0x%" PRIpp " (type: %d)\n",
-	        start, end, type);
+		start, end, type);
 }
 
 /** Prevent allocations from being made from a range of physical memory.
@@ -356,19 +351,17 @@ phys_ptr_t phys_memory_alloc(phys_ptr_t size, size_t align, bool reclaim) {
 	/* Find a free range that is large enough to hold the new range. */
 	LIST_FOREACH(&memory_ranges, iter) {
 		range = list_entry(iter, memory_range_t, header);
-		if(range->ka.type != PHYS_MEMORY_FREE) {
+		if(range->ka.type != PHYS_MEMORY_FREE)
 			continue;
-		}
 
 		/* Align the base address and check that the range fits. */
 		start = ROUND_UP(range->ka.start, align);
-		if((start + size) > range->ka.end) {
+		if((start + size) > range->ka.end)
 			continue;
-		}
 
 		phys_memory_add_internal(start, start + size, type);
 		dprintf("memory: allocated 0x%" PRIpp "-0x%" PRIpp " (align: 0x%zx, reclaim: %d)\n",
-		        start, start + size, align, reclaim);
+			start, start + size, align, reclaim);
 		return start;
 	}
 
@@ -385,8 +378,7 @@ void memory_init(void) {
 	 * before entering the kernel, and mark the heap as reclaimable so the
 	 * kernel can get rid of it once it has finished with the arguments. */
 	phys_memory_add(ROUND_DOWN((phys_ptr_t)((ptr_t)__start), PAGE_SIZE),
-	                (phys_ptr_t)((ptr_t)__end),
-	                PHYS_MEMORY_INTERNAL);
+		(phys_ptr_t)((ptr_t)__end), PHYS_MEMORY_INTERNAL);
 	phys_memory_add((ptr_t)heap, (ptr_t)heap + HEAP_SIZE, PHYS_MEMORY_RECLAIMABLE);
 
 	/* Mark the stack as reclaimable. */

@@ -45,9 +45,8 @@ static Elf32_Addr kernel_entry;
 mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp) {
 	mmu_context_t *ctx;
 
-	if(!elf_check(handle, ELFCLASS32, ELF_EM_ARM)) {
+	if(!elf_check(handle, ELFCLASS32, ELF_EM_ARM))
 		boot_error("Kernel image is not for this architecture");
-	}
 
 	/* Create the MMU context. */
 	ctx = mmu_context_create();
@@ -55,7 +54,7 @@ mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp) {
 	/* Load the kernel. */
 	load_elf_kernel(handle, ctx, &kernel_entry, physp);
 	dprintf("kboot: 32-bit kernel entry point is 0x%lx, TTBR0 is %p\n",
-	        kernel_entry, ctx->ttbr0);
+		kernel_entry, ctx->ttbr0);
 
 	/* Identity map the loader. */
 	mmu_map(ctx, LOADER_LOAD_ADDR, LOADER_LOAD_ADDR, 0x100000);

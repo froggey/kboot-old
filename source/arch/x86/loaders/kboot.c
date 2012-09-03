@@ -54,9 +54,8 @@ static inline bool have_long_mode(void) {
 	x86_cpuid(X86_CPUID_EXT_MAX, &eax, &ebx, &ecx, &edx);
 	if(eax & (1<<31)) {
 		x86_cpuid(X86_CPUID_EXT_FEATURE, &eax, &ebx, &ecx, &edx);
-		if(edx & (1<<29)) {
+		if(edx & (1<<29))
 			return true;
-		}
 	}
 
 	return false;
@@ -70,9 +69,8 @@ static mmu_context_t *kboot_arch_load64(file_handle_t *handle, phys_ptr_t *physp
 	mmu_context_t *ctx;
 
 	/* Check for 64-bit support. */
-	if(!have_long_mode()) {
+	if(!have_long_mode())
 		boot_error("64-bit kernel requires 64-bit CPU");
-	}
 
 	/* Create the MMU context. */
 	ctx = mmu_context_create(true);
@@ -81,7 +79,7 @@ static mmu_context_t *kboot_arch_load64(file_handle_t *handle, phys_ptr_t *physp
 	load_elf64_kernel(handle, ctx, &kernel_entry64, physp);
 	kernel_is_64bit = true;
 	dprintf("kboot: 64-bit kernel entry point is 0x%llx, CR3 is 0x%llx\n",
-	        kernel_entry64, ctx->cr3);
+		kernel_entry64, ctx->cr3);
 	return ctx;
 }
 
@@ -98,7 +96,7 @@ static mmu_context_t *kboot_arch_load32(file_handle_t *handle, phys_ptr_t *physp
 	/* Load the kernel. */
 	load_elf32_kernel(handle, ctx, &kernel_entry32, physp);
 	dprintf("kboot: 32-bit kernel entry point is 0x%lx, CR3 is 0x%llx\n",
-	        kernel_entry32, ctx->cr3);
+		kernel_entry32, ctx->cr3);
 	return ctx;
 }
 
@@ -113,9 +111,8 @@ mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp) {
 	/* Check if CPUID is supported - if we can change EFLAGS.ID, it is. */
 	flags = x86_read_flags();
 	x86_write_flags(flags ^ X86_FLAGS_ID);
-	if((x86_read_flags() & X86_FLAGS_ID) == (flags & X86_FLAGS_ID)) {
+	if((x86_read_flags() & X86_FLAGS_ID) == (flags & X86_FLAGS_ID))
 		boot_error("CPU does not support CPUID");
-	}
 
 	if(elf_check(handle, ELFCLASS64, ELF_EM_X86_64)) {
 		ctx = kboot_arch_load64(handle, physp);

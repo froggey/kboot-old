@@ -113,9 +113,8 @@ static bool textbox_edit_update = false;
 static inline void set_title_region(bool clear) {
 	draw_region_t r = { 0, 0, main_console->width, 1, false };
 	main_console->set_region(&r);
-	if(clear) {
+	if(clear)
 		main_console->clear(0, 0, r.width, r.height);
-	}
 }
 
 /** Set the region to the help region.
@@ -123,9 +122,8 @@ static inline void set_title_region(bool clear) {
 static inline void set_help_region(bool clear) {
 	draw_region_t r = { 0, main_console->height - 1, main_console->width, 1, false };
 	main_console->set_region(&r);
-	if(clear) {
+	if(clear)
 		main_console->clear(0, 0, r.width, r.height);
-	}
 }
 
 /** Set the region to the content region.
@@ -133,9 +131,8 @@ static inline void set_help_region(bool clear) {
 static inline void set_content_region(bool clear) {
 	draw_region_t r = { 1, 2, main_console->width - 2, UI_CONTENT_HEIGHT, false };
 	main_console->set_region(&r);
-	if(clear) {
+	if(clear)
 		main_console->clear(0, 0, r.width, r.height);
-	}
 }
 
 /** Print an action (for help text).
@@ -249,9 +246,8 @@ void ui_window_display(ui_window_t *window, int timeout) {
 			key = main_console->get_key();
 			set_content_region(false);
 			if((ret = window->type->input(window, key)) != INPUT_HANDLED) {
-				if(ret == INPUT_CLOSE) {
+				if(ret == INPUT_CLOSE)
 					exited = true;
-				}
 				break;
 			}
 
@@ -271,13 +267,11 @@ void ui_window_display(ui_window_t *window, int timeout) {
 static void ui_textview_render_line(ui_textview_t *view, size_t line) {
 	size_t i;
 
-	for(i = 0; i < view->lines[line].len; i++) {
+	for(i = 0; i < view->lines[line].len; i++)
 		main_console->putch(view->lines[line].ptr[i]);
-	}
 
-	if(view->lines[line].len < UI_CONTENT_WIDTH) {
+	if(view->lines[line].len < UI_CONTENT_WIDTH)
 		main_console->putch('\n');
-	}
 }
 
 /** Render a textview window.
@@ -286,9 +280,8 @@ static void ui_textview_render(ui_window_t *window) {
 	ui_textview_t *view = (ui_textview_t *)window;
 	size_t i;
 
-	for(i = view->offset; i < MIN(view->offset + UI_CONTENT_HEIGHT, view->count); i++) {
+	for(i = view->offset; i < MIN(view->offset + UI_CONTENT_HEIGHT, view->count); i++)
 		ui_textview_render_line(view, i);
-	}
 }
 
 /** Write the help text for a textview window.
@@ -296,12 +289,12 @@ static void ui_textview_render(ui_window_t *window) {
 static void ui_textview_help(ui_window_t *window) {
 	ui_textview_t *view = (ui_textview_t *)window;
 
-	if(view->offset) {
+	if(view->offset)
 		kprintf("Up = Scroll Up  ");
-	}
-	if((view->count - view->offset) > UI_CONTENT_HEIGHT) {
+
+	if((view->count - view->offset) > UI_CONTENT_HEIGHT)
 		kprintf("Down = Scroll Down  ");
-	}
+
 	kprintf("Esc = Back");
 }
 
@@ -379,9 +372,8 @@ ui_window_t *ui_textview_create(const char *title, const char *text) {
 	}
 
 	/* If there is still data at the end (no newline before end), add it. */
-	if((len = strlen(text)) > 0) {
+	if((len = strlen(text)) > 0)
 		ui_textview_add_line(view, text, len);
-	}
 	
 	return &view->header;
 }
@@ -407,9 +399,8 @@ static void ui_list_render_entry(ui_entry_t *entry, size_t pos, bool selected) {
 	entry->type->render(entry);
 
 	/* Highlight if necessary. */
-	if(selected) {
+	if(selected)
 		main_console->highlight(0, 0, region.width, 1);
-	}
 
 	/* Restore content region. */
 	main_console->set_region(&content);
@@ -422,9 +413,8 @@ static void ui_list_render(ui_window_t *window) {
 	size_t i;
 
 	/* Render each entry. */
-	for(i = list->offset; i < MIN(list->offset + UI_CONTENT_HEIGHT, list->count); i++) {
+	for(i = list->offset; i < MIN(list->offset + UI_CONTENT_HEIGHT, list->count); i++)
 		ui_list_render_entry(list->entries[i], i - list->offset, list->selected == i);
-	}
 }
 
 /** Write the help text for a list window.
@@ -434,20 +424,16 @@ static void ui_list_help(ui_window_t *window) {
 	size_t i;
 
 	/* Print help for each of the selected entry's actions. */
-	for(i = 0; i < list->entries[list->selected]->type->action_count; i++) {
+	for(i = 0; i < list->entries[list->selected]->type->action_count; i++)
 		ui_action_print(&list->entries[list->selected]->type->actions[i]);
-	}
 
 	/* Print navigation instructions. */
-	if(list->selected > 0) {
+	if(list->selected > 0)
 		kprintf("Up = Scroll Up  ");
-	}
-	if(list->selected < (list->count - 1)) {
+	if(list->selected < (list->count - 1))
 		kprintf("Down = Scroll Down  ");
-	}
-	if(list->exitable) {
+	if(list->exitable)
 		kprintf("Esc = Back");
-	}
 }
 
 /** Handle input on the window.
@@ -461,9 +447,8 @@ static input_result_t ui_list_input(ui_window_t *window, uint16_t key) {
 
 	switch(key) {
 	case CONSOLE_KEY_UP:
-		if(!list->selected) {
+		if(!list->selected)
 			break;
-		}
 
 		/* Un-highlight current entry. */
 		main_console->highlight(0, list->selected - list->offset, UI_CONTENT_WIDTH, 1);
@@ -479,9 +464,8 @@ static input_result_t ui_list_input(ui_window_t *window, uint16_t key) {
 		}
 		break;
 	case CONSOLE_KEY_DOWN:
-		if(list->selected >= (list->count - 1)) {
+		if(list->selected >= (list->count - 1))
 			break;
-		}
 
 		/* Un-highlight current entry. */
 		main_console->highlight(0, list->selected - list->offset, UI_CONTENT_WIDTH, 1);
@@ -497,24 +481,23 @@ static input_result_t ui_list_input(ui_window_t *window, uint16_t key) {
 		}
 		break;
 	case '\e':
-		if(list->exitable) {
+		if(list->exitable)
 			ret = INPUT_CLOSE;
-		}
 		break;
 	default:
 		/* Handle custom actions. */
 		for(i = 0; i < list->entries[list->selected]->type->action_count; i++) {
-			if(key != list->entries[list->selected]->type->actions[i].key) {
+			if(key != list->entries[list->selected]->type->actions[i].key)
 				continue;
-			}
 
-			ret = list->entries[list->selected]->type->actions[i].cb(list->entries[list->selected]);
+			ret = list->entries[list->selected]->type->actions[i].cb(
+				list->entries[list->selected]);
 			if(ret == INPUT_HANDLED) {
 				/* Need to re-render the entry. */
-				main_console->highlight(0, list->selected - list->offset, UI_CONTENT_WIDTH, 1);
+				main_console->highlight(0, list->selected - list->offset,
+					UI_CONTENT_WIDTH, 1);
 				ui_list_render_entry(list->entries[list->selected],
-				                     list->selected - list->offset,
-				                     true);
+					list->selected - list->offset, true);
 			}
 			break;
 		}
@@ -558,9 +541,8 @@ void ui_list_insert(ui_window_t *window, ui_entry_t *entry, bool selected) {
 	list->entries[i] = entry;
 	if(selected) {
 		list->selected = i;
-		if(i >= UI_CONTENT_HEIGHT) {
+		if(i >= UI_CONTENT_HEIGHT)
 			list->offset = (i - UI_CONTENT_HEIGHT) + 1;
-		}
 	}
 }
 
@@ -571,7 +553,8 @@ void ui_list_insert(ui_window_t *window, ui_entry_t *entry, bool selected) {
  * @param label		Label to give the entry.
  * @param selected	Whether the entry should be selected. */
 void ui_list_insert_env(ui_window_t *window, environ_t *env, const char *name,
-                        const char *label, bool selected) {
+	const char *label, bool selected)
+{
 	value_t *value = environ_lookup(env, name);
 
 	switch(value->type) {
@@ -640,6 +623,7 @@ ui_entry_t *ui_link_create(ui_window_t *window) {
  * @return		Input handling result. */
 static input_result_t ui_checkbox_toggle(ui_entry_t *entry) {
 	ui_checkbox_t *box = (ui_checkbox_t *)entry;
+
 	box->value->boolean = !box->value->boolean;
 	return INPUT_HANDLED;
 }
@@ -686,9 +670,8 @@ ui_entry_t *ui_checkbox_create(const char *label, value_t *value) {
 static void ui_textbox_editor_render(ui_window_t *window) {
 	size_t i;
 
-	for(i = 0; i < textbox_edit_len; i++) {
+	for(i = 0; i < textbox_edit_len; i++)
 		main_console->putch(textbox_edit_buf[i]);
-	}
 }
 
 /** Write the help text for a text box edit window.
@@ -711,15 +694,13 @@ static input_result_t ui_textbox_editor_input(ui_window_t *window, uint16_t key)
 		return INPUT_CLOSE;
 	default:
 		/* Ignore non-printable keys. */
-		if(!isprint(key) && key != '\b') {
+		if(!isprint(key) && key != '\b')
 			return INPUT_HANDLED;
-		}
 
 		ch = key & 0xFF;
 		if(ch == '\b') {
-			if(textbox_edit_len) {
+			if(textbox_edit_len)
 				textbox_edit_len--;
-			}
 		} else if(textbox_edit_len < ARRAYSZ(textbox_edit_buf)) {
 			textbox_edit_buf[textbox_edit_len++] = ch;
 		}
@@ -761,6 +742,7 @@ static input_result_t ui_textbox_edit(ui_entry_t *entry) {
 		memcpy(box->value->string, textbox_edit_buf, textbox_edit_len);
 		box->value->string[textbox_edit_len] = 0;
 	}
+
 	return INPUT_RENDER;
 }
 
@@ -782,9 +764,8 @@ static void ui_textbox_render(ui_entry_t *entry) {
 	len = strlen(box->value->string);
 	if(len > avail) {
 		kprintf(" [");
-		for(i = 0; i < avail - 3; i++) {
+		for(i = 0; i < avail - 3; i++)
 			main_console->putch(box->value->string[i]);
-		}
 		kprintf("...]");
 	} else {
 		main_console->move_cursor(0 - len - 2, 0);
@@ -824,6 +805,7 @@ ui_entry_t *ui_textbox_create(const char *label, value_t *value) {
  * @return		Input handling result. */
 static input_result_t ui_chooser_change(ui_entry_t *entry) {
 	ui_chooser_t *chooser = (ui_chooser_t *)entry;
+
 	ui_window_display(chooser->list, 0);
 	return INPUT_RENDER;
 }

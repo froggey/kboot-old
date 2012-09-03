@@ -53,8 +53,9 @@ static bool config_cmd_entry(value_list_t *args, environ_t *env) {
 
 	assert(env == root_environ);
 
-	if(args->count != 2 || args->values[0].type != VALUE_TYPE_STRING ||
-	   args->values[1].type != VALUE_TYPE_COMMAND_LIST) {
+	if(args->count != 2 || args->values[0].type != VALUE_TYPE_STRING
+		|| args->values[1].type != VALUE_TYPE_COMMAND_LIST)
+	{
 		dprintf("config: entry: invalid arguments\n");
 		return false;
 	}
@@ -88,13 +89,11 @@ static menu_entry_t *menu_find_default(void) {
 		LIST_FOREACH(&menu_entries, iter) {
 			entry = list_entry(iter, menu_entry_t, link);
 			if(value->type == VALUE_TYPE_INTEGER) {
-				if(i == value->integer) {
+				if(i == value->integer)
 					return entry;
-				}
 			} else if(value->type == VALUE_TYPE_STRING) {
-				if(strcmp(entry->name, value->string) == 0) {
+				if(strcmp(entry->name, value->string) == 0)
 					return entry;
-				}
 			}
 
 			i++;
@@ -116,9 +115,8 @@ static bool menu_can_display(void) {
 		/* Menu hidden, wait half a second for Esc to be pressed. */
 		spin(500000);
 		while(main_console->check_key()) {
-			if(main_console->get_key() == '\e') {
+			if(main_console->get_key() == '\e')
 				return true;
-			}
 		}
 
 		return false;
@@ -203,9 +201,8 @@ environ_t *menu_display(void) {
 
 	/* If no menu entries are defined, assume that the top-level environment
 	 * has been configured with something to boot. */
-	if(list_empty(&menu_entries)) {
+	if(list_empty(&menu_entries))
 		return root_environ;
-	}
 
 	/* Find the default entry. */
 	selected_menu_entry = menu_find_default();
@@ -226,10 +223,10 @@ environ_t *menu_display(void) {
 			ui_list_insert(window, &entry->header, entry == selected_menu_entry);
 		}
 
-		/* Display it. The selected entry pointer will be updated. */
-		if((value = environ_lookup(root_environ, "timeout")) && value->type == VALUE_TYPE_INTEGER) {
+		if((value = environ_lookup(root_environ, "timeout")) && value->type == VALUE_TYPE_INTEGER)
 			timeout = value->integer;
-		}
+
+		/* Display it. The selected entry pointer will be updated. */
 		ui_window_display(window, timeout);
 	}
 

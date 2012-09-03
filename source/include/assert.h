@@ -25,7 +25,10 @@
 #include <system.h>
 
 #if CONFIG_DEBUG
-# define assert(cond)	if(unlikely(!(cond))) { internal_error("Assertion failure: %s\nat %s:%d", #cond, __FILE__, __LINE__); }
+# define assert(cond)	\
+	if(unlikely(!(cond))) { \
+		internal_error("Assertion failure: %s\nat %s:%d", #cond, __FILE__, __LINE__); \
+	}
 #else
 # define assert(cond)	((void)0)
 #endif

@@ -145,9 +145,8 @@ static bool mmu_map64(mmu_context_t *ctx, uint64_t virt, uint64_t phys, uint64_t
 	}
 
 	/* Map whatever remains. */
-	for(i = 0; i < size; i += PAGE_SIZE) {
+	for(i = 0; i < size; i += PAGE_SIZE)
 		map_small64(ctx, virt + i, phys + i);
-	}
 
 	return true;
 }
@@ -224,9 +223,8 @@ static bool mmu_map32(mmu_context_t *ctx, uint32_t virt, uint32_t phys, uint32_t
 	}
 
 	/* Map whatever remains. */
-	for(i = 0; i < size; i += PAGE_SIZE) {
+	for(i = 0; i < size; i += PAGE_SIZE)
 		map_small32(ctx, virt + i, phys + i);
-	}
 
 	return false;
 }
@@ -238,9 +236,8 @@ static bool mmu_map32(mmu_context_t *ctx, uint32_t virt, uint32_t phys, uint32_t
  * @param size		Size of the mapping to create.
  * @return		Whether created successfully. */
 bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size_t size) {
-	if(virt % PAGE_SIZE || phys % PAGE_SIZE || size % PAGE_SIZE) {
+	if(virt % PAGE_SIZE || phys % PAGE_SIZE || size % PAGE_SIZE)
 		return false;
-	}
 
 	if(ctx->is64) {
 		return mmu_map64(ctx, virt, phys, size);

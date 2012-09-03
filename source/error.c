@@ -37,12 +37,11 @@ static ui_window_t *debug_log_window;
  * @param data		If not NULL, newlines will be padded.
  * @param total		Pointer to total character count. */
 static void internal_error_printf_helper(char ch, void *data, int *total) {
-	if(debug_console) {
+	if(debug_console)
 		debug_console->putch(ch);
-	}
-	if(main_console) {
+	if(main_console)
 		main_console->putch(ch);
-	}
+
 	*total = *total + 1;
 }
 
@@ -64,9 +63,9 @@ static int internal_error_printf(const char *fmt, ...) {
 void __noreturn internal_error(const char *fmt, ...) {
 	va_list args;
 
-	if(main_console) {
+	if(main_console)
 		main_console->reset();
-	}
+
 	internal_error_printf("\nAn internal error has occurred:\n\n");
 
 	va_start(args, fmt);
@@ -149,12 +148,10 @@ void __noreturn boot_error(const char *fmt, ...) {
 #else
 	va_list args;
 
-	if(main_console) {
+	if(main_console)
 		main_console->reset();
-	}
-	if(debug_console) {
+	if(debug_console)
 		debug_console->putch('\n');
-	}
 
 	va_start(args, fmt);
 	boot_error_display(fmt, args);

@@ -83,9 +83,8 @@ static void map_small(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys) {
 bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size_t size) {
 	uint32_t i;
 
-	if(virt % PAGE_SIZE || phys % PAGE_SIZE || size % PAGE_SIZE) {
+	if(virt % PAGE_SIZE || phys % PAGE_SIZE || size % PAGE_SIZE)
 		return false;
-	}
 
 	/* Map using sections where possible. To do this, align up to a 1MB
 	 * boundary using small pages, map anything possible with sections,
@@ -108,9 +107,8 @@ bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size
 	}
 
 	/* Map whatever remains. */
-	for(i = 0; i < size; i += PAGE_SIZE) {
+	for(i = 0; i < size; i += PAGE_SIZE)
 		map_small(ctx, virt + i, phys + i);
-	}
 
 	return true;
 }

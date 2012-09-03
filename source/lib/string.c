@@ -29,7 +29,8 @@
 
 #include <memory.h>
 
-/** Copy data in memory.
+/**
+ * Copy data in memory.
  *
  * Copies bytes from a source memory area to a destination memory area,
  * where both areas may not overlap.
@@ -44,9 +45,8 @@ void *memcpy(void *__restrict dest, const void *__restrict src, size_t count) {
 	const unsigned char *s = src;
 	unsigned char *d = dest;
 
-	for(; count != 0; count--) {
+	for(; count != 0; count--)
 		*d++ = *s++;
-	}
 
 	return dest;
 }
@@ -59,14 +59,14 @@ void *memcpy(void *__restrict dest, const void *__restrict src, size_t count) {
 void *memset(void *dest, int val, size_t count) {
 	unsigned char *d = dest;
 
-	for(; count != 0; count--) {
+	for(; count != 0; count--)
 		*d++ = (unsigned char)val;
-	}
 
 	return dest;
 }
 
-/** Copy overlapping data in memory.
+/**
+ * Copy overlapping data in memory.
  *
  * Copies bytes from a source memory area to a destination memory area,
  * where both areas may overlap.
@@ -87,9 +87,8 @@ void *memmove(void *dest, const void *src, size_t count) {
 		} else {
 			d = (unsigned char *)dest + (count - 1);
 			s = (const unsigned char *)src + (count - 1);
-			while(count--) {
+			while(count--)
 				*d-- = *s--;
-			}
 		}
 	}
 
@@ -128,9 +127,8 @@ int strcmp(const char *s1, const char *s2) {
 
 	for(;;) {
 		x = *s1;
-		if(x != *s2 || !x) {
+		if(x != *s2 || !x)
 			break;
-		}
 
 		s1++;
 		s2++;
@@ -167,7 +165,8 @@ int strncmp(const char *s1, const char *s2, size_t count) {
 	return 0;
 }
 
-/** Separate a string.
+/**
+ * Separate a string.
  *
  * Finds the first occurrence of a symbol in the string delim in *stringp.
  * If one is found, the delimeter is replaced by a NULL byte and the pointer
@@ -187,9 +186,8 @@ char *strsep(char **stringp, const char *delim) {
 	int c, sc;
 	char *tok;
 
-	if(!(s = *stringp)) {
+	if(!(s = *stringp))
 		return NULL;
-	}
 
 	for(tok = s;;) {
 		c = *s++;
@@ -236,19 +234,18 @@ char *strrchr(const char *s, int c) {
 	const char *l = NULL;
 
 	for(;;) {
-		if(*s == c) {
+		if(*s == c)
 			l = s;
-		}
-		if(!*s) {
+		if(!*s)
 			return (char *)l;
-		}
 		s++;
 	}
 
 	return (char *)l;
 }
 
-/** Strip whitespace from a string.
+/**
+ * Strip whitespace from a string.
  * 
  * Strips whitespace from the start and end of a string. The string is modified
  * in-place.
@@ -261,22 +258,21 @@ char *strstrip(char *str) {
 	size_t len;
 
 	/* Strip from beginning. */
-	while(isspace(*str)) {
+	while(isspace(*str))
 		str++;
-	}
 
 	/* Strip from end. */
 	len = strlen(str);
 	while(len--) {
-		if(!isspace(str[len])) {
+		if(!isspace(str[len]))
 			break;
-		}
 	}
 	str[++len] = 0;
 	return str;
 }
 
-/** Copy a string.
+/**
+ * Copy a string.
  *
  * Copies a string from one place to another. Assumes that the destination
  * is big enough to hold the string.
@@ -293,7 +289,8 @@ char *strcpy(char *__restrict dest, const char *__restrict src) {
 	return dest;
 }
 
-/** Copy a string with a length limit.
+/**
+ * Copy a string with a length limit.
  *
  * Copies a string from one place to another. Will copy at most the number
  * of bytes specified.
@@ -309,14 +306,14 @@ char *strncpy(char *__restrict dest, const char *__restrict src, size_t count) {
 	
 	for(i = 0; i < count; i++) {
 		dest[i] = src[i];
-		if(!src[i]) {
+		if(!src[i])
 			break;
-		}
 	}
 	return dest;
 }
 
-/** Concatenate two strings.
+/**
+ * Concatenate two strings.
  *
  * Appends one string to another. Assumes that the destination string has
  * enough space to store the contents of both strings and the NULL terminator.
@@ -334,7 +331,8 @@ char *strcat(char *__restrict dest, const char *__restrict src) {
 	return dest;
 }
 
-/** Duplicate a string.
+/**
+ * Duplicate a string.
  *
  * Allocates a buffer big enough to hold the given string and copies the
  * string to it. The pointer returned should be freed with kfree().
@@ -352,7 +350,8 @@ char *kstrdup(const char *src) {
 	return dup;
 }
 
-/** Duplicate a string with a length limit.
+/**
+ * Duplicate a string with a length limit.
  *
  * Allocates a buffer either as big as the string or the maximum length
  * given, and then copies at most the number of bytes specified of the string
@@ -393,21 +392,24 @@ char *kstrndup(const char *src, size_t n) {
 				base = 10; \
 			} \
 		} else if(base == 16) { \
-			if(cp[0] == '0' && tolower(cp[1]) == 'x') { \
+			if(cp[0] == '0' && tolower(cp[1]) == 'x') \
 				cp += 2; \
-			} \
 		} \
-		while(isxdigit(*cp) && (value = isdigit(*cp) ? *cp - '0' : tolower(*cp) - 'a' + 10) < base) { \
+		\
+		while(isxdigit(*cp) && (value = isdigit(*cp) \
+			? *cp - '0' : tolower(*cp) - 'a' + 10) < base) \
+		{ \
 			result = result * base + value; \
 			cp++; \
 		} \
-		if(endp) { \
+		\
+		if(endp) \
 			*endp = (char *)cp; \
-		} \
 		result; \
 	})
 
-/** Convert a string to an unsigned long.
+/**
+ * Convert a string to an unsigned long.
  *
  * Converts a string to an unsigned long using the specified number base.
  *
@@ -421,7 +423,8 @@ unsigned long strtoul(const char *cp, char **endp, unsigned int base) {
 	return __strtoux(unsigned long, cp, endp, base);
 }
 
-/** Convert a string to a signed long.
+/**
+ * Convert a string to a signed long.
  *
  * Converts a string to an signed long using the specified number base.
  *
@@ -432,13 +435,14 @@ unsigned long strtoul(const char *cp, char **endp, unsigned int base) {
  * @return		Converted value.
  */
 long strtol(const char *cp, char **endp, unsigned int base) {
-	if(*cp == '-') {
+	if(*cp == '-')
 		return -strtoul(cp + 1, endp, base);
-	}
+
 	return strtoul(cp, endp, base);
 }
 
-/** Convert a string to an unsigned long long.
+/**
+ * Convert a string to an unsigned long long.
  *
  * Converts a string to an unsigned long long using the specified number base.
  *
@@ -452,7 +456,8 @@ unsigned long long strtoull(const char *cp, char **endp, unsigned int base) {
 	return __strtoux(unsigned long long, cp, endp, base);
 }
 
-/** Convert a string to an signed long long.
+/**
+ * Convert a string to an signed long long.
  *
  * Converts a string to an signed long long using the specified number base.
  *
@@ -463,9 +468,9 @@ unsigned long long strtoull(const char *cp, char **endp, unsigned int base) {
  * @return		Converted value.
  */
 long long strtoll(const char *cp, char **endp, unsigned int base) {
-	if(*cp == '-') {
+	if(*cp == '-')
 		return -strtoull(cp + 1, endp, base);
-	}
+
 	return strtoull(cp, endp, base);
 }
 
@@ -489,7 +494,8 @@ static void vsnprintf_helper(char ch, void *_data, int *total) {
 	}
 }
 
-/** Format a string and place it in a buffer.
+/**
+ * Format a string and place it in a buffer.
  *
  * Places a formatted string in a buffer according to the format and
  * arguments given.
@@ -517,10 +523,12 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args) {
 	} else {
 		data.buf[data.size-1] = 0;
 	}
+
 	return ret;
 }
 
-/** Format a string and place it in a buffer.
+/**
+ * Format a string and place it in a buffer.
  *
  * Places a formatted string in a buffer according to the format and
  * arguments given.
@@ -536,7 +544,8 @@ int vsprintf(char *buf, const char *fmt, va_list args) {
 	return vsnprintf(buf, (size_t)-1, fmt, args);
 }
 
-/** Format a string and place it in a buffer.
+/**
+ * Format a string and place it in a buffer.
  *
  * Places a formatted string in a buffer according to the format and
  * arguments given.
@@ -559,7 +568,8 @@ int snprintf(char *buf, size_t size, const char *fmt, ...) {
 	return ret;
 }
 
-/** Format a string and place it in a buffer.
+/**
+ * Format a string and place it in a buffer.
  *
  * Places a formatted string in a buffer according to the format and
  * arguments given.

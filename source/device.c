@@ -31,7 +31,8 @@ device_t *current_device = NULL;
 /** List of all devices. */
 LIST_DECLARE(device_list);
 
-/** Look up a device according to a string.
+/**
+ * Look up a device according to a string.
  *
  * Looks up a device according to the given string. If the string is in the
  * form "(<name>)", then the device, will be looked up by its name. Otherwise,
@@ -58,20 +59,19 @@ device_t *device_lookup(const char *str) {
 		device = list_entry(iter, device_t, header);
 
 		if(name) {
-			if(strcmp(device->name, name) == 0) {
+			if(strcmp(device->name, name) == 0)
 				return device;
-			}
 		} else if(device->fs && device->fs->uuid) {
-			if(strcmp(device->fs->uuid, str) == 0) {
+			if(strcmp(device->fs->uuid, str) == 0)
 				return device;
-			}
 		}
 	}
 
 	return NULL;
 }
 
-/** Register a device.
+/**
+ * Register a device.
  *
  * Registers a new device. Does not set the FS pointer, so this should be set
  * manually after the function returns. If this is the boot device, the caller
