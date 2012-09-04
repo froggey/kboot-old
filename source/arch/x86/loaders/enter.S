@@ -71,7 +71,7 @@ FUNCTION_START(kboot_arch_enter64)
 	mov	%ax, %gs
 
         /* Clear the high 32 bits of %rsp. */
-        mov     %esp, %esp
+        mov	%esp, %esp
 
 	/* Retreive the tag list address and entry point. */
 	movq	$KBOOT_MAGIC, %rdi

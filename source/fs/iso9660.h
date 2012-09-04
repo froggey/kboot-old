@@ -52,25 +52,25 @@
 
 /** Date and Time Format (ECMA-119 Page 21). */
 typedef struct iso9660_timestamp {
-        uint8_t year[4];			/**< Year. */
-        uint8_t month[2];			/**< Month of year (1-12). */
-        uint8_t day[2];				/**< Day of month (1-31). */
-        uint8_t hour[2];			/**< Hour (0-23). */
-        uint8_t minute[2];			/**< Minute (0-59). */
-        uint8_t second[2];			/**< Second (0-59). */
-        uint8_t centiseconds[2];		/**< Hundredths of second (0-99). */
-        uint8_t offset;				/**< Offset from GMT. */
+	uint8_t year[4];			/**< Year. */
+	uint8_t month[2];			/**< Month of year (1-12). */
+	uint8_t day[2];				/**< Day of month (1-31). */
+	uint8_t hour[2];			/**< Hour (0-23). */
+	uint8_t minute[2];			/**< Minute (0-59). */
+	uint8_t second[2];			/**< Second (0-59). */
+	uint8_t centiseconds[2];		/**< Hundredths of second (0-99). */
+	uint8_t offset;				/**< Offset from GMT. */
 } __packed iso9660_timestamp_t;
 
 /** Recording Date and Time Format (ECMA-119 Page 28). */
 typedef struct iso9660_dir_timestamp {
 	uint8_t year;				/**< Years since 1900. */
 	uint8_t month;				/**< Month of year (1-12). */
-        uint8_t day;				/**< Day of month (1-31). */
-        uint8_t hour;				/**< Hour (0-23). */
-        uint8_t minute;				/**< Minute (0-59). */
-        uint8_t second;				/**< Second (0-59). */
-        uint8_t offset;				/**< Offset from GMT. */
+	uint8_t day;				/**< Day of month (1-31). */
+	uint8_t hour;				/**< Hour (0-23). */
+	uint8_t minute;				/**< Minute (0-59). */
+	uint8_t second;				/**< Second (0-59). */
+	uint8_t offset;				/**< Offset from GMT. */
 } __packed iso9660_dir_timestamp_t;
 
 /** Header of a Volume Descriptor (ECMA-119 Page 15). */
@@ -164,20 +164,20 @@ typedef struct iso9660_supp_volume_desc {
 
 /** Directory Record (ECMA-119 Page 27). */
 typedef struct iso9660_directory_record {
-        uint8_t rec_len;			/**< Length of Directory Record. */
-        uint8_t ext_attr_rec_len;		/**< Extended Attribute Record Length. */
-        uint32_t extent_loc_le;			/**< Location of Extent (LE). */
-        uint32_t extent_loc_be;			/**< Location of Extent (BE). */
-        uint32_t data_len_le;			/**< Data Length (LE). */
-        uint32_t data_len_be;			/**< Data Length (BE). */
-        iso9660_dir_timestamp_t time;		/**< Recording Date and Time. */
-        uint8_t file_flags;			/**< File Flags. */
-        uint8_t file_unit_size;			/**< File Unit Size. */
-        uint8_t interleave_gap_size;		/**< Interleave Gap Size. */
+	uint8_t rec_len;			/**< Length of Directory Record. */
+	uint8_t ext_attr_rec_len;		/**< Extended Attribute Record Length. */
+	uint32_t extent_loc_le;			/**< Location of Extent (LE). */
+	uint32_t extent_loc_be;			/**< Location of Extent (BE). */
+	uint32_t data_len_le;			/**< Data Length (LE). */
+	uint32_t data_len_be;			/**< Data Length (BE). */
+	iso9660_dir_timestamp_t time;		/**< Recording Date and Time. */
+	uint8_t file_flags;			/**< File Flags. */
+	uint8_t file_unit_size;			/**< File Unit Size. */
+	uint8_t interleave_gap_size;		/**< Interleave Gap Size. */
 	uint16_t vol_seq_num_le;		/**< Volume Sequence Number (LE). */
 	uint16_t vol_seq_num_be;		/**< Volume Sequence Number (BE). */
-        uint8_t file_ident_len;			/**< Length of File Identifier. */
-        uint8_t file_ident[];			/**< File Identifier. */
+	uint8_t file_ident_len;			/**< Length of File Identifier. */
+	uint8_t file_ident[];			/**< File Identifier. */
 } __packed iso9660_directory_record_t;
 
 #endif /* __FS_ISO9660_H */

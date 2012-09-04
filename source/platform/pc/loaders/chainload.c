@@ -48,29 +48,25 @@ static void __noreturn chain_loader_load(environ_t *env) {
 	uint8_t id;
 	char *path;
 
-	if(!current_device->disk) {
+	if(!current_device->disk)
 		boot_error("Cannot chainload from non-disk device");
-	}
 
 	path = loader_data_get(env);
 	if(path) {
 		/* Loading from a file. */
 		file = file_open(path);
-		if(!file) {
+		if(!file)
 			boot_error("Could not read boot file");
-		}
 
 		/* Read in the boot sector. */
-		if(!file_read(file, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0)) {
+		if(!file_read(file, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0))
 			boot_error("Could not read boot sector");
-		}
 
 		file_close(file);
 	} else {
 		/* Loading the boot sector from the disk. */
-		if(!disk_read(current_device->disk, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0)) {
+		if(!disk_read(current_device->disk, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0))
 			boot_error("Could not read boot sector");
-		}
 	}
 
 	/* Get the ID of the disk we're booting from. */
@@ -80,7 +76,8 @@ static void __noreturn chain_loader_load(environ_t *env) {
 	/* If booting a partition, we must give partition information to it. */
 	if((parent = disk_parent(current_device->disk)) != current_device->disk) {
 		if(!disk_read(parent, (void *)PARTITION_TABLE_ADDR, PARTITION_TABLE_SIZE,
-		              PARTITION_TABLE_OFFSET)) {
+			PARTITION_TABLE_OFFSET))
+		{
 			boot_error("Could not read partition table");
 		}
 
@@ -91,9 +88,8 @@ static void __noreturn chain_loader_load(environ_t *env) {
 	bios_regs_init(&regs);
 	regs.eax = 0x2400;
 	bios_interrupt(0x15, &regs);
-	if(regs.eflags & X86_FLAGS_CF || regs.eax != 0) {
+	if(regs.eflags & X86_FLAGS_CF || regs.eax != 0)
 		out8(0x92, in8(0x92) & ~(1<<1));
-	}
 
 	/* Restore the console to a decent state. */
 	bios_regs_init(&regs);

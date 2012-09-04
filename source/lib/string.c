@@ -250,9 +250,9 @@ char *strrchr(const char *s, int c) {
  * Strips whitespace from the start and end of a string. The string is modified
  * in-place.
  *
- * @param str           String to remove from.
+ * @param str		String to remove from.
  *
- * @return              Pointer to new start of string.
+ * @return		Pointer to new start of string.
  */
 char *strstrip(char *str) {
 	size_t len;

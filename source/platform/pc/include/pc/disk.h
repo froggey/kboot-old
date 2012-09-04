@@ -58,12 +58,12 @@ typedef struct disk_address_packet {
 
 /** Bootable CD-ROM Specification Packet. */
 typedef struct specification_packet {
-        uint8_t size;
-        uint8_t media_type;
-        uint8_t drive_number;
-        uint8_t controller_num;
-        uint32_t image_lba;
-        uint16_t device_spec;
+	uint8_t size;
+	uint8_t media_type;
+	uint8_t drive_number;
+	uint8_t controller_num;
+	uint32_t image_lba;
+	uint16_t device_spec;
 } __packed specification_packet_t;
 
 extern uint8_t bios_disk_id(struct disk *disk);

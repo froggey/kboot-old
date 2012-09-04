@@ -179,13 +179,13 @@ FUNCTION_START(pxe_call_real)
 	sti
 
 	/* Call the entry point. */
-        pushl	%ebx
-        pushl	%edx
-        pushw	%cx
-       	movw	%sp, %bx
-        lcall	*%ss:6(%bx)
-        addw	$10, %sp
-        movzwl	%ax, %ecx
+	pushl	%ebx
+	pushl	%edx
+	pushw	%cx
+	movw	%sp, %bx
+	lcall	*%ss:6(%bx)
+	addw	$10, %sp
+	movzwl	%ax, %ecx
 
 	/* Switch back to protected mode. */
 	REAL_TO_PROT
