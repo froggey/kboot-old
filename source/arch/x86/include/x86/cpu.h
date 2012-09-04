@@ -116,35 +116,35 @@
 
 /** Read the CR0 register.
  * @return		Value of the CR0 register. */
-GEN_READ_REG(cr0, unative_t);
+GEN_READ_REG(cr0, unsigned long);
 
 /** Write the CR0 register.
  * @param val		New value of the CR0 register. */
-GEN_WRITE_REG(cr0, unative_t);
+GEN_WRITE_REG(cr0, unsigned long);
 
 /** Read the CR3 register.
  * @return		Value of the CR3 register. */
-GEN_READ_REG(cr3, unative_t);
+GEN_READ_REG(cr3, unsigned long);
 
 /** Write the CR3 register.
  * @param val		New value of the CR3 register. */
-GEN_WRITE_REG(cr3, unative_t);
+GEN_WRITE_REG(cr3, unsigned long);
 
 /** Read the CR4 register.
  * @return		Value of the CR4 register. */
-GEN_READ_REG(cr4, unative_t);
+GEN_READ_REG(cr4, unsigned long);
 
 /** Write the CR4 register.
  * @param val		New value of the CR4 register. */
-GEN_WRITE_REG(cr4, unative_t);
+GEN_WRITE_REG(cr4, unsigned long);
 
 #undef GEN_READ_REG
 #undef GEN_WRITE_REG
 
 /** Get current value of EFLAGS/RFLAGS.
  * @return		Current value of EFLAGS/RFLAGS. */
-static inline unative_t x86_read_flags(void) {
-	unative_t val;
+static inline unsigned long x86_read_flags(void) {
+	unsigned long val;
 
 	__asm__ volatile("pushf; pop %0" : "=rm"(val));
 	return val;
@@ -152,7 +152,7 @@ static inline unative_t x86_read_flags(void) {
 
 /** Set value of EFLAGS/RFLAGS.
  * @param val		New value for EFLAGS/RFLAGS. */
-static inline void x86_write_flags(unative_t val) {
+static inline void x86_write_flags(unsigned long val) {
 	__asm__ volatile("push %0; popf" :: "rm"(val));
 }
 

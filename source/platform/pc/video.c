@@ -107,7 +107,8 @@ void video_init(void) {
 			/* Not usable in linear mode. */
 			continue;
 		} else if(minfo->bits_per_pixel != 8 && minfo->bits_per_pixel != 16 &&
-		          minfo->bits_per_pixel != 24 && minfo->bits_per_pixel != 32) {
+			minfo->bits_per_pixel != 24 && minfo->bits_per_pixel != 32)
+		{
 			continue;
 		}
 
@@ -148,6 +149,6 @@ void video_enable(video_mode_t *mode) {
 	regs.ebx = vmode->id | (1<<14);
 	bios_interrupt(0x10, &regs);
 
-	dprintf("video: set video mode %dx%dx%d (framebuffer: 0x%" PRIpp ")\n",
+	dprintf("video: set video mode %dx%dx%d (framebuffer: 0x%" PRIxPHYS ")\n",
 		mode->width, mode->height, mode->bpp, mode->addr);
 }

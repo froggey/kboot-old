@@ -120,7 +120,7 @@ static void load_module(kboot_data_t *data, file_handle_t *handle, const char *n
 	tag->addr = addr;
 	tag->size = size;
 
-	dprintf("kboot: loaded module %s to 0x%" PRIpp " (size: %" PRIu64 ")\n",
+	dprintf("kboot: loaded module %s to 0x%" PRIxPHYS " (size: %" PRIu64 ")\n",
 		name, addr, size);
 }
 

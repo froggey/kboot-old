@@ -106,7 +106,7 @@ static mmu_context_t *kboot_arch_load32(file_handle_t *handle, phys_ptr_t *physp
  * @return		Created MMU context for kernel. */
 mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp) {
 	mmu_context_t *ctx;
-	unative_t flags;
+	unsigned long flags;
 
 	/* Check if CPUID is supported - if we can change EFLAGS.ID, it is. */
 	flags = x86_read_flags();

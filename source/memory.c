@@ -215,7 +215,7 @@ static void phys_memory_dump(void) {
 	LIST_FOREACH(&memory_ranges, iter) {
 		range = list_entry(iter, memory_range_t, header);
 
-		dprintf(" 0x%016" PRIpp "-0x%016" PRIpp ": ", range->ka.start, range->ka.end);
+		dprintf(" 0x%016" PRIxPHYS "-0x%016" PRIxPHYS ": ", range->ka.start, range->ka.end);
 		switch(range->ka.type) {
 		case PHYS_MEMORY_FREE:
 			dprintf("Free\n");
@@ -309,7 +309,7 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type)
  * @param type		Type of the range. */
 void phys_memory_add(phys_ptr_t start, phys_ptr_t end, int type) {
 	phys_memory_add_internal(start, end, type);
-	dprintf("memory: added range 0x%" PRIpp "-0x%" PRIpp " (type: %d)\n",
+	dprintf("memory: added range 0x%" PRIxPHYS "-0x%" PRIxPHYS " (type: %d)\n",
 		start, end, type);
 }
 
@@ -360,7 +360,7 @@ phys_ptr_t phys_memory_alloc(phys_ptr_t size, size_t align, bool reclaim) {
 			continue;
 
 		phys_memory_add_internal(start, start + size, type);
-		dprintf("memory: allocated 0x%" PRIpp "-0x%" PRIpp " (align: 0x%zx, reclaim: %d)\n",
+		dprintf("memory: allocated 0x%" PRIxPHYS "-0x%" PRIxPHYS " (align: 0x%zx, reclaim: %d)\n",
 			start, start + size, align, reclaim);
 		return start;
 	}

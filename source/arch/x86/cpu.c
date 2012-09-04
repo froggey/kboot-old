@@ -33,25 +33,25 @@
 
 /** Structure defining an interrupt stack frame. */
 typedef struct interrupt_frame {
-	unative_t gs;			/**< GS. */
-	unative_t fs;			/**< FS. */
-	unative_t es;			/**< ES. */
-	unative_t ds;			/**< DS. */
-	unative_t di;			/**< EDI. */
-	unative_t si;			/**< ESI. */
-	unative_t bp;			/**< EBP. */
-	unative_t ksp;			/**< ESP (kernel). */
-	unative_t bx;			/**< EBX. */
-	unative_t dx;			/**< EDX. */
-	unative_t cx;			/**< ECX. */
-	unative_t ax;			/**< EAX. */
-	unative_t int_no;		/**< Interrupt number. */
-	unative_t err_code;		/**< Error code (if applicable). */
-	unative_t ip;			/**< IP. */
-	unative_t cs;			/**< CS. */
-	unative_t flags;		/**< FLAGS. */
-	unative_t sp;			/**< SP. */
-	unative_t ss;			/**< SS. */
+	unsigned long gs;		/**< GS. */
+	unsigned long fs;		/**< FS. */
+	unsigned long es;		/**< ES. */
+	unsigned long ds;		/**< DS. */
+	unsigned long di;		/**< EDI. */
+	unsigned long si;		/**< ESI. */
+	unsigned long bp;		/**< EBP. */
+	unsigned long ksp;		/**< ESP (kernel). */
+	unsigned long bx;		/**< EBX. */
+	unsigned long dx;		/**< EDX. */
+	unsigned long cx;		/**< ECX. */
+	unsigned long ax;		/**< EAX. */
+	unsigned long int_no;		/**< Interrupt number. */
+	unsigned long err_code;		/**< Error code (if applicable). */
+	unsigned long ip;		/**< IP. */
+	unsigned long cs;		/**< CS. */
+	unsigned long flags;		/**< FLAGS. */
+	unsigned long sp;		/**< SP. */
+	unsigned long ss;		/**< SS. */
 } __packed interrupt_frame_t;
 
 /** Frequency of the PIT. */
@@ -141,11 +141,10 @@ void spin(timeout_t us) {
  * @param frame		Interrupt frame. */
 void interrupt_handler(interrupt_frame_t *frame) {
 	internal_error("Exception %u (error code %u)\n"
-		"cs: 0x%04" PRIxn "  ds: 0x%04" PRIxn "  es: 0x%04" PRIxn "  "
-		"fs: 0x%04" PRIxn "  gs: 0x%04" PRIxn "\n"
-		"eflags: 0x%08" PRIxn "  esp: 0x%08" PRIxn "\n"
-		"eax: 0x%08" PRIxn "  ebx: 0x%08" PRIxn "  ecx: 0x%08" PRIxn "  edx: 0x%08" PRIxn "\n"
-		"edi: 0x%08" PRIxn "  esi: 0x%08" PRIxn "  ebp: 0x%08" PRIxn "  eip: 0x%08" PRIxn,
+		"cs: 0x%04lx  ds: 0x%04lx  es: 0x%04lx  fs: 0x%04lx  gs: 0x%04lx\n"
+		"eflags: 0x%08lx  esp: 0x%08lx\n"
+		"eax: 0x%08lx  ebx: 0x%08lx  ecx: 0x%08lx  edx: 0x%08lx\n"
+		"edi: 0x%08lx  esi: 0x%08lx  ebp: 0x%08lx  eip: 0x%08lx",
 		frame->int_no, frame->err_code, frame->cs, frame->ds, frame->es,
 		frame->fs, frame->gs, frame->flags, frame->ksp, frame->ax,
 		frame->bx, frame->cx, frame->dx, frame->di, frame->si, frame->bp,
