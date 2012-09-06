@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011 Alex Smith
+# Copyright (C) 2011-2012 Alex Smith
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -19,22 +19,29 @@ choice
 	default PLATFORM_PC if ARCH_X86
 	default PLATFORM_OMAP3 if ARCH_ARM
 
+config PLATFORM_BCM2835
+	bool "Raspberry Pi (Broadcom BCM2835)"
+	depends on ARCH_ARM
+	help
+	  Target KBoot to run on the Raspberry Pi (Broadcom BCM2835 chipset).
+
 config PLATFORM_OMAP3
 	bool "Texas Instruments OMAP3"
 	depends on ARCH_ARM
 	help
-	  Target the built system to Texas Instruments' OMAP3 platform.
-	  This includes boards such as the BeagleBoard.
+	  Target KBoot to run on Texas Instruments' OMAP3 platform. This
+	  includes boards such as the BeagleBoard.
 
 config PLATFORM_PC
 	bool "Standard PC"
 	depends on ARCH_X86
 	help
-	  Target the built system to standard PCs (nearly all x86 computers).
+	  Target KBoot to run on standard PCs (nearly all x86 computers).
 
 endchoice
 
 config PLATFORM
-        string
-        default "omap3" if PLATFORM_OMAP3
-        default "pc" if PLATFORM_PC
+	string
+	default "bcm2835" if PLATFORM_BCM2835
+	default "omap3" if PLATFORM_OMAP3
+	default "pc" if PLATFORM_PC

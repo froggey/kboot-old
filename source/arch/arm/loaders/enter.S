@@ -27,6 +27,7 @@
  * @param ttbr0		Address to load into TTBR0.
  * @param entry		Kernel entry point. */
 FUNCTION_START(kboot_arch_enter_real)
+#ifdef CONFIG_PLATFORM_OMAP3
 	/* Ensure that IRQs/FIQs are disabled. */
 	cpsid	if
 
@@ -65,4 +66,7 @@ FUNCTION_START(kboot_arch_enter_real)
 	mov	r1, r0
 	ldr	r0, =KBOOT_MAGIC
 	mov	pc, r2
+#else
+1:	b	1
+#endif
 FUNCTION_END(kboot_arch_enter_real)

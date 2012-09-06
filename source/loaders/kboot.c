@@ -293,7 +293,7 @@ static __noreturn void kboot_loader_load(environ_t *env) {
 
 	/* Load the kernel image into memory. */
 	kprintf("Loading kernel...\n");
-	data->mmu = kboot_arch_load(data->kernel, &core->kernel_phys);
+	data->mmu = kboot_arch_load(data->kernel, (phys_ptr_t *)&core->kernel_phys);
 
 	/* Record the boot device. */
 	bootdev = allocate_tag(data, KBOOT_TAG_BOOTDEV, sizeof(*bootdev));
