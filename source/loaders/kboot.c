@@ -272,10 +272,9 @@ static bool set_options(elf_note_t *note, const char *name, void *desc, void *_d
 	return true;
 }
 
-/** Load the operating system.
- * @param env		Environment for the OS. */
-static __noreturn void kboot_loader_load(environ_t *env) {
-	kboot_data_t *data = loader_data_get(env);
+/** Load the operating system. */
+static __noreturn void kboot_loader_load(void) {
+	kboot_data_t *data = loader_data_get(current_environ);
 	kboot_tag_bootdev_t *bootdev;
 	kboot_tag_core_t *core;
 	phys_ptr_t addr;
@@ -319,10 +318,9 @@ static __noreturn void kboot_loader_load(environ_t *env) {
 }
 
 #if CONFIG_KBOOT_UI
-/** Display a configuration menu.
- * @param env		Environment for the OS. */
-static void kboot_loader_configure(environ_t *env) {
-	kboot_data_t *data = loader_data_get(env);
+/** Display a configuration menu. */
+static void kboot_loader_configure(void) {
+	kboot_data_t *data = loader_data_get(current_environ);
 	ui_window_display(data->config, 0);
 }
 #endif
@@ -423,9 +421,8 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 
 /** Load a KBoot kernel and modules.
  * @param args		Command arguments.
- * @param env		Environment for the command.
  * @return		Whether completed successfully. */
-static bool config_cmd_kboot(value_list_t *args, environ_t *env) {
+static bool config_cmd_kboot(value_list_t *args) {
 	kboot_data_t *data;
 
 	if(args->count != 2 || !vtype(args, 0, VALUE_TYPE_STRING)
@@ -436,11 +433,11 @@ static bool config_cmd_kboot(value_list_t *args, environ_t *env) {
 	}
 
 	data = kmalloc(sizeof(*data));
-	loader_type_set(env, &kboot_loader_type);
-	loader_data_set(env, data);
+	loader_type_set(current_environ, &kboot_loader_type);
+	loader_data_set(current_environ, data);
 
 	value_copy(&args->values[1], &data->modules);
-	data->env = env;
+	data->env = current_environ;
 	data->is_kboot = false;
 	data->tags = 0;
 #if CONFIG_KBOOT_UI

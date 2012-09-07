@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -82,6 +82,9 @@ char *config_file_override = NULL;
 
 /** Root environment. */
 environ_t *root_environ = NULL;
+
+/** Current environment. */
+environ_t *current_environ = NULL;
 
 /** Read a character from the input file.
  * @return		Character read. */
@@ -449,7 +452,7 @@ static bool config_parse(const char *buf, const char *path) {
 	if(!(list = parse_command_list(EOF)))
 		return false;
 
-	ret = command_list_exec(list, root_environ);
+	ret = command_list_exec(list, &root_environ);
 	command_list_destroy(list);
 	return ret;
 }
@@ -483,30 +486,64 @@ static bool config_load(const char *path) {
 
 /** Execute a single command from a command list.
  * @param entry		Entry to execute.
- * @param env		Environment to execute command in.
  * @return		Whether successful. */
-static bool command_exec(command_list_entry_t *entry, environ_t *env) {
+static bool command_exec(command_list_entry_t *entry) {
 	BUILTIN_ITERATE(BUILTIN_TYPE_COMMAND, command_t, command) {
 		if(strcmp(command->name, entry->name) == 0)
-			return command->func(entry->args, env);
+			return command->func(entry->args);
 	}
 
 	dprintf("unknown command '%s'\n", entry->name);
 	return false;
 }
 
-/** Execute a command list.
+/**
+ * Execute a command list.
+ *
+ * Executes all the commands contained in a command list. A new environment
+ * will be created with its parent as the current environment to execute the
+ * commands under.
+ *
  * @param list		List of commands.
- * @param env		Environment to execute commands in.
- * @return		Whether all of the commands completed successfully. */
-bool command_list_exec(command_list_t *list, environ_t *env) {
+ * @param envp		Where to store pointer to environment commands were
+ *			executed under upon success. If this is non-NULL, it
+ *			is the caller's responsibility to destroy the
+ *			environment when it is no longer needed.
+ *
+ * @return		Whether all of the commands completed successfully.
+ */
+bool command_list_exec(command_list_t *list, environ_t **envp) {
 	command_list_entry_t *entry;
+	environ_t *env, *prev;
+
+	/* Create a new environment, and set it as the current. */
+	env = environ_create(current_environ);
+	prev = current_environ;
+	current_environ = env;
+
+	/* Set envp here just so that root_environ is set when we're executing
+	 * the commands. */
+	if(envp)
+		*envp = env;
 
 	LIST_FOREACH(list, iter) {
 		entry = list_entry(iter, command_list_entry_t, header);
-		if(!command_exec(entry, env))
+		if(!command_exec(entry)) {
+			current_environ = prev;
+			environ_destroy(env);
 			return false;
+		}
 	}
+
+	/* Restore the previous environment if not NULL. This has the effect of
+	 * keeping current_environ set to the root environment when we finish
+	 * executing the top level configuration. */
+	if(prev)
+		current_environ = prev;
+
+	/* Destroy the environment if it's no longer wanted. */
+	if(!envp)
+		environ_destroy(env);
 
 	return true;
 }
@@ -520,27 +557,37 @@ void value_list_insert(value_list_t *list, value_t *value) {
 }
 
 /** Create a new environment.
+ * @param parent	Parent environment.
  * @return		Pointer to created environment. */
-environ_t *environ_create(void) {
+environ_t *environ_create(environ_t *parent) {
 	environ_t *env = kmalloc(sizeof(environ_t));
-	list_init(env);
+	list_init(&env->entries);
+	env->parent = parent;
 	return env;
 }
 
-/** Look up an entry in an environment.
+/**
+ * Look up an entry in an environment.
+ *
+ * Looks up an entry by name in an environment. If the entry is not found, it
+ * will be recursively looked up in the parent environment, until the root
+ * environment is reached.
+ *
  * @param env		Environment to look up in.
  * @param name		Name of entry to look up.
- * @return		Pointer to value if found, NULL if not. */
+ *
+ * @return		Pointer to value if found, NULL if not.
+ */
 value_t *environ_lookup(environ_t *env, const char *name) {
 	environ_entry_t *entry;
 
-	LIST_FOREACH(env, iter) {
+	LIST_FOREACH(&env->entries, iter) {
 		entry = list_entry(iter, environ_entry_t, header);
 		if(strcmp(entry->name, name) == 0)
 			return &entry->value;
 	}
 
-	return NULL;
+	return (env->parent) ? environ_lookup(env->parent, name) : NULL;
 }
 
 /** Insert an entry into an environment.
@@ -551,7 +598,7 @@ void environ_insert(environ_t *env, const char *name, value_t *value) {
 	environ_entry_t *entry;
 
 	/* Look for an existing entry with the same name. */
-	LIST_FOREACH(env, iter) {
+	LIST_FOREACH(&env->entries, iter) {
 		entry = list_entry(iter, environ_entry_t, header);
 		if(strcmp(entry->name, name) == 0) {
 			value_destroy(&entry->value);
@@ -565,20 +612,36 @@ void environ_insert(environ_t *env, const char *name, value_t *value) {
 	list_init(&entry->header);
 	entry->name = kstrdup(name);
 	value_copy(value, &entry->value);
-	list_append(env, &entry->header);
+	list_append(&env->entries, &entry->header);
+}
+
+/** Destroy an environment.
+ * @param env		Environment to destroy. */
+void environ_destroy(environ_t *env) {
+	environ_entry_t *entry;
+
+	LIST_FOREACH_SAFE(&env->entries, iter) {
+		entry = list_entry(iter, environ_entry_t, header);
+
+		list_remove(&entry->header);
+		kfree(entry->name);
+		value_destroy(&entry->value);
+		kfree(entry);
+	}
+
+	kfree(env);
 }
 
 /** Set a value in the environment.
  * @param args		Argument list.
- * @param env		Environment to set in.
  * @return		Whether successful. */
-static bool config_cmd_set(value_list_t *args, environ_t *env) {
+static bool config_cmd_set(value_list_t *args) {
 	if(args->count != 2 || args->values[0].type != VALUE_TYPE_STRING) {
 		dprintf("set: invalid arguments\n");
 		return false;
 	}
 
-	environ_insert(env, args->values[0].string, &args->values[1]);
+	environ_insert(current_environ, args->values[0].string, &args->values[1]);
 	return true;
 }
 BUILTIN_COMMAND("set", config_cmd_set);
@@ -586,9 +649,6 @@ BUILTIN_COMMAND("set", config_cmd_set);
 /** Set up the configuration system and load the configuration file. */
 void config_init(void) {
 	size_t i;
-
-	/* Create the root environment. */
-	root_environ = environ_create();
 
 	if(config_file_override) {
 		if(!config_load(config_file_override))

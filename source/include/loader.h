@@ -27,13 +27,13 @@
 /** Structure defining an OS loader type. */
 typedef struct loader_type {
 	/** Load the operating system.
-	 * @note		Should not return.
-	 * @param env		Environment for the OS. */
-	void (*load)(environ_t *env) __noreturn;
+	 * @note		Should not return. */
+	void (*load)(void) __noreturn;
 
-	/** Display a configuration menu.
-	 * @param env		Environment for the OS. */
-	void (*configure)(environ_t *env);
+#if CONFIG_KBOOT_UI
+	/** Display a configuration menu. */
+	void (*configure)(void);
+#endif
 } loader_type_t;
 
 extern loader_type_t *loader_type_get(environ_t *env);

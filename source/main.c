@@ -83,7 +83,6 @@ void loader_data_set(environ_t *env, void *data) {
 /** Main function for the Kiwi bootloader. */
 void loader_main(void) {
 	loader_type_t *type;
-	environ_t *env;
 	value_t *value;
 	device_t *device;
 
@@ -110,15 +109,14 @@ void loader_main(void) {
 	/* Load the configuration file. */
 	config_init();
 
+	/* Display the menu interface if enabled. If not, the root environment
+	 * should have the OS loaded. */
 #if CONFIG_KBOOT_UI
-	/* Display the menu interface. */
-	env = menu_display();
-#else
-	env = root_environ;
+	current_environ = menu_display();
 #endif
 
 	/* Set the current filesystem. */
-	if((value = environ_lookup(env, "device")) && value->type == VALUE_TYPE_STRING) {
+	if((value = environ_lookup(current_environ, "device")) && value->type == VALUE_TYPE_STRING) {
 		if(!(device = device_lookup(value->string)))
 			boot_error("Could not find device %s", value->string);
 
@@ -126,6 +124,6 @@ void loader_main(void) {
 	}
 
 	/* Load the operating system. */
-	type = loader_type_get(env);
-	type->load(env);
+	type = loader_type_get(current_environ);
+	type->load();
 }

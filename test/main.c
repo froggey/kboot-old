@@ -25,6 +25,7 @@
 extern void kmain(uint32_t magic, phys_ptr_t tags);
 
 KBOOT_IMAGE(0);
+KBOOT_BOOLEAN_OPTION("test_option", "Test Option", true);
 
 /** Entry point of the test kernel.
  * @param magic		KBoot magic number.

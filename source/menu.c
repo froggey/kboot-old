@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -46,12 +46,14 @@ static menu_entry_t *selected_menu_entry = NULL;
 
 /** Add a new menu entry.
  * @param args		Arguments to the command.
- * @param env		Environment to operate on.
  * @return		Whether successful. */
-static bool config_cmd_entry(value_list_t *args, environ_t *env) {
+static bool config_cmd_entry(value_list_t *args) {
 	menu_entry_t *entry;
 
-	assert(env == root_environ);
+	if(current_environ != root_environ) {
+		dprintf("config: entry: nested entries not allowed\n");
+		return false;
+	}
 
 	if(args->count != 2 || args->values[0].type != VALUE_TYPE_STRING
 		|| args->values[1].type != VALUE_TYPE_COMMAND_LIST)
@@ -63,11 +65,9 @@ static bool config_cmd_entry(value_list_t *args, environ_t *env) {
 	entry = kmalloc(sizeof(menu_entry_t));
 	list_init(&entry->link);
 	entry->name = kstrdup(args->values[0].string);
-	entry->env = environ_create();
 
 	/* Execute the command list. */
-	if(!command_list_exec(args->values[1].cmds, entry->env)) {
-		//environ_destroy(entry->env);
+	if(!command_list_exec(args->values[1].cmds, &entry->env)) {
 		kfree(entry->name);
 		kfree(entry);
 		return false;
@@ -130,6 +130,7 @@ static bool menu_can_display(void) {
  * @return		Always returns INPUT_CLOSE. */
 static input_result_t menu_entry_select(ui_entry_t *_entry) {
 	menu_entry_t *entry = (menu_entry_t *)_entry;
+
 	selected_menu_entry = entry;
 	return INPUT_CLOSE;
 }
@@ -140,8 +141,13 @@ static input_result_t menu_entry_select(ui_entry_t *_entry) {
 static input_result_t menu_entry_configure(ui_entry_t *_entry) {
 	menu_entry_t *entry = (menu_entry_t *)_entry;
 	loader_type_t *type = loader_type_get(entry->env);
+	environ_t *prev;
 
-	type->configure(entry->env);
+	prev = current_environ;
+	current_environ = entry->env;
+	type->configure();
+	current_environ = prev;
+
 	return INPUT_RENDER;
 }
 

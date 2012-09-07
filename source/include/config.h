@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -66,7 +66,10 @@ typedef struct value {
 } value_t;
 
 /** Structure containing an environment. */
-typedef list_t environ_t;
+typedef struct environ {
+	struct environ *parent;		/**< Parent environment. */
+	list_t entries;			/**< Entries in the environment. */
+} environ_t;
 
 /** Structure describing a command that can be used in a command list. */
 typedef struct command {
@@ -74,9 +77,8 @@ typedef struct command {
 
 	/** Execute the command.
 	 * @param args		List of arguments.
-	 * @param env		Environment to execute the command in.
 	 * @return		Whether the command completed successfully. */
-	bool (*func)(value_list_t *args, environ_t *env);
+	bool (*func)(value_list_t *args);
 } command_t;
 
 /** Define a command, to be automatically added to the command list. */
@@ -89,17 +91,19 @@ typedef struct command {
 
 extern char *config_file_override;
 extern environ_t *root_environ;
+extern environ_t *current_environ;
 
 extern void value_copy(value_t *source, value_t *dest);
 extern void value_destroy(value_t *value);
 
-extern bool command_list_exec(command_list_t *list, environ_t *env);
+extern bool command_list_exec(command_list_t *list, environ_t **envp);
 
 extern void value_list_insert(value_list_t *list, value_t *value);
 
-extern environ_t *environ_create(void);
+extern environ_t *environ_create(environ_t *parent);
 extern value_t *environ_lookup(environ_t *env, const char *name);
 extern void environ_insert(environ_t *env, const char *name, value_t *value);
+extern void environ_destroy(environ_t *env);
 
 extern void config_init(void);
 

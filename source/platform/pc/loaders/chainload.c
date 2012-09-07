@@ -38,9 +38,8 @@ extern void chain_loader_enter(uint8_t id, ptr_t part) __noreturn;
 #define PARTITION_TABLE_SIZE	64
 
 /** Load a chainload entry.
- * @note		Assumes the disk has an MSDOS partition table.
- * @param env		Environment for the OS. */
-static void __noreturn chain_loader_load(environ_t *env) {
+ * @note		Assumes the disk has an MSDOS partition table. */
+static __noreturn void chain_loader_load(void) {
 	disk_t *disk, *parent;
 	ptr_t part_addr = 0;
 	file_handle_t *file;
@@ -53,7 +52,7 @@ static void __noreturn chain_loader_load(environ_t *env) {
 
 	disk = (disk_t *)current_device;
 
-	path = loader_data_get(env);
+	path = loader_data_get(current_environ);
 	if(path) {
 		/* Loading from a file. */
 		file = file_open(path);
@@ -112,9 +111,8 @@ static loader_type_t chain_loader_type = {
 
 /** Chainload another boot sector.
  * @param args		Arguments for the command.
- * @param env		Environment to use.
  * @return		Whether successful. */
-static bool config_cmd_chainload(value_list_t *args, environ_t *env) {
+static bool config_cmd_chainload(value_list_t *args) {
 	char *path = NULL;
 
 	if(args->count != 0 && args->count != 1) {
@@ -131,8 +129,8 @@ static bool config_cmd_chainload(value_list_t *args, environ_t *env) {
 		path = kstrdup(args->values[0].string);
 	}
 
-	loader_type_set(env, &chain_loader_type);
-	loader_data_set(env, path);
+	loader_type_set(current_environ, &chain_loader_type);
+	loader_data_set(current_environ, path);
 	return true;
 }
 BUILTIN_COMMAND("chainload", config_cmd_chainload);
