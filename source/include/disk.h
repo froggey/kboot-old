@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -33,20 +33,18 @@ struct disk;
  * @param disk		Disk containing the partition.
  * @param id		ID of the partition.
  * @param lba		Start LBA.
- * @param blocks	Size in blocks.
- * @param data		Data argument passed to iterate. */
+ * @param blocks	Size in blocks. */
 typedef void (*partition_map_iterate_cb_t)(struct disk *disk, uint8_t id, uint64_t lba,
-	uint64_t blocks, void *data);
+	uint64_t blocks);
 
 /** Partition map operations. */
 typedef struct partition_map_ops {
 	/** Iterate over the partitions on the device.
 	 * @param disk		Disk to iterate over.
 	 * @param cb		Callback function.
-	 * @param data		Data argument to pass to the callback function.
 	 * @return		Whether the device contained a partition map of
 	 *			this type. */
-	bool (*iterate)(struct disk *disk, partition_map_iterate_cb_t cb, void *data);
+	bool (*iterate)(struct disk *disk, partition_map_iterate_cb_t cb);
 } partition_map_ops_t;
 
 /** Define a builtin partition map type. */
@@ -75,6 +73,8 @@ typedef struct disk_ops {
 
 /** Structure representing a disk device. */
 typedef struct disk {
+	device_t device;		/**< Device header. */
+
 	size_t block_size;		/**< Size of one block on the disk. */
 	uint64_t blocks;		/**< Number of blocks on the disk. */
 	disk_ops_t *ops;		/**< Pointer to operations structure. */
@@ -102,6 +102,7 @@ typedef struct disk {
 extern bool disk_read(disk_t *disk, void *buf, size_t count, offset_t offset);
 extern void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *ops,
 	void *data, bool boot);
+extern bool disk_is_partition(disk_t *disk);
 extern disk_t *disk_parent(disk_t *disk);
 
 extern void platform_disk_detect(void);

@@ -208,9 +208,11 @@ void tar_mount(void *addr, size_t size) {
 	memset(mount, 0, sizeof(mount_t));
 	mount->type = &tar_fs_type;
 	mount->data = addr;
-	mount->label = kstrdup("TAR");
+	mount->label = kstrdup("Boot Image");
 	mount->uuid = NULL;
-	device = device_add("pxe", NULL);
+
+	device = kmalloc(sizeof(device_t));
+	device_add(device, "bimg", DEVICE_TYPE_OTHER);
 	device->fs = mount;
 
 	/* This is the boot device. */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,26 +25,25 @@
 #include <lib/list.h>
 
 struct mount;
-struct disk;
+
+/** Type of a device. */
+typedef enum device_type {
+	DEVICE_TYPE_DISK,		/**< Disk device. */
+	DEVICE_TYPE_OTHER,		/**< Other device. */
+} device_type_t;
 
 /** Structure containing details of a device. */
 typedef struct device {
 	list_t header;			/**< Link to device list. */
 
 	char *name;			/**< Name of the device. */
+	device_type_t type;		/**< Type of the device. */
 	struct mount *fs;		/**< Filesystem that resides on the device. */
-
-	union {
-#if CONFIG_KBOOT_HAVE_DISK
-		struct disk *disk;	/**< Pointer to disk structure for device. */
-#endif
-		void *data;		/**< Data pointer to be used by non-disk devices. */
-	};
 } device_t;
 
 extern device_t *current_device;
 
 extern device_t *device_lookup(const char *str);
-extern device_t *device_add(const char *name, void *data);
+extern void device_add(device_t *device, const char *name, device_type_t type);
 
 #endif /* __DEVICE_H */

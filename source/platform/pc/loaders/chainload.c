@@ -41,15 +41,17 @@ extern void chain_loader_enter(uint8_t id, ptr_t part) __noreturn;
  * @note		Assumes the disk has an MSDOS partition table.
  * @param env		Environment for the OS. */
 static void __noreturn chain_loader_load(environ_t *env) {
+	disk_t *disk, *parent;
 	ptr_t part_addr = 0;
 	file_handle_t *file;
 	bios_regs_t regs;
-	disk_t *parent;
 	uint8_t id;
 	char *path;
 
-	if(!current_device->disk)
+	if(current_device->type != DEVICE_TYPE_DISK)
 		boot_error("Cannot chainload from non-disk device");
+
+	disk = (disk_t *)current_device;
 
 	path = loader_data_get(env);
 	if(path) {
@@ -65,23 +67,23 @@ static void __noreturn chain_loader_load(environ_t *env) {
 		file_close(file);
 	} else {
 		/* Loading the boot sector from the disk. */
-		if(!disk_read(current_device->disk, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0))
+		if(!disk_read(disk, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0))
 			boot_error("Could not read boot sector");
 	}
 
 	/* Get the ID of the disk we're booting from. */
-	id = bios_disk_id(current_device->disk);
+	id = bios_disk_id(disk);
 	dprintf("loader: chainloading from device %s (id: 0x%x)\n", current_device->name, id);
 
 	/* If booting a partition, we must give partition information to it. */
-	if((parent = disk_parent(current_device->disk)) != current_device->disk) {
+	if((parent = disk_parent(disk)) != disk) {
 		if(!disk_read(parent, (void *)PARTITION_TABLE_ADDR, PARTITION_TABLE_SIZE,
 			PARTITION_TABLE_OFFSET))
 		{
 			boot_error("Could not read partition table");
 		}
 
-		part_addr = PARTITION_TABLE_ADDR + (current_device->disk->id << 4);
+		part_addr = PARTITION_TABLE_ADDR + (disk->id << 4);
 	}
 
 	/* Try to disable the A20 line. */

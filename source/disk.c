@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -27,7 +27,7 @@
 #include <memory.h>
 #include <system.h>
 
-static void probe_disk(device_t *device);
+static void probe_disk(disk_t *disk);
 
 /** Read from a disk.
  * @param disk		Disk to read from.
@@ -120,14 +120,12 @@ static disk_ops_t partition_disk_ops = {
  * @param parent	Parent of the partition.
  * @param id		ID of the partition.
  * @param lba		Start LBA.
- * @param blocks	Size in blocks.
- * @param data		Parent device structure pointer. */
-static void add_partition(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blocks, void *data) {
+ * @param blocks	Size in blocks. */
+static void add_partition(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blocks) {
 	disk_t *disk = kmalloc(sizeof(disk_t));
 	char name[32];
-	device_t *device;
 
-	sprintf(name, "%s,%u", ((device_t *)data)->name, id);
+	sprintf(name, "%s,%u", parent->device.name, id);
 
 	disk->block_size = parent->block_size;
 	disk->blocks = blocks;
@@ -137,24 +135,27 @@ static void add_partition(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blo
 	disk->offset = lba;
 
 	/* Add the device. */
-	device = device_add(name, disk);
+	device_add(&disk->device, name, DEVICE_TYPE_DISK);
 
 	/* Probe for filesystems/partitions. */
-	probe_disk(device);
+	probe_disk(disk);
 
 	/* Set the device as the current if it is the boot partition. */
-	if(device->fs && parent->boot && parent->ops->is_boot_partition) {
+	if(disk->device.fs && parent->boot && parent->ops->is_boot_partition) {
 		if(parent->ops->is_boot_partition(parent, id, lba))
-			current_device = device;
+			current_device = &disk->device;
 	}
 }
 
 /** Probe a disk for filesystems/partitions.
- * @param device	Device to probe. */
-static void probe_disk(device_t *device) {
-	if(!(device->fs = fs_probe(device->disk))) {
+ * @param disk		Disk to probe. */
+static void probe_disk(disk_t *disk) {
+	if(!(disk->device.fs = fs_probe(disk))) {
+		/* Check for a partition table on the device. We recursively
+		 * search for partition tables under partitions in order to
+		 * support, for example, BSD disklabels. */
 		BUILTIN_ITERATE(BUILTIN_TYPE_PARTITION_MAP, partition_map_ops_t, type) {
-			if(type->iterate(device->disk, add_partition, device))
+			if(type->iterate(disk, add_partition))
 				return;
 		}
 	}
@@ -173,7 +174,6 @@ void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *
 	void *data, bool boot)
 {
 	disk_t *disk = kmalloc(sizeof(disk_t));
-	device_t *device;
 
 	disk->block_size = block_size;
 	disk->blocks = blocks;
@@ -182,14 +182,21 @@ void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *
 	disk->boot = boot;
 
 	/* Add the device. */
-	device = device_add(name, disk);
+	device_add(&disk->device, name, DEVICE_TYPE_DISK);
 
 	/* Probe for filesystems/partitions. */
-	probe_disk(device);
+	probe_disk(disk);
 
 	/* Set the device as the current if it is the boot disk. */
-	if(device->fs && boot)
-		current_device = device;
+	if(disk->device.fs && boot)
+		current_device = &disk->device;
+}
+
+/** Determine whether a disk is a partition.
+ * @param disk		Disk to check.
+ * @return		Whether the disk is a partition. */
+bool disk_is_partition(disk_t *disk) {
+	return (disk->ops == &partition_disk_ops);
 }
 
 /** Get the parent disk of a partition.
@@ -197,7 +204,7 @@ void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *
  * @return		Parent disk (if disk is already the top level, it will
  *			be returned). */
 disk_t *disk_parent(disk_t *disk) {
-	while(disk->ops == &partition_disk_ops)
+	while(disk_is_partition(disk))
 		disk = disk->parent;
 
 	return disk;

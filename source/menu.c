@@ -220,6 +220,7 @@ environ_t *menu_display(void) {
 			} else {
 				ui_entry_init(&entry->header, &menu_entry_type);
 			}
+
 			ui_list_insert(window, &entry->header, entry == selected_menu_entry);
 		}
 

@@ -296,7 +296,9 @@ bool pxe_detect(void) {
 	mount->type = &tftp_fs_type;
 	mount->label = kstrdup("PXE");
 	mount->uuid = kstrdup("PXE");
-	device = device_add("pxe", NULL);
+
+	device = kmalloc(sizeof(device_t));
+	device_add(device, "pxe", DEVICE_TYPE_OTHER);
 	device->fs = mount;
 
 	/* This is the boot device. */

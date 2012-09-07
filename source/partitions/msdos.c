@@ -29,12 +29,15 @@
 /** Iterate over the partitions on a device.
  * @param disk		Disk to iterate over.
  * @param cb		Callback function.
- * @param data		Data argument to pass to the callback function.
  * @return		Whether the device contained an MSDOS partition table. */
-static bool msdos_partition_iterate(disk_t *disk, partition_map_iterate_cb_t cb, void *data) {
+static bool msdos_partition_iterate(disk_t *disk, partition_map_iterate_cb_t cb) {
 	msdos_mbr_t *mbr = kmalloc(disk->block_size);
 	msdos_part_t *part;
 	size_t i;
+
+	/* We don't support being nested on a partition. */
+	if(disk_is_partition(disk))
+		return false;
 
 	/* Read in the MBR, which is in the first block on the device. */
 	if(!disk_read(disk, mbr, sizeof(msdos_mbr_t), 0) || mbr->signature != MSDOS_SIGNATURE) {
@@ -58,7 +61,7 @@ static bool msdos_partition_iterate(disk_t *disk, partition_map_iterate_cb_t cb,
 		dprintf(" start_lba: %u\n", part->start_lba);
 		dprintf(" num_sects: %u\n", part->num_sects);
 
-		cb(disk, i, part->start_lba, part->num_sects, data);
+		cb(disk, i, part->start_lba, part->num_sects);
 	}
 
 	kfree(mbr);

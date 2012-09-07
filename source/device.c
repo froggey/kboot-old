@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -35,7 +35,7 @@ LIST_DECLARE(device_list);
  * Look up a device according to a string.
  *
  * Looks up a device according to the given string. If the string is in the
- * form "(<name>)", then the device, will be looked up by its name. Otherwise,
+ * form "(<name>)", then the device will be looked up by its name. Otherwise,
  * the string will be taken as a UUID, and the device containing a filesystem
  * with that UUID will be returned.
  *
@@ -49,7 +49,10 @@ device_t *device_lookup(const char *str) {
 	size_t len;
 
 	if(str[0] == '(') {
-		len = strlen(str) - 2;
+		len = strlen(str);
+		if(len < 3 || str[len - 1] != ')')
+			return NULL;
+		len -= 2;
 		name = kmalloc(len);
 		memcpy(name, str + 1, len);
 		name[len] = 0;
@@ -77,20 +80,15 @@ device_t *device_lookup(const char *str) {
  * manually after the function returns. If this is the boot device, the caller
  * should set it as the current device itself.
  *
+ * @param device	Device structure for the device.
  * @param name		Name of the device (string will be duplicated).
- * @param data		Implementation-specific data pointer.
- *
- * @return		Pointer to created device structure.
+ * @param type		Type of the device.
  */
-device_t *device_add(const char *name, void *data) {
-	device_t *device = kmalloc(sizeof(device_t));
-
+void device_add(device_t *device, const char *name, device_type_t type) {
 	list_init(&device->header);
 	device->name = kstrdup(name);
+	device->type = type;
 	device->fs = NULL;
-	device->data = data;
 
 	list_append(&device_list, &device->header);
-
-	return device;
 }
