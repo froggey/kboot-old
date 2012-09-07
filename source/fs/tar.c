@@ -216,5 +216,5 @@ void tar_mount(void *addr, size_t size) {
 	device->fs = mount;
 
 	/* This is the boot device. */
-	current_device = device;
+	boot_device = device;
 }

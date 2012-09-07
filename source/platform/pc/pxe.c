@@ -25,6 +25,7 @@
 #include <pc/bios.h>
 #include <pc/pxe.h>
 
+#include <config.h>
 #include <disk.h>
 #include <endian.h>
 #include <fs.h>
@@ -302,7 +303,7 @@ bool pxe_detect(void) {
 	device->fs = mount;
 
 	/* This is the boot device. */
-	current_device = device;
+	boot_device = device;
 
 	return true;
 }

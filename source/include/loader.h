@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -35,10 +35,5 @@ typedef struct loader_type {
 	void (*configure)(void);
 #endif
 } loader_type_t;
-
-extern loader_type_t *loader_type_get(environ_t *env);
-extern void loader_type_set(environ_t *env, loader_type_t *type);
-extern void *loader_data_get(environ_t *env);
-extern void loader_data_set(environ_t *env, void *data);
 
 #endif /* __LOADER_H */

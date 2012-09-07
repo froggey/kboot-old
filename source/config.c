@@ -561,8 +561,12 @@ void value_list_insert(value_list_t *list, value_t *value) {
  * @return		Pointer to created environment. */
 environ_t *environ_create(environ_t *parent) {
 	environ_t *env = kmalloc(sizeof(environ_t));
+
 	list_init(&env->entries);
 	env->parent = parent;
+	env->device = boot_device;
+	env->loader = NULL;
+	env->data = NULL;
 	return env;
 }
 

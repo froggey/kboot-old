@@ -23,6 +23,7 @@
 #include <lib/utility.h>
 
 #include <assert.h>
+#include <config.h>
 #include <fs.h>
 #include <memory.h>
 
@@ -95,7 +96,7 @@ file_handle_t *file_open(const char *path) {
 	file_handle_t *handle;
 	mount_t *mount;
 
-	if(!(mount = current_device->fs))
+	if(!current_device || !(mount = current_device->fs))
 		return NULL;
 
 	/* Use the provided open() implementation if any. */

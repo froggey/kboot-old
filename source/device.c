@@ -21,12 +21,13 @@
 
 #include <lib/string.h>
 
+#include <config.h>
 #include <device.h>
 #include <fs.h>
 #include <memory.h>
 
-/** Current device. */
-device_t *current_device = NULL;
+/** Boot device. */
+device_t *boot_device = NULL;
 
 /** List of all devices. */
 LIST_DECLARE(device_list);
@@ -92,3 +93,20 @@ void device_add(device_t *device, const char *name, device_type_t type) {
 
 	list_append(&device_list, &device->header);
 }
+
+/** Set the current device.
+ * @param args		Argument list.
+ * @return		Whether successful. */
+static bool config_cmd_device(value_list_t *args) {
+	if(args->count != 1 || args->values[0].type != VALUE_TYPE_STRING) {
+		dprintf("device: invalid arguments\n");
+		return false;
+	}
+
+	/* Look up the device. If the device is not found, we leave the pointer
+	 * set as NULL. It will be handled later when the user tries to boot. */
+	current_environ->device = device_lookup(args->values[0].string);
+
+	return true;
+}
+BUILTIN_COMMAND("device", config_cmd_device);

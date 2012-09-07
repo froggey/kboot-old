@@ -140,10 +140,10 @@ static void add_partition(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blo
 	/* Probe for filesystems/partitions. */
 	probe_disk(disk);
 
-	/* Set the device as the current if it is the boot partition. */
+	/* Set the device as the boot device if it is the boot partition. */
 	if(disk->device.fs && parent->boot && parent->ops->is_boot_partition) {
 		if(parent->ops->is_boot_partition(parent, id, lba))
-			current_device = &disk->device;
+			boot_device = &disk->device;
 	}
 }
 
@@ -187,9 +187,9 @@ void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *
 	/* Probe for filesystems/partitions. */
 	probe_disk(disk);
 
-	/* Set the device as the current if it is the boot disk. */
+	/* Set the device as the boot device if it is the boot disk. */
 	if(disk->device.fs && boot)
-		current_device = &disk->device;
+		boot_device = &disk->device;
 }
 
 /** Determine whether a disk is a partition.

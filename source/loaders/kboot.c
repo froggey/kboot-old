@@ -274,7 +274,7 @@ static bool set_options(elf_note_t *note, const char *name, void *desc, void *_d
 
 /** Load the operating system. */
 static __noreturn void kboot_loader_load(void) {
-	kboot_data_t *data = loader_data_get(current_environ);
+	kboot_data_t *data = current_environ->data;
 	kboot_tag_bootdev_t *bootdev;
 	kboot_tag_core_t *core;
 	phys_ptr_t addr;
@@ -320,7 +320,7 @@ static __noreturn void kboot_loader_load(void) {
 #if CONFIG_KBOOT_UI
 /** Display a configuration menu. */
 static void kboot_loader_configure(void) {
-	kboot_data_t *data = loader_data_get(current_environ);
+	kboot_data_t *data = current_environ->data;
 	ui_window_display(data->config, 0);
 }
 #endif
@@ -433,8 +433,8 @@ static bool config_cmd_kboot(value_list_t *args) {
 	}
 
 	data = kmalloc(sizeof(*data));
-	loader_type_set(current_environ, &kboot_loader_type);
-	loader_data_set(current_environ, data);
+	current_environ->loader = &kboot_loader_type;
+	current_environ->data = data;
 
 	value_copy(&args->values[1], &data->modules);
 	data->env = current_environ;

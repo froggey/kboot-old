@@ -52,7 +52,7 @@ static __noreturn void chain_loader_load(void) {
 
 	disk = (disk_t *)current_device;
 
-	path = loader_data_get(current_environ);
+	path = current_environ->data;
 	if(path) {
 		/* Loading from a file. */
 		file = file_open(path);
@@ -129,8 +129,8 @@ static bool config_cmd_chainload(value_list_t *args) {
 		path = kstrdup(args->values[0].string);
 	}
 
-	loader_type_set(current_environ, &chain_loader_type);
-	loader_data_set(current_environ, path);
+	current_environ->loader = &chain_loader_type;
+	current_environ->data = path;
 	return true;
 }
 BUILTIN_COMMAND("chainload", config_cmd_chainload);

@@ -34,58 +34,8 @@
 extern char __bss_start[], __bss_end[];
 extern void loader_main(void);
 
-/** Get the loader type from an environment.
- * @param env		Environment to get from.
- * @return		Pointer to loader type. */
-loader_type_t *loader_type_get(environ_t *env) {
-	value_t *value;
-
-	value = environ_lookup(env, "loader_type");
-	if(!value || value->type != VALUE_TYPE_POINTER)
-		boot_error("No operating system loaded");
-
-	return value->pointer;
-}
-
-/** Set the loader type in an environment.
- * @param env		Environment to set in.
- * @param type		Type to set. */
-void loader_type_set(environ_t *env, loader_type_t *type) {
-	value_t value;
-
-	value.type = VALUE_TYPE_POINTER;
-	value.pointer = type;
-	environ_insert(env, "loader_type", &value);
-}
-
-/** Get the loader data from an environment.
- * @param env		Environment to get from.
- * @return		Pointer to loader data. */
-void *loader_data_get(environ_t *env) {
-	value_t *value;
-
-	value = environ_lookup(env, "loader_data");
-	assert(value && value->type == VALUE_TYPE_POINTER);
-	return value->pointer;
-}
-
-/** Set the loader data in an environment.
- * @param env		Environment to set in.
- * @param data		Loader data pointer. */
-void loader_data_set(environ_t *env, void *data) {
-	value_t value;
-
-	value.type = VALUE_TYPE_POINTER;
-	value.pointer = data;
-	environ_insert(env, "loader_data", &value);
-}
-
 /** Main function for the Kiwi bootloader. */
 void loader_main(void) {
-	loader_type_t *type;
-	value_t *value;
-	device_t *device;
-
 	/* Initialise the console. */
 	console_init();
 
@@ -99,7 +49,7 @@ void loader_main(void) {
 	disk_init();
 #endif
 	/* We must have a filesystem to boot from. */
-	if(!current_device || !current_device->fs)
+	if(!boot_device || !boot_device->fs)
 		boot_error("Could not find boot filesystem");
 
 #if CONFIG_KBOOT_HAVE_VIDEO
@@ -115,15 +65,11 @@ void loader_main(void) {
 	current_environ = menu_display();
 #endif
 
-	/* Set the current filesystem. */
-	if((value = environ_lookup(current_environ, "device")) && value->type == VALUE_TYPE_STRING) {
-		if(!(device = device_lookup(value->string)))
-			boot_error("Could not find device %s", value->string);
-
-		current_device = device;
-	}
-
 	/* Load the operating system. */
-	type = loader_type_get(current_environ);
-	type->load();
+	if(!current_environ->device) {
+		boot_error("Specified boot device not found");
+	} else if(!current_environ->loader) {
+		boot_error("No operating system loaded");
+	}
+	current_environ->loader->load();
 }

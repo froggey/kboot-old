@@ -41,7 +41,10 @@ typedef struct device {
 	struct mount *fs;		/**< Filesystem that resides on the device. */
 } device_t;
 
-extern device_t *current_device;
+extern device_t *boot_device;
+
+/** Macro expanding to the current device. */
+#define current_device		((current_environ) ? current_environ->device : boot_device)
 
 extern device_t *device_lookup(const char *str);
 extern void device_add(device_t *device, const char *name, device_type_t type);

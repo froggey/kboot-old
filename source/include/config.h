@@ -27,8 +27,23 @@
 #include <fs.h>
 #include <system.h>
 
-struct value;
 struct command;
+struct device;
+struct loader_type;
+struct value;
+
+/** Structure containing an environment. */
+typedef struct environ {
+	struct environ *parent;		/**< Parent environment. */
+
+	/** Values set in the environment by the user. */
+	list_t entries;
+
+	/** Per-environment data used internally. */
+	struct device *device;		/**< Current device. */
+	struct loader_type *loader;	/**< Operating system loader type. */
+	void *data;			/**< Data used by the loader. */
+} environ_t;
 
 /** Structure containing a list of commands. */
 typedef list_t command_list_t;
@@ -64,12 +79,6 @@ typedef struct value {
 		void *pointer;			/**< Pointer. */
 	};
 } value_t;
-
-/** Structure containing an environment. */
-typedef struct environ {
-	struct environ *parent;		/**< Parent environment. */
-	list_t entries;			/**< Entries in the environment. */
-} environ_t;
 
 /** Structure describing a command that can be used in a command list. */
 typedef struct command {

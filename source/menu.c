@@ -140,12 +140,11 @@ static input_result_t menu_entry_select(ui_entry_t *_entry) {
  * @return		Always returns INPUT_RENDER. */
 static input_result_t menu_entry_configure(ui_entry_t *_entry) {
 	menu_entry_t *entry = (menu_entry_t *)_entry;
-	loader_type_t *type = loader_type_get(entry->env);
 	environ_t *prev;
 
 	prev = current_environ;
 	current_environ = entry->env;
-	type->configure();
+	entry->env->loader->configure();
 	current_environ = prev;
 
 	return INPUT_RENDER;
@@ -221,7 +220,7 @@ environ_t *menu_display(void) {
 
 			/* If the entry's loader type has a configure function,
 			 * use the configurable entry type. */
-			if(loader_type_get(entry->env)->configure) {
+			if(entry->env->loader && entry->env->loader->configure) {
 				ui_entry_init(&entry->header, &configurable_menu_entry_type);
 			} else {
 				ui_entry_init(&entry->header, &menu_entry_type);
