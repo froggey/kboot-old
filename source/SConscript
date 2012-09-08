@@ -51,6 +51,7 @@ env['CPPPATH'] = [
 	Dir('include'),
 	Dir('arch/%s/include' % (config['SRCARCH'])),
 	Dir('platform/%s/include' % (config['PLATFORM'])),
+	Dir('platform/generic'),
 ]
 env['CCFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config['PLATFORM'])]
 env['ASFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config['PLATFORM'])]

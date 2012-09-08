@@ -14,23 +14,5 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env')
-
-# Generic components.
-pl011_sources = SConscript(dirs = ['../generic/pl011'], exports = ['env'])
-
-sources = pl011_sources + map(File, [
-	'gpio.c',
-	'memory.c',
-	'platform.c',
-	'start.S',
-	'uart.c',
-])
-
-# Set build flags.
-env['CCFLAGS'] += ['-mcpu=arm1176jzf-s']
-
-# Set the linker script path.
-env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')
-
+sources = map(File, ['pl011.c'])
 Return('sources')
