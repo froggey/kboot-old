@@ -250,7 +250,7 @@ PRIVATE_FUNCTION_START(__loader_entry)
 	call	memset
 
 	/* Call the main function. */
-	jmp	loader_main
+	jmp	platform_init
 FUNCTION_END(__loader_entry)
 
 .section .data, "aw", @progbits

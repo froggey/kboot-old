@@ -25,17 +25,25 @@
 
 #include <lib/string.h>
 
+#include <pc/console.h>
 #include <pc/multiboot.h>
 
 #include <config.h>
 #include <loader.h>
 #include <time.h>
 
+extern void platform_init(void);
 extern char *video_mode_override;
 
-/** Early PC platform startup code. */
-void platform_early_init(void) {
+/** Main function of the PC loader. */
+void platform_init(void) {
 	char *tok, *cmdline;
+
+	/* Set up console output. */
+	console_init();
+
+	/* Initialize the architecture. */
+	arch_init();
 
 	/* If booted with Multiboot, parse the command line. */
 	if(multiboot_magic == MB_LOADER_MAGIC) {
@@ -48,6 +56,8 @@ void platform_early_init(void) {
 			}
 		}
 	}
+
+	loader_main();
 }
 
 /** Reboot the system. */

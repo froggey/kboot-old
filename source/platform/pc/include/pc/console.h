@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Alex Smith
+ * Copyright (C) 2009-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,19 @@
 
 /**
  * @file
- * @brief		x86 core definitions.
+ * @brief		PC console definitions.
  */
 
-#ifndef __ARCH_LOADER_H
-#define __ARCH_LOADER_H
+#ifndef __PC_CONSOLE_H
+#define __PC_CONSOLE_H
 
-extern void cpu_init(void);
-extern void arch_init(void);
+/** VGA register definitions. */
+#define VGA_CRTC_INDEX		0x3D4
+#define VGA_CRTC_DATA		0x3D5
 
-#endif /* __ARCH_LOADER_H */
+/** VGA memory address. */
+#define VGA_MEM_BASE		0xB8000
+
+extern void console_init(void);
+
+#endif /* __PC_CONSOLE_H */

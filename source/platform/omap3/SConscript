@@ -18,6 +18,7 @@ Import('env')
 
 sources = map(File, [
 	'memory.c',
+	'platform.c',
 	'start.S',
 	'uart.c',
 	'video.c',

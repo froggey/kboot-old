@@ -36,9 +36,4 @@
  */
 #define LOADER_LOAD_ADDR		0x8000
 
-#ifndef __ASM__
-
-#define platform_early_init()	
-
-#endif /* __ASM__ */
 #endif /* __PLATFORM_LOADER_H */

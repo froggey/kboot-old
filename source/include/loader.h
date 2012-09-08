@@ -80,4 +80,6 @@ extern void backtrace(int (*printfn)(const char *fmt, ...));
 extern void internal_error(const char *fmt, ...) __printf(1, 2) __noreturn;
 extern void boot_error(const char *fmt, ...) __printf(1, 2) __noreturn;
 
+extern void loader_main(void) __noreturn;
+
 #endif /* __LOADER_H */

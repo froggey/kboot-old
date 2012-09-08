@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -30,18 +30,8 @@
 #include <menu.h>
 #include <video.h>
 
-extern char __bss_start[], __bss_end[];
-extern void loader_main(void);
-
 /** Main function for the Kiwi bootloader. */
 void loader_main(void) {
-	/* Initialise the console. */
-	console_init();
-
-	/* Perform early architecture/platform initialisation. */
-	arch_early_init();
-	platform_early_init();
-
 	/* Detect hardware details. */
 	memory_init();
 #if CONFIG_KBOOT_HAVE_DISK
@@ -70,5 +60,6 @@ void loader_main(void) {
 	} else if(!current_environ->loader) {
 		boot_error("No operating system loaded");
 	}
+
 	current_environ->loader->load();
 }

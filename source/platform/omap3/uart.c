@@ -112,7 +112,7 @@ static console_t uart_console = {
 };
 
 /** Initialise the UART console. */
-void console_init(void) {
+void uart_init(void) {
 	/* Initialise the debug port and set it as the debug console. */
 	uart_init_port(DEBUG_UART, 115200);
 	debug_console = &uart_console;

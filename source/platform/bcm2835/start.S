@@ -57,12 +57,9 @@ FUNCTION_START(_start)
 	sub	r2, r2, r0
 	bl	memset
 
-	/* Store the ATAG list address. */
-	ldr	r0, =atag_list
-	str	r4, [r0]
-
 	/* Call the main function. */
-	b	loader_main
+	mov	r0, r4
+	b	platform_init
 FUNCTION_END(_start)
 
 .section .data, "aw", %progbits

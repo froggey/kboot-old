@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,7 +36,6 @@
 
 #ifndef __ASM__
 
-extern void platform_early_init(void);
 extern void platform_reboot(void);
 
 #endif /* __ASM__ */

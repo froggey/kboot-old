@@ -60,14 +60,9 @@ static console_t uart_console = {
 	.putch = uart_console_putch,
 };
 
-#include <arm/atag.h>
 /** Initialise the UART console. */
-void console_init(void) {
+void uart_init(void) {
 	uint32_t divider, fraction;
-
-	/* Light up the OK LED (LED will be lit when pin is clear). */
-	gpio_select_function(16, GPIO_FUNC_OUTPUT);
-	gpio_clear_pin(16);
 
 	/* Disable the UART while we configure it. */
 	uart_mapping[PL011_REG_CR] = 0;

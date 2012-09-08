@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,6 +22,8 @@
 #ifndef __ARCH_LOADER_H
 #define __ARCH_LOADER_H
 
-extern void arch_early_init(void);
+struct atag;
+
+extern void arch_init(struct atag *atags);
 
 #endif /* __ARCH_LOADER_H */

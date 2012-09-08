@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief		ARM architecture initialisation functions.
+ * @brief		ARM architecture initialization functions.
  */
 
 #include <arm/atag.h>
@@ -27,8 +27,11 @@
 /** Address of the ATAG list. */
 atag_t *atag_list = NULL;
 
-/** Perform early architecture initialisation. */
-void arch_early_init(void) {
+/** Perform early architecture initialization.
+ * @param atags		ATAG list from the firmware/U-Boot. */
+void arch_init(atag_t *atags) {
+	atag_list = atags;
+
 	/* Verify that the list is valid: it must begin with an ATAG_CORE tag. */
 	if(atag_list->hdr.tag != ATAG_CORE)
 		internal_error("ATAG list is not valid (%p)", atag_list);

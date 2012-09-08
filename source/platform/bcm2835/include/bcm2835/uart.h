@@ -57,4 +57,6 @@
 /** Base clock rate (3MHz, APB clock rate). */
 #define UART0_CLOCK		3000000
 
+extern void uart_init(void);
+
 #endif /* __BCM2835_UART_H */

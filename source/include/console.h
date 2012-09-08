@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -107,7 +107,5 @@ extern char debug_log[];
 
 extern console_t *main_console;
 extern console_t *debug_console;
-
-extern void console_init(void);
 
 #endif /* __CONSOLE_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Alex Smith
+ * Copyright (C) 2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,31 @@
 
 /**
  * @file
- * @brief		x86 core definitions.
+ * @brief		BCM2835 platform startup code.
  */
 
-#ifndef __ARCH_LOADER_H
-#define __ARCH_LOADER_H
+#include <arm/atag.h>
 
-extern void cpu_init(void);
-extern void arch_init(void);
+#include <bcm2835/gpio.h>
+#include <bcm2835/uart.h>
 
-#endif /* __ARCH_LOADER_H */
+#include <loader.h>
+
+extern void platform_init(atag_t *atags);
+
+/** Main function of the BCM2835 loader.
+ * @param atags		ATAG list from the firmware/U-Boot. */
+void platform_init(atag_t *atags) {
+	/* Light up the OK LED (LED will be lit when pin is clear). */
+	gpio_select_function(16, GPIO_FUNC_OUTPUT);
+	gpio_clear_pin(16);
+
+	/* Set up the UART for debug output. */
+	uart_init();
+
+	/* Initialize the architecture. */
+	arch_init(atags);
+
+	/* Call the main function. */
+	loader_main();
+}

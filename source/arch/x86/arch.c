@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,6 +22,6 @@
 #include <loader.h>
 
 /** Perform early architecture initialisation. */
-void arch_early_init(void) {
+void arch_init(void) {
 	cpu_init();
 }

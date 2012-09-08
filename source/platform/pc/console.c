@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Alex Smith
+ * Copyright (C) 2009-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +25,7 @@
 #include <lib/utility.h>
 
 #include <pc/bios.h>
+#include <pc/console.h>
 
 #include <console.h>
 
@@ -39,15 +40,11 @@
 #define VGA_COLS		80
 #define VGA_ROWS		25
 
-/** VGA register definitions. */
-#define VGA_CRTC_INDEX		0x3D4
-#define VGA_CRTC_DATA		0x3D5
-
 static void pc_console_clear(int x, int y, int width, int height);
 static void pc_console_scroll_down(void);
 
 /** VGA memory pointer. */
-static uint16_t *vga_mapping = (uint16_t *)0xB8000;
+static uint16_t *vga_mapping = (uint16_t *)VGA_MEM_BASE;
 
 /** VGA cursor position. */
 static int vga_cursor_x = 0;
