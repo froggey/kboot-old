@@ -40,7 +40,4 @@ void uart_init(void) {
 	gpio_select_function(15, GPIO_FUNC_ALT0);
 
 	pl011_init(BCM2835_UART0_BASE, UART0_CLOCK);
-
-	dprintf("Hello, World!\n");
-	while(1);
 }

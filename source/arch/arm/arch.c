@@ -22,7 +22,6 @@
 #include <arm/atag.h>
 
 #include <loader.h>
-#include <tar.h>
 
 /** Address of the ATAG list. */
 atag_t *atag_list = NULL;
@@ -35,10 +34,4 @@ void arch_init(atag_t *atags) {
 	/* Verify that the list is valid: it must begin with an ATAG_CORE tag. */
 	if(atag_list->hdr.tag != ATAG_CORE)
 		internal_error("ATAG list is not valid (%p)", atag_list);
-
-	/* The boot image is passed to us as an initial ramdisk. */
-	ATAG_ITERATE(tag, ATAG_INITRD2) {
-		tar_mount((void *)tag->initrd.start, tag->initrd.size);
-		break;
-	}
 }
