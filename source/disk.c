@@ -150,10 +150,9 @@ static void add_partition(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blo
 /** Probe a disk for filesystems/partitions.
  * @param disk		Disk to probe. */
 static void probe_disk(disk_t *disk) {
-	if(!(disk->device.fs = fs_probe(disk))) {
-		/* Check for a partition table on the device. We recursively
-		 * search for partition tables under partitions in order to
-		 * support, for example, BSD disklabels. */
+	if(!(disk->device.fs = fs_probe(disk)) && !disk_is_partition(disk)) {
+		/* Check for a partition table on the device if it is not
+		 * itself a partition. */
 		BUILTIN_ITERATE(BUILTIN_TYPE_PARTITION_MAP, partition_map_ops_t, type) {
 			if(type->iterate(disk, add_partition))
 				return;
