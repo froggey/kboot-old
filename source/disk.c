@@ -24,8 +24,8 @@
 
 #include <disk.h>
 #include <fs.h>
+#include <loader.h>
 #include <memory.h>
-#include <system.h>
 
 static void probe_disk(disk_t *disk);
 

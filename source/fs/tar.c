@@ -26,8 +26,8 @@
 #include <lib/utility.h>
 
 #include <fs.h>
+#include <loader.h>
 #include <memory.h>
-#include <system.h>
 #include <tar.h>
 
 /** Callback type for tar_iterate(). */

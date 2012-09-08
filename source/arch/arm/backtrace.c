@@ -19,7 +19,7 @@
  * @brief		ARM backtrace function.
  */
 
-#include <system.h>
+#include <loader.h>
 
 /** Print out a backtrace.
  * @param printfn	Print function to use. */

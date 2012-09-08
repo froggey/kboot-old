@@ -16,18 +16,12 @@
 
 /**
  * @file
- * @brief		OMAP3 platform core definitions.
+ * @brief		ARM architecture core definitions.
  */
 
-#ifndef __PLATFORM_SYSTEM_H
-#define __PLATFORM_SYSTEM_H
+#ifndef __ARCH_LOADER_H
+#define __ARCH_LOADER_H
 
-/** Load address (start of SDRAM). */
-#define LOADER_LOAD_ADDR		0x80008000
+extern void arch_early_init(void);
 
-#ifndef __ASM__
-
-#define platform_early_init()	
-
-#endif /* __ASM__ */
-#endif /* __PLATFORM_SYSTEM_H */
+#endif /* __ARCH_LOADER_H */

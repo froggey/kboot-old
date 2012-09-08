@@ -25,7 +25,7 @@
 #include <omap3/uart.h>
 
 #include <kboot.h>
-#include <system.h>
+#include <loader.h>
 
 extern void console_putc(char ch);
 static bool have_inited = false;

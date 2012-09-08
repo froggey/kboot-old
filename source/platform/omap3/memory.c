@@ -25,8 +25,8 @@
 
 #include <omap3/omap3.h>
 
+#include <loader.h>
 #include <memory.h>
-#include <system.h>
 
 extern char __start[];
 

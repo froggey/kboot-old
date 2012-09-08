@@ -39,7 +39,8 @@
  *    something.
  */
 
-#include <platform/system.h>
+#include <platform/loader.h>
+
 #include <x86/asm.h>
 
 #include "../../../fs/ext2.h"

@@ -27,9 +27,9 @@
 #include <lib/string.h>
 
 #include <assert.h>
+#include <loader.h>
 #include <memory.h>
 #include <mmu.h>
-#include <system.h>
 
 /** Allocate a paging structure. */
 static phys_ptr_t allocate_structure(void) {

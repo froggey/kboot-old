@@ -23,7 +23,7 @@
 
 #include <arm/asm.h>
 
-#include <platform/system.h>
+#include <platform/loader.h>
 
 /* Ensure that this code is linked in first. */
 .section .init.text, "ax", %progbits

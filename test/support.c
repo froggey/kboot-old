@@ -20,7 +20,7 @@
  */
 
 #include <lib/string.h>
-#include <system.h>
+#include <loader.h>
 
 extern void console_putc(char ch);
 

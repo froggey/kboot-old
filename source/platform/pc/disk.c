@@ -29,8 +29,8 @@
 
 #include <assert.h>
 #include <disk.h>
+#include <loader.h>
 #include <memory.h>
-#include <system.h>
 
 /** Structure used to store details of a BIOS disk. */
 typedef struct bios_disk {

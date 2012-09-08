@@ -25,7 +25,7 @@
 #include <lib/list.h>
 
 #include <fs.h>
-#include <system.h>
+#include <loader.h>
 
 struct command;
 struct device;

@@ -28,7 +28,6 @@
 #include <loader.h>
 #include <memory.h>
 #include <menu.h>
-#include <system.h>
 #include <video.h>
 
 extern char __bss_start[], __bss_end[];

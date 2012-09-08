@@ -38,7 +38,7 @@
 #include <bcm2835/uart.h>
 
 #include <console.h>
-#include <system.h>
+#include <loader.h>
 
 /** Baud rate to use. */
 #define BAUD_RATE	115200

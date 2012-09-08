@@ -36,7 +36,6 @@
 #include <kboot.h>
 #include <loader.h>
 #include <memory.h>
-#include <system.h>
 #include <ui.h>
 #include <video.h>
 

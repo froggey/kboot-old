@@ -23,7 +23,7 @@
 #define __FS_H
 
 #include <disk.h>
-#include <system.h>
+#include <loader.h>
 
 struct mount;
 struct file_handle;

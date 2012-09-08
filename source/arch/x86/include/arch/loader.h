@@ -19,10 +19,10 @@
  * @brief		x86 core definitions.
  */
 
-#ifndef __ARCH_SYSTEM_H
-#define __ARCH_SYSTEM_H
+#ifndef __ARCH_LOADER_H
+#define __ARCH_LOADER_H
 
 extern void cpu_init(void);
 extern void arch_early_init(void);
 
-#endif /* __ARCH_SYSTEM_H */
+#endif /* __ARCH_LOADER_H */

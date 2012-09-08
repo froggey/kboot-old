@@ -25,8 +25,8 @@
 #include <assert.h>
 #include <endian.h>
 #include <fs.h>
+#include <loader.h>
 #include <memory.h>
-#include <system.h>
 
 #include "iso9660.h"
 

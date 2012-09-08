@@ -21,7 +21,7 @@
 
 #include <arch/page.h>
 
-#include <platform/system.h>
+#include <platform/loader.h>
 
 #include <elf_load.h>
 #include <kboot.h>

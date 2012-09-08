@@ -19,7 +19,8 @@
  * @brief		x86 CD boot sector.
  */
 
-#include <platform/system.h>
+#include <platform/loader.h>
+
 #include <x86/asm.h>
 
 /** Various definitions. */

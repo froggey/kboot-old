@@ -29,9 +29,9 @@
 
 #include <elf.h>
 #include <fs.h>
+#include <loader.h>
 #include <memory.h>
 #include <mmu.h>
-#include <system.h>
 
 #ifdef LITTLE_ENDIAN
 # define ELF_ENDIAN	ELFDATA2LSB

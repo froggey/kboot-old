@@ -19,7 +19,8 @@
  * @brief		PXE loader wrapper.
  */
 
-#include <platform/system.h>
+#include <platform/loader.h>
+
 #include <x86/asm.h>
 
 .section .text

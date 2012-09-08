@@ -20,7 +20,7 @@
  */
 
 #include <arch/io.h>
-#include <system.h>
+#include <loader.h>
 
 /** Serial port to use. */
 #define SERIAL_PORT		0x3F8

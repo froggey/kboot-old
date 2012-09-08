@@ -23,7 +23,7 @@
 #define __DISK_H
 
 #include <device.h>
-#include <system.h>
+#include <loader.h>
 
 #if CONFIG_KBOOT_HAVE_DISK
 

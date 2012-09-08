@@ -20,7 +20,7 @@
  */
 
 #include <kboot.h>
-#include <system.h>
+#include <loader.h>
 
 extern void kmain(uint32_t magic, phys_ptr_t tags);
 

@@ -27,9 +27,9 @@
 
 #include <config.h>
 #include <fs.h>
+#include <loader.h>
 #include <memory.h>
 #include <menu.h>
-#include <system.h>
 
 /** Structure containing details of a command to run. */
 typedef struct command_list_entry {

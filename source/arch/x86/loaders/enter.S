@@ -24,7 +24,7 @@
 #include <x86/asm.h>
 #include <x86/cpu.h>
 
-#include <platform/system.h>
+#include <platform/loader.h>
 
 #include <kboot.h>
 

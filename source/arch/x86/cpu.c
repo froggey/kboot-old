@@ -27,8 +27,8 @@
 #include <lib/utility.h>
 
 #include <assert.h>
+#include <loader.h>
 #include <memory.h>
-#include <system.h>
 #include <time.h>
 
 /** Structure defining an interrupt stack frame. */

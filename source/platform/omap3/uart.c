@@ -23,7 +23,7 @@
 #include <omap3/uart.h>
 
 #include <console.h>
-#include <system.h>
+#include <loader.h>
 
 /** UART port definitions. */
 static volatile uint8_t *uarts[] = {

@@ -25,8 +25,8 @@
 
 #include <assert.h>
 #include <kboot.h>
+#include <loader.h>
 #include <memory.h>
-#include <system.h>
 
 /** Structure representing an area on the heap. */
 typedef struct heap_chunk {

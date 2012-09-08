@@ -21,7 +21,7 @@
 
 #include <arm/atag.h>
 
-#include <system.h>
+#include <loader.h>
 #include <tar.h>
 
 /** Address of the ATAG list. */

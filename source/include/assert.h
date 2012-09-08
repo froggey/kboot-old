@@ -22,7 +22,7 @@
 #ifndef __ASSERT_H
 #define __ASSERT_H
 
-#include <system.h>
+#include <loader.h>
 
 #if CONFIG_DEBUG
 # define assert(cond)	\

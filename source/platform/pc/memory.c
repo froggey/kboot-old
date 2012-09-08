@@ -24,8 +24,8 @@
 
 #include <pc/bios.h>
 
+#include <loader.h>
 #include <memory.h>
-#include <system.h>
 
 /** Memory map type values. */
 #define E820_TYPE_FREE		1	/**< Usable memory. */

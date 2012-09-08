@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Alex Smith
+ * Copyright (C) 2010-2011 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,29 +16,29 @@
 
 /**
  * @file
- * @brief		BCM2835 platform core definitions.
+ * @brief		PC platform core definitions.
  */
 
-#ifndef __PLATFORM_SYSTEM_H
-#define __PLATFORM_SYSTEM_H
+#ifndef __PLATFORM_LOADER_H
+#define __PLATFORM_LOADER_H
 
-/**
- * Load address.
- *
- * This is where start.elf (running on the VideoCore GPU) will load us to, or
- * where U-Boot should load us if we're booting via that. If config.txt sets
- * disable_commandline_tags we'll get loaded to 0x0 instead, but we require
- * tags so we don't need to support that case.
- *
- * Older firmwares (before May 2012) loaded to 0x0 and required a 32k blob to
- * be prepended to do some setup stuff and jump to 0x8000, this is no longer
- * required - https://github.com/raspberrypi/linux/issues/16
- */
-#define LOADER_LOAD_ADDR		0x8000
+/** Memory layout definitions. */
+#define LOADER_LOAD_ADDR	0x10000		/**< Load address of the boot loader. */
+#define MULTIBOOT_LOAD_ADDR	0x100000	/**< Load address for Multiboot. */
+#define MULTIBOOT_LOAD_OFFSET	0xF0000		/**< Load offset for Multiboot. */
+
+/** Segment defintions. */
+#define SEGMENT_CS		0x08		/**< Code segment. */
+#define SEGMENT_DS		0x10		/**< Data segment. */
+#define SEGMENT_CS16		0x18		/**< 16-bit code segment. */
+#define SEGMENT_CS64		0x20		/**< 64-bit code segment. */
+#define SEGMENT_DS64		0x28		/**< 64-bit data segment. */
 
 #ifndef __ASM__
 
-#define platform_early_init()	
+extern void platform_early_init(void);
+extern void platform_reboot(void);
 
 #endif /* __ASM__ */
-#endif /* __PLATFORM_SYSTEM_H */
+
+#endif /* __PLATFORM_LOADER_H */
