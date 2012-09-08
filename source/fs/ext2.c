@@ -314,7 +314,8 @@ static bool ext2_mount(mount_t *mount) {
 		data->sb.s_uuid[12], data->sb.s_uuid[13], data->sb.s_uuid[14],
 		data->sb.s_uuid[15]);
 
-	dprintf("ext2: mounted %s (uuid: %s)\n", mount->label, mount->uuid);
+	dprintf("ext2: mounted%s%s (%s) (uuid: %s)\n", (mount->label[0]) ? " " : "", mount->label,
+		mount->disk->device.name, mount->uuid);
 	return true;
 fail:
 	kfree(data);

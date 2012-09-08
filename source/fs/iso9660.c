@@ -287,7 +287,8 @@ static bool iso9660_mount(mount_t *mount) {
 		mount->root = iso9660_handle_create(mount,
 			(iso9660_directory_record_t *)&pri->root_dir_record);
 	}
-	dprintf("iso9660: mounted %s (joliet: %d, uuid: %s)\n", mount->label, joliet, mount->uuid);
+	dprintf("iso9660: mounted %s (%s) (joliet: %d, uuid: %s)\n", mount->label,
+		mount->disk->device.name, joliet, mount->uuid);
 	ret = true;
 out:
 	if(pri) {
