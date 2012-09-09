@@ -160,7 +160,7 @@ static bool msdos_partition_iterate(disk_t *disk, partition_map_iterate_cb_t cb)
 	return true;
 }
 
-/** MS-DOS parition map type. */
+/** MS-DOS partition map type. */
 BUILTIN_PARTITION_MAP(msdos_partition_map) = {
 	.iterate = msdos_partition_iterate,
 };

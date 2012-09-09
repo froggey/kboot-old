@@ -121,7 +121,7 @@ PRIVATE_FUNCTION_START(enable_a20)
 	mov	$0x2401, %ax
 	int	$0x15
 	call	test_a20
-	cmp	$0, %eax
+	cmp	$0, %ax
 	je	.Lenable_kbd
 	ret
 .Lenable_kbd:
@@ -137,7 +137,7 @@ PRIVATE_FUNCTION_START(enable_a20)
 	outb	%al, $0x64
 	call	.Lflush
 	call	test_a20
-	cmp	$0, %eax
+	cmp	$0, %ax
 	je	.Lenable_fast
 	ret
 .Lenable_fast:
@@ -149,7 +149,7 @@ PRIVATE_FUNCTION_START(enable_a20)
 	andb	$~(1<<0), %al
 	outb	%al, $0x92
 	call	test_a20
-	cmp	$0, %eax
+	cmp	$0, %ax
 	je	.Lfail
 	ret
 .Lfail:

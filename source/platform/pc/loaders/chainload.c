@@ -42,7 +42,6 @@ static __noreturn void chain_loader_load(void) {
 	disk_t *disk, *parent;
 	ptr_t part_addr = 0;
 	file_handle_t *file;
-	bios_regs_t regs;
 	uint8_t id;
 	char *path;
 
@@ -83,21 +82,6 @@ static __noreturn void chain_loader_load(void) {
 
 		part_addr = PARTITION_TABLE_ADDR + (disk->id << 4);
 	}
-
-	/* Try to disable the A20 line. */
-	bios_regs_init(&regs);
-	regs.eax = 0x2400;
-	bios_interrupt(0x15, &regs);
-	if(regs.eflags & X86_FLAGS_CF || regs.eax != 0)
-		out8(0x92, in8(0x92) & ~(1<<1));
-
-	/* Restore the console to a decent state. */
-	bios_regs_init(&regs);
-	regs.eax = 0x0500;
-	bios_interrupt(0x10, &regs);
-	bios_regs_init(&regs);
-	regs.eax = 0x0200;
-	bios_interrupt(0x10, &regs);
 
 	/* Drop to real mode and jump to the boot sector. */
 	chain_loader_enter(id, part_addr);
