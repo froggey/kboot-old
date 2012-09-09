@@ -11,7 +11,7 @@ cat > isobuild/boot/loader.cfg << EOF
 set "timeout" 5
 
 entry "Test" {
-	kboot "/test.elf" []
+	kboot "/test.elf"
 }
 EOF
 

@@ -25,6 +25,7 @@
 #include <lib/string.h>
 #include <lib/utility.h>
 
+#include <assert.h>
 #include <config.h>
 #include <fs.h>
 #include <loader.h>
@@ -132,11 +133,45 @@ static void syntax_error(const char *fmt, ...) {
 	dprintf("\n");
 }
 
+/** Initialize a value to a default (empty) value.
+ * @param value		Value to initialize.
+ * @param type		Type of the value. */
+void value_init(value_t *value, int type) {
+	value->type = type;
+
+	switch(type) {
+	case VALUE_TYPE_INTEGER:
+		value->integer = 0;
+		break;
+	case VALUE_TYPE_BOOLEAN:
+		value->boolean = false;
+		break;
+	case VALUE_TYPE_STRING:
+		value->string = kstrdup("");
+		break;
+	case VALUE_TYPE_LIST:
+		value->list = kmalloc(sizeof(value_list_t));
+		value->list->values = NULL;
+		value->list->count = 0;
+		break;
+	case VALUE_TYPE_COMMAND_LIST:
+		value->cmds = kmalloc(sizeof(command_list_t));
+		list_init(value->cmds);
+		break;
+	case VALUE_TYPE_POINTER:
+		value->pointer = NULL;
+		break;
+	default:
+		assert(0 && "Setting invalid value type");
+	}
+}
+
 /** Copy the contents of one value to another.
  * @param source	Source value.
  * @param dest		Destination value. */
 void value_copy(value_t *source, value_t *dest) {
 	dest->type = source->type;
+
 	switch(dest->type) {
 	case VALUE_TYPE_INTEGER:
 		dest->integer = source->integer;
@@ -188,6 +223,7 @@ static value_list_t *value_list_copy(value_list_t *source) {
 	size_t i;
 
 	dest->count = source->count;
+
 	if(source->count) {
 		dest->values = kmalloc(sizeof(value_t) * source->count);
 		for(i = 0; i < source->count; i++)
@@ -195,6 +231,7 @@ static value_list_t *value_list_copy(value_list_t *source) {
 	} else {
 		dest->values = NULL;
 	}
+
 	return dest;
 }
 
@@ -546,14 +583,6 @@ bool command_list_exec(command_list_t *list, environ_t **envp) {
 		environ_destroy(env);
 
 	return true;
-}
-
-/** Insert a value into a value list.
- * @param list		List to insert into.
- * @param value		Value to insert (will be copied). */
-void value_list_insert(value_list_t *list, value_t *value) {
-	list->values = krealloc(list->values, sizeof(value_t) * (list->count + 1));
-	value_copy(value, &list->values[list->count++]);
 }
 
 /** Create a new environment.

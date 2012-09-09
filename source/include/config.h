@@ -102,12 +102,11 @@ extern char *config_file_override;
 extern environ_t *root_environ;
 extern environ_t *current_environ;
 
+extern void value_init(value_t *value, int type);
 extern void value_copy(value_t *source, value_t *dest);
 extern void value_destroy(value_t *value);
 
 extern bool command_list_exec(command_list_t *list, environ_t **envp);
-
-extern void value_list_insert(value_list_t *list, value_t *value);
 
 extern environ_t *environ_create(environ_t *parent);
 extern value_t *environ_lookup(environ_t *env, const char *name);

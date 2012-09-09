@@ -39,9 +39,6 @@
 #include <ui.h>
 #include <video.h>
 
-/** Macro to make the code a little nicer. */
-#define vtype(a, i, t)	((a)->values[(i)].type == (t))
-
 /** Data for the KBoot loader. */
 typedef struct kboot_data {
 	environ_t *env;			/**< Environment back pointer. */
@@ -424,8 +421,10 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 static bool config_cmd_kboot(value_list_t *args) {
 	kboot_data_t *data;
 
-	if(args->count != 2 || !vtype(args, 0, VALUE_TYPE_STRING)
-		|| (!vtype(args, 1, VALUE_TYPE_LIST) && !vtype(args, 1, VALUE_TYPE_STRING)))
+	if((args->count != 1 && args->count != 2)
+		|| args->values[0].type != VALUE_TYPE_STRING
+		|| (args->count == 2 && args->values[1].type != VALUE_TYPE_LIST
+			&& args->values[1].type != VALUE_TYPE_STRING))
 	{
 		dprintf("kboot: invalid arguments\n");
 		return false;
@@ -435,7 +434,12 @@ static bool config_cmd_kboot(value_list_t *args) {
 	current_environ->loader = &kboot_loader_type;
 	current_environ->data = data;
 
-	value_copy(&args->values[1], &data->modules);
+	if(args->count == 2) {
+		value_copy(&args->values[1], &data->modules);
+	} else {
+		value_init(&data->modules, VALUE_TYPE_LIST);
+	}
+
 	data->env = current_environ;
 	data->is_kboot = false;
 	data->tags = 0;
