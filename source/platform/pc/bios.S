@@ -45,6 +45,14 @@
 	/* Switch to the BIOS IVT. */ \
 	lidt	(bios_idtp); \
 	\
+	/* Set data segments. */ \
+	movw	$SEGMENT_DS16, %ax; \
+	movw	%ax, %ds; \
+	movw	%ax, %es; \
+	movw	%ax, %fs; \
+	movw	%ax, %gs; \
+	movw	%ax, %ss; \
+	\
 	/* Jump into the real mode code segment. */ \
 	ljmp	$SEGMENT_CS16, $1f - LOADER_LOAD_ADDR; \
 	\
@@ -57,7 +65,7 @@
 	.byte 0x66; \
 	ljmp	$(LOADER_LOAD_ADDR >> 4), $2f - LOADER_LOAD_ADDR; \
 .code16 \
-2:	mov	$0, %ax; \
+2:	xorw	%ax, %ax; \
 	mov	%ax, %ds; \
 	mov	%ax, %es; \
 	mov	%ax, %fs; \

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,7 +23,7 @@
 
 #include <x86/asm.h>
 
-#define CHAINLOAD_STACK		0x2000
+#define CHAINLOAD_STACK		0x7C00
 #define CHAINLOAD_ADDR		0x7C00
 
 .section .text, "ax", @progbits
@@ -44,6 +44,14 @@ FUNCTION_START(chain_loader_enter)
 	/* Switch to the BIOS IVT. */
 	lidt	(bios_idtp)
 
+	/* Set data segments. */
+	movw	$SEGMENT_DS16, %ax
+	movw	%ax, %ds
+	movw	%ax, %es
+	movw	%ax, %fs
+	movw	%ax, %gs
+	movw	%ax, %ss
+
 	/* Jump into the real mode code segment. */
 	ljmp	$SEGMENT_CS16, $1f - LOADER_LOAD_ADDR
 
@@ -56,14 +64,17 @@ FUNCTION_START(chain_loader_enter)
 	.byte 0x66
 	ljmp	$(LOADER_LOAD_ADDR >> 4), $2f - LOADER_LOAD_ADDR
 .code16
-2:	mov	$0, %ax
-	mov	%ax, %ds
-	mov	%ax, %es
-	mov	%ax, %fs
-	mov	%ax, %gs
-	mov	%ax, %ss
+2:	xorw	%ax, %ax
+	movw	%ax, %ds
+	movw	%ax, %es
+	movw	%ax, %fs
+	movw	%ax, %gs
+	movw	%ax, %ss
 
 	sti
+
+	push	%edx
+	push	%esi
 
 	/* Restore the console to a decent state. Set display page to the first
 	 * and move the cursor to (0, 0). */
@@ -78,6 +89,13 @@ FUNCTION_START(chain_loader_enter)
 	call	disable_a20
 
 	/* Jump to the loader. */
+	xorl	%eax, %eax
+	xorl	%ebx, %ebx
+	xorl	%ecx, %ecx
+	xorl	%edi, %edi
+	xorl	%ebp, %ebp
+	pop	%esi
+	pop	%edx
 	ljmp	$0, $CHAINLOAD_ADDR
 FUNCTION_END(chain_loader_enter)
 
@@ -87,8 +105,10 @@ FUNCTION_END(chain_loader_enter)
  * @return		AX = 1 if enabled, AX = 0 if not. */
 PRIVATE_FUNCTION_START(test_a20)
 .code16
-	/* Iterate checking to give time for enabling attempts we make to take
+	/* Iterate checking to give time for disabling attempts we make to take
 	 * effect. */
+	push	%fs
+	push	%gs
 	push	%cx
 	mov	$0x1000, %cx
 
@@ -107,13 +127,13 @@ PRIVATE_FUNCTION_START(test_a20)
 	movb	$0xFF, %gs:(%si)
 	outb	%al, $0x80
 	cmpb	$0xFF, %fs:(%di)
+	xorw	%ax, %ax
 	je	2f
 	loop	1b
-	mov	$1, %ax
-	pop	%cx
-	ret
-2:	xor	%ax, %ax
-	pop	%cx
+	inc	%ax
+2:	pop	%cx
+	pop	%gs
+	pop	%fs
 	ret
 FUNCTION_END(test_a20)
 
@@ -131,7 +151,7 @@ PRIVATE_FUNCTION_START(disable_a20)
 .Ldisable_fast:
 	/* Try the fast A20 mechanism. */
 	inb	$0x92, %al
-	andb	$((1<<0) | (1<<1)), %al
+	andb	$~((1<<0) | (1<<1)), %al
 	outb	%al, $0x92
 	call	test_a20
 	test	%ax, %ax

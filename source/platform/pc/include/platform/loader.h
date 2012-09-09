@@ -31,8 +31,9 @@
 #define SEGMENT_CS		0x08		/**< Code segment. */
 #define SEGMENT_DS		0x10		/**< Data segment. */
 #define SEGMENT_CS16		0x18		/**< 16-bit code segment. */
-#define SEGMENT_CS64		0x20		/**< 64-bit code segment. */
-#define SEGMENT_DS64		0x28		/**< 64-bit data segment. */
+#define SEGMENT_DS16		0x20		/**< 16-bit code segment. */
+#define SEGMENT_CS64		0x28		/**< 64-bit code segment. */
+#define SEGMENT_DS64		0x30		/**< 64-bit data segment. */
 
 #ifndef __ASM__
 

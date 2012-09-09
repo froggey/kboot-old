@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -67,6 +67,10 @@ static __noreturn void chain_loader_load(void) {
 		if(!disk_read(disk, (void *)CHAINLOAD_ADDR, CHAINLOAD_SIZE, 0))
 			boot_error("Could not read boot sector");
 	}
+
+	/* Check if this is a valid boot sector. */
+	if(*(uint16_t *)(CHAINLOAD_ADDR + 510) != 0xAA55)
+		boot_error("Boot sector is missing signature");
 
 	/* Get the ID of the disk we're booting from. */
 	id = bios_disk_id(disk);

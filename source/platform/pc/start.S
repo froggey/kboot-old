@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -279,8 +279,9 @@ __gdt:
         .quad 0x00CF9A000000FFFF                /**< 32-bit code     (0x08). */
         .quad 0x00CF92000000FFFF                /**< 32-bit data     (0x10). */
 	.quad 0x00009A010000FFFF		/**< 16-bit code     (0x18). */
-	.quad 0x00AF9A000000FFFF		/**< 64-bit code     (0x20). */
-	.quad 0x008F92000000FFFF		/**< 64-bit data     (0x28). */
+	.quad 0x000092000000FFFF		/**< 16-bit code     (0x20). */
+	.quad 0x00AF9A000000FFFF		/**< 64-bit code     (0x28). */
+	.quad 0x008F92000000FFFF		/**< 64-bit data     (0x30). */
 .L__gdt_end:
 
 /** Multiboot magic number. */
