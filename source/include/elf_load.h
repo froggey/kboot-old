@@ -48,7 +48,7 @@ static inline bool elf_check(file_handle_t *handle, uint8_t bitsize, uint8_t mac
 	Elf32_Ehdr ehdr;
 
 	if(!file_read(handle, &ehdr, sizeof(ehdr), 0)) {
-		return false;
+		boot_error("Could not read kernel image");
 	} else if(strncmp((const char *)ehdr.e_ident, ELF_MAGIC, 4) != 0) {
 		return false;
 	} else if(ehdr.e_ident[ELF_EI_VERSION] != 1 || ehdr.e_version != 1) {
