@@ -41,10 +41,10 @@ for f in stage1s:
 		'-Wl,--build-id=none',
 	])
 	Depends('stage1/%s.elf' % (f), File('stage1/stage1.ld'))
-	target = env.Command('stage1/%s' % (f), 'stage1/%s.elf' % (f), Action(
-		"$OBJCOPY -O binary --strip-all -R '.note.*' -R .comment $SOURCE $TARGET",
-		'$GENCOMSTR'
-	))
+	target = env.Command('stage1/%s' % (f), 'stage1/%s.elf' % (f), [
+		Action("$OBJCOPY -O binary --strip-all -R '.note.*' -R .comment $SOURCE $TARGET", '$GENCOMSTR'),
+		Action('$OBJDUMP -d -m i386 -M i8086 $SOURCE > ${TARGET}.lst', None),
+	])
 	defaults.append(target)
 
 # Set the linker script path.

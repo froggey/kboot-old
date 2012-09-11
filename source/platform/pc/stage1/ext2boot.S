@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,7 +23,8 @@
  * the partition's boot sector.
  *
  * Since the MBR only loads 512 bytes for us, we are split into 2 sections, and
- * we load the second half early on in the main function.
+ * we load the second half early on in the main function (along with the FS
+ * superblock).
  *
  * The start LBA (32-bit) of the boot partition should be written to offset 502.
  * The inode number of the loader itself should be written to offset 506.
@@ -59,8 +60,7 @@
 /** Print an error message and halt. */
 #define ERROR(s)		\
 	movw	$s, %si; \
-	call 	puts; \
-	hlt
+	jmp 	error
 
 #define pushad			data32 pusha
 #define popad			data32 popa
@@ -90,12 +90,9 @@ FUNCTION_START(_start)
 	call	read_disk_sectors
 
 	/* Check whether this is a valid Ext2 filesystem. */
-	movw	(superblock + EXT2_SUPERBLOCK_OFF_MAGIC), %ax
-	cmpw	$EXT2_MAGIC, %ax
-	je	.Lvalid_fs
+	cmpw	$EXT2_MAGIC, (superblock + EXT2_SUPERBLOCK_OFF_MAGIC)
+	jne	.Lbad_fs
 
-	ERROR(msg_not_ext2)
-.Lvalid_fs:
 	/* Compute and save the block size. Although s_log_block_size is a
 	 * 32-bit field in the superblock, in reality it'll never even be
 	 * greater than 10, so just treat it as a byte. */
@@ -118,7 +115,6 @@ FUNCTION_START(_start)
 	/* Read in our inode. */
 	movl	inode_number, %eax
 	call	read_inode
-	movl	(inode + EXT2_INODE_OFF_SIZE), %eax
 
 	/* Read in the inode data. */
 	call	read_inode_data
@@ -130,6 +126,8 @@ FUNCTION_START(_start)
 	movl	partition_lba, %ebx
 	xorl	%ecx, %ecx
 	ljmp	$(LOADER_LOAD_ADDR >> 4), $0
+.Lbad_fs:
+	ERROR(msg_not_ext2)
 FUNCTION_END(_start)
 
 /** Read a single sector from the boot partition.
@@ -258,39 +256,6 @@ PRIVATE_FUNCTION_START(read_block)
 	ret
 FUNCTION_END(read_block)
 
-/** Display a string on the screen.
- * @param %ds:%si	String to display. */
-PRIVATE_FUNCTION_START(puts)
-	pushw	%ax
-	cld
-1:	lodsb
-	test	%al, %al
-	jz	2f
-	pushw	%bx
-	movb	$0x0E, %ah
-	movw	$1, %bx
-	int	$0x10
-	popw	%bx
-	jmp	1b
-2:	popw	%ax
-	ret
-FUNCTION_END(puts)
-
-/** Error strings. */
-msg_loading:		.asciz "Loading... "
-msg_read_failed:	.asciz "Read failed!\r\n"
-msg_not_ext2:		.asciz "Unrecognised FS!\r\n"
-msg_ok:			.asciz "OK\r\n"
-
-/* Pad up to the end of the first 512 bytes, with space for the partition LBA
- * and the boot signature at the end. */
-. = _start + 0x1F6
-partition_lba:		.long 0
-inode_number:		.long 0
-boot_signature:		.word 0xAA55
-
-second_half:
-
 /** Read all data for the inode to LOADER_LOAD_ADDR. */
 PRIVATE_FUNCTION_START(read_inode_data)
 	pushad
@@ -322,9 +287,9 @@ PRIVATE_FUNCTION_START(read_inode_data)
 	/* Increment data buffer, handle overflowing into the next segment. */
 	addw	block_size, %di
 	jnc	3f
-	push	%es
-	addw	$0x1000, (%esp)
-	pop	%es
+	movw	%es, %dx
+	addw	$0x1000, %dx
+	movw	%dx, %es
 3:	pop	%eax
 	inc	%eax
 	dec	%ecx
@@ -335,13 +300,53 @@ PRIVATE_FUNCTION_START(read_inode_data)
 	ret
 FUNCTION_END(read_inode_data)
 
+/** Display a string on the screen.
+ * @param %ds:%si	String to display. */
+PRIVATE_FUNCTION_START(puts)
+	pushw	%ax
+1:	lodsb
+	test	%al, %al
+	jz	2f
+	pushw	%bx
+	movb	$0x0E, %ah
+	movw	$1, %bx
+	int	$0x10
+	popw	%bx
+	jmp	1b
+2:	popw	%ax
+	ret
+FUNCTION_END(puts)
+
+/* Print an error and stop.
+ * @param %ds:%si	String to display. */
+PRIVATE_FUNCTION_START(error)
+	call	puts
+1:	hlt
+	jmp	1b
+FUNCTION_END(error)
+
+/** Error strings. */
+msg_loading:		.asciz "Loading... "
+msg_read_failed:	.asciz "Read failed!\r\n"
+msg_not_ext2:		.asciz "Bad FS!\r\n"
+msg_ok:			.asciz "OK\r\n"
+
+/* Pad up to the end of the first 512 bytes, with space for the partition LBA
+ * and the boot signature at the end. */
+. = _start + 0x1F6
+partition_lba:		.long 0
+inode_number:		.long 0
+boot_signature:		.word 0xAA55
+
+second_half:
+
 /** Look up a raw block number in the current inode.
  * @param %eax		Block number.
- * @return		Raw block number in %eax. */
+ * @return		Raw block number in %eax. Trashes %edx and %ebx. */
 PRIVATE_FUNCTION_START(get_raw_block)
 	/* Test for extents. */
 	testl	$EXT4_EXTENTS_FL, (inode + EXT2_INODE_OFF_FLAGS)
-	jnz	.Lnotsupp
+	jnz	.Lextents
 
 	cmp	$EXT2_NDIR_BLOCKS, %eax
 	jae	.Lindirect
@@ -354,7 +359,7 @@ PRIVATE_FUNCTION_START(get_raw_block)
 	sub	$EXT2_NDIR_BLOCKS, %eax
 	shl	$2, %eax
 	cmp	block_size, %eax
-	jae	.Lnotsupp
+	jae	.Lbi_indirect
 
 	/* Read in the indirect block. */
 	push	%eax
@@ -366,12 +371,105 @@ PRIVATE_FUNCTION_START(get_raw_block)
 	movl	%es:(%di), %eax
 	pop	%di
 	ret
-.Lnotsupp:
-	ERROR(msg_not_implemented)
+.Lbi_indirect:
+	/* Don't bother supporting this. We only have to load the loader here,
+	 * which shouldn't be too big. */
+	ERROR(msg_too_large)
+.Lextents:
+	/* Find the leaf. First iteration we want to operate on i_block. All
+	 * other iterations we want to operate on the current buffer location.
+	 * Safe for us to trash %dx here to use as a loop counter. */
+	push	%es
+	push	%di
+	xorw	%dx, %dx
+	movw	%dx, %es
+	movw	$inode + EXT2_INODE_OFF_BLOCK, %di
+
+1:	/* Check whether the extent header is valid. */
+	cmpw	$EXT4_EXT_MAGIC, %es:EXT4_EXTENT_HEADER_OFF_MAGIC(%di)
+	jne	.Lbad_extent
+
+	/* If the depth is 0, this is the leaf. */
+	cmpw	$0, %es:EXT4_EXTENT_HEADER_OFF_DEPTH(%di)
+	je	.Lfound_extent
+
+	/* Loop through to find the index covering the block (%dx == 0). */
+	movw	%es:EXT4_EXTENT_HEADER_OFF_ENTRIES(%di), %bx
+	addw	$EXT4_EXTENT_HEADER_SIZE, %di
+2:	cmpw	%bx, %dx
+	jae	3f
+
+	cmpl	%es:EXT4_EXTENT_IDX_OFF_BLOCK(%di), %eax
+	jb	3f
+
+	addw	$EXT4_EXTENT_IDX_SIZE, %di
+	inc	%dx
+	jmp	2b
+
+3:	/* Count of 0 means the block was not covered by any index. */
+	test	%dx, %dx
+	jz	.Lbad_extent
+
+	/* Get the block number to read. index[i - 1]. */
+	movl	%es:(EXT4_EXTENT_IDX_OFF_LEAF - EXT4_EXTENT_IDX_SIZE)(%di), %ebx
+
+	/* Restore the base address and read the next block (would be nice if
+	 * %sp could be used as a base register...). File block number is
+	 * preserved in %ebx. */
+	pop	%di
+	pop	%es
+	xchgl	%eax, %ebx
+	call	read_block
+	movl	%ebx, %eax
+	push	%es
+	push	%di
+	xorw	%dx, %dx
+	jmp	1b
+.Lfound_extent:
+	/* %es:%di points at the header of the leaf. Loop through to find the
+	 * extent covering the block (%dx == 0). TODO: Could possibly merge
+	 * this with the similar loop above, but I'm lazy. Should be done if we
+	 * need to free up some space in the future. */
+	movw	%es:EXT4_EXTENT_HEADER_OFF_ENTRIES(%di), %bx
+	addw	$EXT4_EXTENT_HEADER_SIZE, %di
+1:	cmpw	%bx, %dx
+	jae	2f
+
+	cmpl	%es:EXT4_EXTENT_OFF_BLOCK(%di), %eax
+	jb	2f
+
+	addw	$EXT4_EXTENT_SIZE, %di
+	inc	%dx
+	jmp	1b
+
+2:	/* Count of 0 means the block was not covered by any extent. */
+	test	%dx, %dx
+	jz	.Lbad_extent
+
+	/* Subtract start block from block number. extent[i - 1]. */
+	sub	%es:(EXT4_EXTENT_OFF_BLOCK - EXT4_EXTENT_SIZE)(%di), %eax
+
+	/* If the offset is greater than the length of the extent, return 0,
+	 * else add on the physical start block. */
+	movzxw	%es:(EXT4_EXTENT_OFF_LEN - EXT4_EXTENT_SIZE)(%di), %edx
+	movl	%eax, %ebx
+	xorl	%eax, %eax
+	cmp	%edx, %ebx
+	jae	3f
+	movl	%es:(EXT4_EXTENT_OFF_START - EXT4_EXTENT_SIZE)(%di), %eax
+	add	%ebx, %eax
+
+	/* Restore old base address and return. */
+3:	pop	%di
+	pop	%es
+	ret
+.Lbad_extent:
+	ERROR(msg_bad_extent)
 FUNCTION_END(get_raw_block)
 
 /** More error strings. */
-msg_not_implemented:	.asciz "Not implemented!\r\n"
+msg_too_large:		.asciz "Too large!\r\n"
+msg_bad_extent:		.asciz "Bad extent!\r\n"
 
 /** Pad up to 1KB. */
 . = _start + 0x3FF
