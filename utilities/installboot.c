@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 
 #include <fcntl.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,11 +41,14 @@ int main(int argc, char **argv) {
 	struct bootsect sect;
 	int ofd, ifd;
 	ssize_t ret;
+	off_t offset;
 	struct stat st;
 	void *buf;
 
 	if(argc != 5) {
 		printf("Usage: %s <image> <boot sector> <partition start LBA> <inode number>\n", argv[0]);
+		printf("Don't use this unless you really really know what you are doing!\n");
+		printf("A proper utility will be implemented soon.\n");
 		return 1;
 	}
 
@@ -87,7 +91,10 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	ret = pwrite(ofd, &sect, sizeof(sect), sect.partition_lba * 512);
+	// FIXME: Sector size independence (stat does NOT give device block size)
+	offset = (off_t)sect.partition_lba * 512;
+	printf("Writing to block %" PRIu32 ", offset %" PRId64 "\n", sect.partition_lba, offset);
+	ret = pwrite(ofd, &sect, sizeof(sect), offset);
 	if(ret != sizeof(sect)) {
 		perror("pwrite");
 		return 1;
