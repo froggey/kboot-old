@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -40,5 +40,8 @@
 
 #define STRINGIFY(val)		#val
 #define XSTRINGIFY(val)		STRINGIFY(val)
+
+#define STATIC_ASSERT(cond)	\
+	do { struct __static_assert { char static_assert_failed[(cond) ? 1 : -1]; }; } while(0)
 
 #endif /* __COMPILER_H */
