@@ -34,13 +34,19 @@
 #define PHYS_MEMORY_UNUSABLE	KBOOT_MEMORY_UNUSABLE
 #define PHYS_MEMORY_INTERNAL	5
 
+/** Flags for phys_memory_alloc(). */
+#define PHYS_ALLOC_RECLAIM	(1<<0)	/**< Mark the allocated range as reclaimable. */
+#define PHYS_ALLOC_CANFAIL	(1<<1)	/**< The allocation is allowed to fail. */
+#define PHYS_ALLOC_HIGH		(1<<2)	/**< Allocate the highest possible address. */
+
 extern void *kmalloc(size_t size);
 extern void *krealloc(void *addr, size_t size);
 extern void kfree(void *addr);
 
 extern void phys_memory_add(phys_ptr_t start, phys_ptr_t end, int type);
 extern void phys_memory_protect(phys_ptr_t start, phys_ptr_t end);
-extern phys_ptr_t phys_memory_alloc(phys_ptr_t size, size_t align, bool reclaim);
+extern bool phys_memory_alloc(phys_ptr_t size, size_t align, phys_ptr_t min_addr,
+	phys_ptr_t max_addr, unsigned flags, phys_ptr_t *physp);
 
 extern void platform_memory_detect(void);
 extern void memory_init(void);

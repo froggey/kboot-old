@@ -107,7 +107,7 @@ static void load_module(kboot_data_t *data, file_handle_t *handle, const char *n
 
 	/* Allocate a chunk of memory to load to. */
 	size = file_size(handle);
-	addr = phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), PAGE_SIZE, true);
+	phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), PAGE_SIZE, 0, 0, PHYS_ALLOC_RECLAIM, &addr);
 	if(!file_read(handle, (void *)((ptr_t)addr), size, 0))
 		boot_error("Could not read module %s", name);
 
@@ -458,4 +458,5 @@ static bool config_cmd_kboot(value_list_t *args) {
 	elf_note_iterate(data->kernel, add_options, data);
 	return true;
 }
+
 BUILTIN_COMMAND("kboot", config_cmd_kboot);

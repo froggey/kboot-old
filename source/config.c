@@ -677,6 +677,7 @@ static bool config_cmd_set(value_list_t *args) {
 	environ_insert(current_environ, args->values[0].string, &args->values[1]);
 	return true;
 }
+
 BUILTIN_COMMAND("set", config_cmd_set);
 
 /** Set up the configuration system and load the configuration file. */

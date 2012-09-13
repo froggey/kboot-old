@@ -27,7 +27,8 @@ sources = FeatureSources(config, [
 	'lib/string.c',
 	'lib/support.c',
 
-	'loaders/kboot.c',
+	('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
+	('KBOOT_LOADER_LINUX', 'loaders/linux.c'),
 
 	('KBOOT_PARTITION_MAP_MSDOS', 'partitions/msdos.c'),
 

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2012 Alex Smith
+# Copyright (C) 2012 Alex Smith
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -13,26 +13,3 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-
-Import('env', 'config')
-from util import FeatureSources
-
-sources = FeatureSources(config, [
-	'loaders/enter.S',
-	('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
-	('KBOOT_LOADER_LINUX', 'loaders/linux.c'),
-
-	'arch.c',
-	'backtrace.c',
-	'cpu.c',
-	'except.S',
-	'mmu.c',
-])
-
-# Set build flags.
-env['CCFLAGS'] += ['-m32', '-mno-sse', '-mno-mmx', '-mno-sse2', '-mno-3dnow']
-env['ASFLAGS'] += ['-m32']
-env['LINKFLAGS'] += ['-m32']
-env['LIBS'] = ['gcc']
-
-Return('sources')

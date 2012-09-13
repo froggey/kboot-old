@@ -40,7 +40,30 @@
 
 /** Structure describing registers to pass to a BIOS interrupt. */
 typedef struct bios_regs {
-	uint32_t eflags, eax, ebx, ecx, edx, edi, esi, ebp, es;
+	union {
+		struct {
+			uint32_t eflags;
+			uint32_t eax;
+			uint32_t ebx;
+			uint32_t ecx;
+			uint32_t edx;
+			uint32_t edi;
+			uint32_t esi;
+			uint32_t ebp;
+			uint32_t _es;
+		};
+		struct {
+			uint16_t flags, _hflags;
+			uint16_t ax, _hax;
+			uint16_t bx, _hbx;
+			uint16_t cx, _hcx;
+			uint16_t dx, _hdx;
+			uint16_t di, _hdi;
+			uint16_t si, _hsi;
+			uint16_t bp, _hbp;
+			uint16_t es, _hes;
+		};
+	};
 } bios_regs_t;
 
 /** Initialise a BIOS registers structure.

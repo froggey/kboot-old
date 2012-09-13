@@ -75,6 +75,7 @@ static bool config_cmd_entry(value_list_t *args) {
 	list_append(&menu_entries, &entry->link);
 	return true;
 }
+
 BUILTIN_COMMAND("entry", config_cmd_entry);
 
 /** Find the default menu entry.

@@ -112,7 +112,7 @@ extern bool elf_note_iterate(file_handle_t *handle, elf_note_iterate_cb_t cb, vo
 		} \
 		phys_memory_protect(virt_base, virt_end); \
 		\
-		phys = phys_memory_alloc(ROUND_UP(virt_end - virt_base, PAGE_SIZE), _alignment, false); \
+		phys_memory_alloc(ROUND_UP(virt_end - virt_base, PAGE_SIZE), _alignment, 0, 0, 0, &phys); \
 		dprintf("elf: loading kernel image to 0x%" PRIxPHYS " (size: 0x%zx, align: 0x%zx)\n", \
 			phys, (size_t)(virt_end - virt_base), _alignment); \
 		*physp = phys; \

@@ -39,7 +39,7 @@ void video_init(void) {
 	phys_ptr_t paddr;
 
 	/* Allocate a framebuffer address. */
-	paddr = phys_memory_alloc(ROUND_UP(1280 * 720 * 2, 0x100000), 0x100000, false);
+	phys_memory_alloc(ROUND_UP(1280 * 720 * 2, 0x100000), 0x100000, 0, 0, 0, &paddr);
 
 	/* The BeagleBoard's firmware sets us up in 1280x720, little-endian
 	 * RGB16 (5:6:5). */

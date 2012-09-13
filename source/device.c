@@ -109,4 +109,5 @@ static bool config_cmd_device(value_list_t *args) {
 
 	return true;
 }
+
 BUILTIN_COMMAND("device", config_cmd_device);

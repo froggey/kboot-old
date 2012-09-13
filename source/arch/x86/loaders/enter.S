@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +29,8 @@
 #include <kboot.h>
 
 .section .text, "ax", @progbits
+
+#if CONFIG_KBOOT_LOADER_KBOOT
 
 /** Enter a 64-bit KBoot kernel.
  * @param tags		Address of tag list.
@@ -130,4 +132,66 @@ FUNCTION_START(kboot_arch_enter32)
 	push	%edi
 	push	$KBOOT_MAGIC
 	call	*%eax
+1:	jmp	1b
 FUNCTION_END(kboot_arch_enter32)
+
+#endif /* CONFIG_KBOOT_LOADER_KBOOT */
+
+#if CONFIG_KBOOT_LOADER_LINUX
+
+/** Enter a Linux kernel.
+ * @param entry		Address of kernel entry point.
+ * @param params	Address of kernel parameters page.
+ * @param sp		Stack pointer to use. */
+FUNCTION_START(linux_arch_enter)
+.code32
+	cli
+
+	/* Load the GDT and new segments. */
+	lgdt	(linux_gdtp)
+	ljmp	$0x10, $2f
+2:
+	mov	$0x18, %ax
+	mov	%ax, %ds
+	mov	%ax, %es
+	mov	%ax, %fs
+	mov	%ax, %gs
+	mov	%ax, %ss
+
+	/* Get the arguments. */
+	movl	4(%esp), %eax
+	movl	8(%esp), %esi
+	movl	12(%esp), %esp
+
+	/* Clear out EFLAGS and other registers required to be 0. */
+	xorl	%ebp, %ebp
+	xorl	%edi, %edi
+	xorl	%ebx, %ebx
+	push	$0
+	popf
+
+	/* Jump to the kernel entry point. */
+	call	*%eax
+1:	jmp	1b
+FUNCTION_END(linux_arch_enter)
+
+#endif /* CONFIG_KBOOT_LOADER_LINUX */
+
+.section .data, "aw", @progbits
+
+#if CONFIG_KBOOT_LOADER_LINUX
+
+/** GDT pointer. */
+linux_gdtp:
+        .word .L__gdt_end-__linux_gdt-1
+        .long __linux_gdt
+
+/** Global descriptor table. */
+__linux_gdt:
+	.quad 0x0000000000000000                /**< NULL descriptor (0x00). */
+	.quad 0x0000000000000000                /**< NULL descriptor (0x08). */
+        .quad 0x00CF9A000000FFFF                /**< 32-bit code     (0x10). */
+        .quad 0x00CF92000000FFFF                /**< 32-bit data     (0x18). */
+.L__gdt_end:
+
+#endif /* CONFIG_KBOOT_LOADER_LINUX */

@@ -22,6 +22,8 @@
 #include <arm/asm.h>
 #include <kboot.h>
 
+#if CONFIG_KBOOT_LOADER_KBOOT
+
 /** Enter an ARM KBoot kernel.
  * @param tags		Tag list address.
  * @param ttbr0		Address to load into TTBR0.
@@ -70,3 +72,5 @@ FUNCTION_START(kboot_arch_enter_real)
 1:	b	1
 #endif
 FUNCTION_END(kboot_arch_enter_real)
+
+#endif /* CONFIG_KBOOT_LOADER_KBOOT */

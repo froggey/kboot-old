@@ -120,4 +120,5 @@ static bool config_cmd_chainload(value_list_t *args) {
 	current_environ->data = path;
 	return true;
 }
+
 BUILTIN_COMMAND("chainload", config_cmd_chainload);

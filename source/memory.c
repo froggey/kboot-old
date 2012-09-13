@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -335,38 +335,109 @@ void phys_memory_protect(phys_ptr_t start, phys_ptr_t end) {
 	}
 }
 
-/** Allocate a range of physical memory.
- * @note		If allocation fails, a boot error will be raised.
- * @param size		Size of the range (multiple of the page size).
- * @param align		Alignment of the range (multiple of the page size).
- * @param reclaim	Whether to mark the range as reclaimable.
- * @return		Address of allocation. */
-phys_ptr_t phys_memory_alloc(phys_ptr_t size, size_t align, bool reclaim) {
-	int type = (reclaim) ? PHYS_MEMORY_RECLAIMABLE : PHYS_MEMORY_ALLOCATED;
+/** Check whether a range can satisfy an allocation
+ * @param range		Range to check.
+ * @param size		Size of the allocation.
+ * @param align		Alignment of the allocation.
+ * @param min_addr	Minimum address for the start of the allocated range.
+ * @param max_addr	Maximum address of the end of the allocated range.
+ * @param flags		Behaviour flags.
+ * @param physp		Where to store address for allocation.
+ * @return		Whether the range can satisfy the allocation. */
+static bool is_suitable_range(memory_range_t *range, phys_ptr_t size, size_t align,
+	phys_ptr_t min_addr, phys_ptr_t max_addr, unsigned flags,
+	phys_ptr_t *physp)
+{
+	phys_ptr_t start, match_start, match_end;
+
+	if(range->ka.type != PHYS_MEMORY_FREE)
+		return false;
+
+	/* Check if this range contains addresses in the requested range. */
+	match_start = MAX(min_addr, range->ka.start);
+	match_end = MIN(max_addr - 1, range->ka.end - 1);
+	if(match_end <= match_start)
+		return false;
+
+	/* Align the base address and check that the range fits. */
+	if(flags & PHYS_ALLOC_HIGH) {
+		start = ROUND_DOWN((match_end - size) + 1, align);
+		if(start < match_start)
+			return false;
+	} else {
+		start = ROUND_UP(match_start, align);
+		if((start + size - 1) > match_end)
+			return false;
+	}
+
+	*physp = start;
+	return true;
+}
+
+/**
+ * Allocate a range of physical memory.
+ *
+ * Allocates a range of physical memory satisfying the specified constraints.
+ * Unless PHYS_ALLOC_CANFAIL is specified, a boot error will be raised if the
+ * allocation fails.
+ *
+ * @param size		Size of the range (multiple of PAGE_SIZE).
+ * @param align		Alignment of the range (power of 2, at least PAGE_SIZE).
+ * @param min_addr	Minimum address for the start of the allocated range.
+ * @param max_addr	Maximum address of the end of the allocated range.
+ * @param flags		Behaviour flags.
+ * @param physp		Where to store address of allocation.
+ *
+ * @return		Whether successfully allocated (always true unless
+ *			PHYS_ALLOC_CANFAIL specified).
+ */
+bool phys_memory_alloc(phys_ptr_t size, size_t align, phys_ptr_t min_addr, phys_ptr_t max_addr,
+	unsigned flags, phys_ptr_t *physp)
+{
 	memory_range_t *range;
 	phys_ptr_t start;
 
+	if(!align)
+		align = PAGE_SIZE;
+
 	assert(!(size % PAGE_SIZE));
+	assert(!(min_addr % align));
+	assert(((max_addr - 1) - min_addr) >= (size - 1));
 
 	/* Find a free range that is large enough to hold the new range. */
-	LIST_FOREACH(&memory_ranges, iter) {
-		range = list_entry(iter, memory_range_t, header);
-		if(range->ka.type != PHYS_MEMORY_FREE)
-			continue;
+	if(flags & PHYS_ALLOC_HIGH) {
+		LIST_FOREACH_R(&memory_ranges, iter) {
+			range = list_entry(iter, memory_range_t, header);
+			if(is_suitable_range(range, size, align, min_addr, max_addr, flags, &start))
+				break;
 
-		/* Align the base address and check that the range fits. */
-		start = ROUND_UP(range->ka.start, align);
-		if((start + size) > range->ka.end)
-			continue;
+			range = NULL;
+		}
+	} else {
+		LIST_FOREACH(&memory_ranges, iter) {
+			range = list_entry(iter, memory_range_t, header);
+			if(is_suitable_range(range, size, align, min_addr, max_addr, flags, &start))
+				break;
 
-		phys_memory_add_internal(start, start + size, type);
-		dprintf("memory: allocated 0x%" PRIxPHYS "-0x%" PRIxPHYS " (align: 0x%zx, reclaim: %d)\n",
-			start, start + size, align, reclaim);
-		return start;
+			range = NULL;
+		}
 	}
 
-	/* Nothing available in all physical ranges, give an error. */
-	boot_error("You do not have enough memory available");
+	if(!range) {
+		if(!(flags & PHYS_ALLOC_CANFAIL))
+			boot_error("You do not have enough memory available");
+
+		return false;
+	}
+
+	/* Insert a new range over the top of the allocation. */
+	phys_memory_add_internal(start, start + size, (flags & PHYS_ALLOC_RECLAIM)
+		? PHYS_MEMORY_RECLAIMABLE : PHYS_MEMORY_ALLOCATED);
+
+	dprintf("memory: allocated 0x%" PRIxPHYS "-0x%" PRIxPHYS " (align: 0x%zx, flags: 0x%x)\n",
+		start, start + size, align, flags);
+	*physp = start;
+	return true;
 }
 
 /** Initialise the memory manager. */
@@ -383,6 +454,9 @@ void memory_init(void) {
 
 	/* Mark the stack as reclaimable. */
 	phys_memory_add((ptr_t)loader_stack, (ptr_t)loader_stack + PAGE_SIZE, PHYS_MEMORY_RECLAIMABLE);
+
+	dprintf("memory: initial memory map:\n");
+	phys_memory_dump();
 }
 
 /** Finalise the memory map.

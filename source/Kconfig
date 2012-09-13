@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011 Alex Smith
+# Copyright (C) 2011-2012 Alex Smith
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -60,9 +60,40 @@ config KBOOT_PARTITION_MAP_MSDOS
 endmenu
 #######
 
-if PLATFORM_PC
-source "platform/pc/Kconfig"
+###############################
+menu "Operating system support"
+###############################
+
+config KBOOT_LOADER_KBOOT
+	bool "KBoot kernel support"
+	default y
+	help
+	  Enable support for loading kernels using the KBoot boot format.
+
+config KBOOT_LOADER_LINUX
+	bool "Linux kernel support"
+	default y
+	depends on KBOOT_HAVE_LOADER_LINUX
+	help
+	  Enable support for loading Linux kernels.
+
+#######
+endmenu
+#######
+
+if ARCH_ARM
+source "arch/arm/Kconfig"
+endif
+if ARCH_X86
+source "arch/x86/Kconfig"
+endif
+
+if PLATFORM_BCM2835
+source "platform/bcm2835/Kconfig"
 endif
 if PLATFORM_OMAP3
 source "platform/omap3/Kconfig"
+endif
+if PLATFORM_PC
+source "platform/pc/Kconfig"
 endif

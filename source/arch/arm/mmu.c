@@ -30,7 +30,9 @@
 
 /** Allocate a paging structure. */
 static phys_ptr_t allocate_structure(size_t size) {
-	phys_ptr_t addr = phys_memory_alloc(size, size, true);
+	phys_ptr_t addr;
+
+	phys_memory_alloc(size, size, 0, 0, PHYS_ALLOC_RECLAIM, &addr);
 	memset((void *)addr, 0, size);
 	return addr;
 }
