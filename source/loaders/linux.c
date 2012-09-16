@@ -74,10 +74,11 @@ static __noreturn void linux_loader_load(void) {
 }
 
 #if CONFIG_KBOOT_UI
-/** Display a configuration menu. */
-static void linux_loader_configure(void) {
+/** Return a window for configuring the OS.
+ * @return		Pointer to configuration window. */
+static ui_window_t *linux_loader_configure(void) {
 	linux_data_t *data = current_environ->data;
-	ui_window_display(data->config, 0);
+	return data->config;
 }
 #endif
 
@@ -118,7 +119,9 @@ static bool config_cmd_linux(value_list_t *args) {
 #if CONFIG_KBOOT_UI
 	/* Create the configuration UI. */
 	data->config = ui_list_create("Kernel Options", true);
-	ui_list_insert_env(data->config, current_environ, "cmdline", "Command Line", false);
+	ui_list_insert(data->config,
+		ui_entry_create("Command Line", current_environ, "cmdline"),
+		false);
 #endif
 
 	current_environ->loader = &linux_loader_type;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -67,6 +67,11 @@ typedef struct ui_window_type {
 	 * @param key		Key that was pressed.
 	 * @return		Input handling result. */
 	input_result_t (*input)(struct ui_window *window, uint16_t key);
+
+	/** Move the cursor to where it needs to be in the content area.
+	 * @note		The draw region will be set to the content area.
+	 * @param window	Window to draw cursor for. */
+	void (*place_cursor)(struct ui_window *window);
 } ui_window_type_t;
 
 /** Window header structure. */
@@ -91,12 +96,6 @@ typedef struct ui_entry {
 	ui_entry_type_t *type;		/**< Type of the entry. */
 } ui_entry_t;
 
-/** Size of the content region. */
-#define UI_CONTENT_WIDTH	((size_t)main_console->width - 2)
-#define UI_CONTENT_HEIGHT	((size_t)main_console->height - 4)
-
-extern void ui_action_print(ui_action_t *action);
-
 extern void ui_window_init(ui_window_t *window, ui_window_type_t *type, const char *title);
 extern void ui_window_display(ui_window_t *window, int timeout);
 
@@ -104,14 +103,15 @@ extern ui_window_t *ui_textview_create(const char *title, const char *text);
 
 extern ui_window_t *ui_list_create(const char *title, bool exitable);
 extern void ui_list_insert(ui_window_t *window, ui_entry_t *entry, bool selected);
-extern void ui_list_insert_env(ui_window_t *window, environ_t *env, const char *name,
-	const char *label, bool selected);
+extern bool ui_list_empty(ui_window_t *window);
 
 extern void ui_entry_init(ui_entry_t *entry, ui_entry_type_t *type);
 
 extern ui_entry_t *ui_link_create(ui_window_t *window);
 extern ui_entry_t *ui_checkbox_create(const char *label, value_t *value);
 extern ui_entry_t *ui_textbox_create(const char *label, value_t *value);
+extern ui_entry_t *ui_entry_create(const char *label, environ_t *env, const char *name);
+
 extern ui_entry_t *ui_chooser_create(const char *label, value_t *value);
 extern void ui_chooser_insert(ui_entry_t *entry, const char *name, void *value, bool selected);
 

@@ -28,6 +28,7 @@
 #include <pc/console.h>
 
 #include <console.h>
+#include <loader.h>
 
 /** Define the serial port to use. */
 #define SERIAL_PORT		0x3F8		/**< COM1. */
@@ -49,9 +50,22 @@ static uint16_t *vga_mapping = (uint16_t *)VGA_MEM_BASE;
 /** VGA cursor position. */
 static int vga_cursor_x = 0;
 static int vga_cursor_y = 0;
+static bool vga_cursor_visible = true;
 
 /** VGA draw region. */
 static draw_region_t vga_region;
+
+/** Update the hardware cursor. */
+static void update_hw_cursor(void) {
+	int x = (vga_cursor_visible) ? vga_cursor_x : 0;
+	int y = (vga_cursor_visible) ? vga_cursor_y : (VGA_ROWS + 1);
+	uint16_t pos = (y * VGA_COLS) + x;
+
+	out8(VGA_CRTC_INDEX, 14);
+	out8(VGA_CRTC_DATA, pos >> 8);
+	out8(VGA_CRTC_INDEX, 15);
+	out8(VGA_CRTC_DATA, pos & 0xFF);
+}
 
 /** Reset the VGA console. */
 static void pc_console_reset(void) {
@@ -59,6 +73,9 @@ static void pc_console_reset(void) {
 	vga_region.x = vga_region.y = 0;
 	vga_region.width = VGA_COLS;
 	vga_region.height = VGA_ROWS;
+
+	vga_cursor_visible = true;
+	update_hw_cursor();
 
 	pc_console_clear(0, 0, VGA_COLS, VGA_ROWS);
 }
@@ -69,6 +86,7 @@ static void pc_console_set_region(draw_region_t *region) {
 	vga_region = *region;
 	vga_cursor_x = vga_region.x;
 	vga_cursor_y = vga_region.y;
+	update_hw_cursor();
 }
 
 /** Get the VGA console draw region.
@@ -85,10 +103,9 @@ static void pc_console_putch(char ch) {
 		/* Backspace, move back one character if we can. */
 		if(vga_cursor_x > vga_region.x) {
 			vga_cursor_x--;
-		} else {
+		} else if(vga_cursor_y > vga_region.y) {
 			vga_cursor_x = vga_region.x + vga_region.width - 1;
-			if(vga_cursor_y > vga_region.y)
-				vga_cursor_y--;
+			vga_cursor_y--;
 		}
 		break;
 	case '\r':
@@ -127,6 +144,8 @@ static void pc_console_putch(char ch) {
 
 		vga_cursor_y = vga_region.y + vga_region.height - 1;
 	}
+
+	update_hw_cursor();
 }
 
 /** Change the highlight on a portion of the console.
@@ -180,6 +199,15 @@ static void pc_console_move_cursor(int x, int y) {
 	} else {
 		vga_cursor_y = vga_region.y + y;
 	}
+
+	update_hw_cursor();
+}
+
+/** Set whether the cursor is visible.
+ * @param visible	Whether the cursor is visible. */
+static void pc_console_show_cursor(bool visible) {
+	vga_cursor_visible = visible;
+	update_hw_cursor();
 }
 
 /** Scroll the console up by one row. */
@@ -240,10 +268,14 @@ static uint16_t pc_console_get_key(void) {
 		return CONSOLE_KEY_LEFT;
 	case 0x4D:
 		return CONSOLE_KEY_RIGHT;
-	case 0x3B:
-		return CONSOLE_KEY_F1;
-	case 0x3C:
-		return CONSOLE_KEY_F2;
+	case 0x47:
+		return CONSOLE_KEY_HOME;
+	case 0x4F:
+		return CONSOLE_KEY_END;
+	case 0x53:
+		return CONSOLE_KEY_DELETE;
+	case 0x3B ... 0x44:
+		return CONSOLE_KEY_F1 + (scan - 0x3B);
 	default:
 		/* Convert CR to LF. */
 		return (ascii == '\r') ? '\n' : ascii;
@@ -273,6 +305,7 @@ static console_t pc_console = {
 	.highlight = pc_console_highlight,
 	.clear = pc_console_clear,
 	.move_cursor = pc_console_move_cursor,
+	.show_cursor = pc_console_show_cursor,
 	.scroll_up = pc_console_scroll_up,
 	.scroll_down = pc_console_scroll_down,
 	.get_key = pc_console_get_key,
@@ -318,11 +351,6 @@ void console_init(void) {
 		debug_console = &serial_console;
 	}
 #endif
-	/* We don't care about the cursor, move it out the way. */
-	out8(VGA_CRTC_INDEX, 14);
-	out8(VGA_CRTC_DATA, (((VGA_ROWS + 1) * VGA_COLS) >> 8) & 0xFF);
-	out8(VGA_CRTC_INDEX, 15);
-	out8(VGA_CRTC_DATA, ((VGA_ROWS + 1) * VGA_COLS) & 0xFF);
 	pc_console_reset();
 	main_console = &pc_console;
 }

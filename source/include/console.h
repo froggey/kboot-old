@@ -80,6 +80,10 @@ typedef struct console {
 	 * @param y		New Y position. */
 	void (*move_cursor)(int x, int y);
 
+	/** Set whether the cursor is visible.
+	 * @param visible	Whether the cursor is visible. */
+	void (*show_cursor)(bool visible);
+
 	/** Scroll the draw region up (move contents down). */
 	void (*scroll_up)(void);
 
@@ -100,8 +104,19 @@ typedef struct console {
 #define CONSOLE_KEY_DOWN	0x101
 #define CONSOLE_KEY_LEFT	0x102
 #define CONSOLE_KEY_RIGHT	0x103
-#define CONSOLE_KEY_F1		0x104
-#define CONSOLE_KEY_F2		0x105
+#define CONSOLE_KEY_HOME	0x104
+#define CONSOLE_KEY_END		0x105
+#define CONSOLE_KEY_DELETE	0x106
+#define CONSOLE_KEY_F1		0x107
+#define CONSOLE_KEY_F2		0x108
+#define CONSOLE_KEY_F3		0x109
+#define CONSOLE_KEY_F4		0x10A
+#define CONSOLE_KEY_F5		0x10B
+#define CONSOLE_KEY_F6		0x10C
+#define CONSOLE_KEY_F7		0x10D
+#define CONSOLE_KEY_F8		0x10E
+#define CONSOLE_KEY_F9		0x10F
+#define CONSOLE_KEY_F10		0x110
 
 extern char debug_log[];
 

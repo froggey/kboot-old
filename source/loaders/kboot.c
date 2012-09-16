@@ -314,10 +314,11 @@ static __noreturn void kboot_loader_load(void) {
 }
 
 #if CONFIG_KBOOT_UI
-/** Display a configuration menu. */
-static void kboot_loader_configure(void) {
+/** Return a window for configuring the OS.
+ * @return		Pointer to configuration window. */
+static ui_window_t *kboot_loader_configure(void) {
 	kboot_data_t *data = current_environ->data;
-	ui_window_display(data->config, 0);
+	return (!ui_list_empty(data->config)) ? data->config : NULL;
 }
 #endif
 
@@ -407,7 +408,9 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 			environ_insert(data->env, opt_name, &value);
 
 #if CONFIG_KBOOT_UI
-		ui_list_insert_env(data->config, data->env, opt_name, opt_desc, false);
+		ui_list_insert(data->config,
+			ui_entry_create(opt_desc, data->env, opt_name),
+			false);
 #endif
 		break;
 	}

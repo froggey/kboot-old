@@ -28,6 +28,8 @@
 
 #include <types.h>
 
+struct ui_window;
+
 /** Structure defining an OS loader type. */
 typedef struct loader_type {
 	/** Load the operating system.
@@ -35,8 +37,9 @@ typedef struct loader_type {
 	void (*load)(void) __noreturn;
 
 #if CONFIG_KBOOT_UI
-	/** Display a configuration menu. */
-	void (*configure)(void);
+	/** Return a window for configuring the OS.
+	 * @return		Pointer to configuration window. */
+	struct ui_window *(*configure)(void);
 #endif
 } loader_type_t;
 

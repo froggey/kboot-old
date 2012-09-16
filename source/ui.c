@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,8 +18,6 @@
  * @file
  * @brief		User interface functions.
  *
- * @todo		Allow moving around the buffer in the textbox editor,
- *			rather than only allowing edits at the end.
  * @todo		Destroy windows.
  */
 
@@ -83,7 +81,6 @@ typedef struct ui_textbox {
 	ui_entry_t header;		/**< Entry header. */
 	const char *label;		/**< Label for the textbox. */
 	value_t *value;			/**< Value of the textbox. */
-	ui_window_t *editor;		/**< Editor window for the textbox. */
 } ui_textbox_t;
 
 /** Structure containing a chooser. */
@@ -104,9 +101,15 @@ typedef struct ui_choice {
 } ui_choice_t;
 
 /** State for the textbox editor. */
+static ui_window_t *textbox_edit_window = NULL;
 static char textbox_edit_buf[1024];
 static size_t textbox_edit_len = 0;
+static size_t textbox_edit_offset = 0;
 static bool textbox_edit_update = false;
+
+/** Size of the content region. */
+#define UI_CONTENT_WIDTH	((size_t)main_console->width - 2)
+#define UI_CONTENT_HEIGHT	((size_t)main_console->height - 4)
 
 /** Set the region to the title region.
  * @param clear		Whether to clear the region. */
@@ -137,7 +140,10 @@ static inline void set_content_region(bool clear) {
 
 /** Print an action (for help text).
  * @param action	Action to print. */
-void ui_action_print(ui_action_t *action) {
+static void ui_action_print(ui_action_t *action) {
+	if(!action->name)
+		return;
+
 	switch(action->key) {
 	case CONSOLE_KEY_UP:
 		kprintf("Up");
@@ -194,11 +200,11 @@ static void ui_window_render_help(ui_window_t *window, int seconds) {
 }
 
 /** Render the contents of a window.
- * @note		Draw region will be content region after returning.
  * @param window	Window to render.
  * @param timeout	Seconds remaining. */
 static void ui_window_render(ui_window_t *window, int seconds) {
 	main_console->reset();
+	main_console->show_cursor(false);
 
 	set_title_region(true);
 	kprintf("%s", window->title);
@@ -208,6 +214,27 @@ static void ui_window_render(ui_window_t *window, int seconds) {
 
 	set_content_region(true);
 	window->type->render(window);
+
+	if(window->type->place_cursor) {
+		set_content_region(false);
+		window->type->place_cursor(window);
+		main_console->show_cursor(true);
+	}
+}
+
+/** Update the window after completion of an action.
+ * @param window	Window to update.
+ * @param timeout	Seconds remaining. */
+static void ui_window_update(ui_window_t *window, int seconds) {
+	main_console->show_cursor(false);
+
+	ui_window_render_help(window, seconds);
+
+	if(window->type->place_cursor) {
+		set_content_region(false);
+		window->type->place_cursor(window);
+		main_console->show_cursor(true);
+	}
 }
 
 /** Display a window.
@@ -216,45 +243,42 @@ static void ui_window_render(ui_window_t *window, int seconds) {
  *			If 0, the window will not time out. */
 void ui_window_display(ui_window_t *window, int timeout) {
 	timeout_t us = timeout * 1000000;
-	bool exited = false;
-	input_result_t ret;
+	input_result_t result;
 	uint16_t key;
 
-	while(!exited) {
-		ui_window_render(window, timeout);
-		while(true) {
-			/* This is a bit crap. */
-			if(timeout > 0) {
-				if(main_console->check_key()) {
-					timeout = 0;
-				} else {
-					spin(1000);
-					us -= 1000;
-					if(us <= 0) {
-						exited = true;
-						break;
-					}
+	ui_window_render(window, timeout);
 
-					if((ROUND_UP(us, 1000000) / 1000000) < timeout) {
-						timeout--;
-						ui_window_render_help(window, timeout);
-					}
-					continue;
+	while(true) {
+		if(timeout > 0) {
+			if(main_console->check_key()) {
+				timeout = 0;
+				continue;
+			} else {
+				spin(1000);
+				us -= 1000;
+				if(us <= 0)
+					break;
+
+				if((ROUND_UP(us, 1000000) / 1000000) < timeout) {
+					timeout--;
+					ui_window_update(window, timeout);
 				}
 			}
-
+		} else {
 			key = main_console->get_key();
 			set_content_region(false);
-			if((ret = window->type->input(window, key)) != INPUT_HANDLED) {
-				if(ret == INPUT_CLOSE)
-					exited = true;
-				break;
-			}
 
-			/* Need to re-render help text each key press, for
-			 * example if the action moved to a different list
-			 * entry with different actions. */
-			ui_window_render_help(window, timeout);
+			result = window->type->input(window, key);
+			if(result == INPUT_CLOSE) {
+				break;
+			} else if(result == INPUT_RENDER) {
+				ui_window_render(window, timeout);
+			} else {
+				/* Need to re-render help text each key press,
+				 * for example if the action moved to a list
+				 * entry with different actions. */
+				ui_window_update(window, timeout);
+			}
 		}
 	}
 
@@ -423,15 +447,17 @@ static void ui_list_help(ui_window_t *window) {
 	ui_list_t *list = (ui_list_t *)window;
 	size_t i;
 
-	/* Print help for each of the selected entry's actions. */
-	for(i = 0; i < list->entries[list->selected]->type->action_count; i++)
-		ui_action_print(&list->entries[list->selected]->type->actions[i]);
+	if(list->count) {
+		/* Print help for each of the selected entry's actions. */
+		for(i = 0; i < list->entries[list->selected]->type->action_count; i++)
+			ui_action_print(&list->entries[list->selected]->type->actions[i]);
 
-	/* Print navigation instructions. */
-	if(list->selected > 0)
-		kprintf("Up = Scroll Up  ");
-	if(list->selected < (list->count - 1))
-		kprintf("Down = Scroll Down  ");
+		if(list->selected > 0)
+			kprintf("Up = Scroll Up  ");
+		if(list->selected < (list->count - 1))
+			kprintf("Down = Scroll Down  ");
+	}
+
 	if(list->exitable)
 		kprintf("Esc = Back");
 }
@@ -546,27 +572,12 @@ void ui_list_insert(ui_window_t *window, ui_entry_t *entry, bool selected) {
 	}
 }
 
-/** Add a list entry to edit an environment value.
- * @param window	Window to insert into.
- * @param env		Environment to operate on.
- * @param name		Name of environment entry.
- * @param label		Label to give the entry.
- * @param selected	Whether the entry should be selected. */
-void ui_list_insert_env(ui_window_t *window, environ_t *env, const char *name,
-	const char *label, bool selected)
-{
-	value_t *value = environ_lookup(env, name);
-
-	switch(value->type) {
-	case VALUE_TYPE_BOOLEAN:
-		ui_list_insert(window, ui_checkbox_create(label, value), selected);
-		break;
-	case VALUE_TYPE_STRING:
-		ui_list_insert(window, ui_textbox_create(label, value), selected);
-		break;
-	default:
-		internal_error("Unhandled value type");
-	}
+/** Return whether a list is empty.
+ * @param window	Window to check.
+ * @return		Whether the list is empty. */
+bool ui_list_empty(ui_window_t *window) {
+	ui_list_t *list = (ui_list_t *)window;
+	return (list->count == 0);
 }
 
 /** Initialise a list entry structure.
@@ -631,6 +642,7 @@ static input_result_t ui_checkbox_toggle(ui_entry_t *entry) {
 /** Actions for a check box. */
 static ui_action_t ui_checkbox_actions[] = {
 	{ "Toggle", '\n', ui_checkbox_toggle },
+	{ NULL, ' ', ui_checkbox_toggle },
 };
 
 /** Render a check box.
@@ -692,17 +704,61 @@ static input_result_t ui_textbox_editor_input(ui_window_t *window, uint16_t key)
 		textbox_edit_update = true;
 	case '\e':
 		return INPUT_CLOSE;
+	case CONSOLE_KEY_LEFT:
+		if(textbox_edit_offset)
+			textbox_edit_offset--;
+
+		return INPUT_HANDLED;
+	case CONSOLE_KEY_RIGHT:
+		if(textbox_edit_offset < textbox_edit_len)
+			textbox_edit_offset++;
+
+		return INPUT_HANDLED;
+	case CONSOLE_KEY_HOME:
+		textbox_edit_offset = 0;
+		return INPUT_HANDLED;
+	case CONSOLE_KEY_END:
+		textbox_edit_offset = textbox_edit_len;
+		return INPUT_HANDLED;
+	case '\b':
+		if(textbox_edit_offset) {
+			if(textbox_edit_offset < textbox_edit_len) {
+				memmove(&textbox_edit_buf[textbox_edit_offset - 1],
+					&textbox_edit_buf[textbox_edit_offset],
+					textbox_edit_len - textbox_edit_offset);
+			}
+
+			textbox_edit_offset--;
+			textbox_edit_len--;
+		}
+
+		return INPUT_RENDER;
+	case CONSOLE_KEY_DELETE:
+		if(textbox_edit_offset < textbox_edit_len) {
+			textbox_edit_len--;
+			if(textbox_edit_offset < textbox_edit_len) {
+				memmove(&textbox_edit_buf[textbox_edit_offset],
+					&textbox_edit_buf[textbox_edit_offset + 1],
+					textbox_edit_len - textbox_edit_offset - 1);
+			}
+		}
+
+		return INPUT_RENDER;
 	default:
 		/* Ignore non-printable keys. */
-		if(!isprint(key) && key != '\b')
+		if(key > 0xFF || !isprint(key))
 			return INPUT_HANDLED;
 
 		ch = key & 0xFF;
-		if(ch == '\b') {
-			if(textbox_edit_len)
-				textbox_edit_len--;
-		} else if(textbox_edit_len < ARRAYSZ(textbox_edit_buf)) {
-			textbox_edit_buf[textbox_edit_len++] = ch;
+		if(textbox_edit_len < ARRAYSZ(textbox_edit_buf)) {
+			if(textbox_edit_offset < textbox_edit_len) {
+				memmove(&textbox_edit_buf[textbox_edit_offset + 1],
+					&textbox_edit_buf[textbox_edit_offset],
+					textbox_edit_len - textbox_edit_offset);
+			}
+
+			textbox_edit_buf[textbox_edit_offset++] = ch;
+			textbox_edit_len++;
 		}
 
 		/* FIXME: I'm lazy and cba to make this update the screen. */
@@ -710,11 +766,24 @@ static input_result_t ui_textbox_editor_input(ui_window_t *window, uint16_t key)
 	}
 }
 
+/** Place the cursor for the text box edit window.
+ * @param window	Window to place cursor for. */
+static void ui_textbox_editor_place_cursor(ui_window_t *window) {
+	draw_region_t content;
+	int x, y;
+
+	main_console->get_region(&content);
+	x = textbox_edit_offset % content.width;
+	y = textbox_edit_offset / content.width;
+	main_console->move_cursor(x, y);
+}
+
 /** Text box editor window type. */
 static ui_window_type_t ui_textbox_editor_window_type = {
 	.render = ui_textbox_editor_render,
 	.help = ui_textbox_editor_help,
 	.input = ui_textbox_editor_input,
+	.place_cursor = ui_textbox_editor_place_cursor,
 };
 
 /** Edit the value of a text box.
@@ -728,10 +797,11 @@ static input_result_t ui_textbox_edit(ui_entry_t *entry) {
 	len = strlen(box->value->string);
 	memcpy(textbox_edit_buf, box->value->string, len);
 	textbox_edit_len = len;
+	textbox_edit_offset = len;
 	textbox_edit_update = false;
 
 	/* Display the editor. */
-	ui_window_display(box->editor, 0);
+	ui_window_display(textbox_edit_window, 0);
 
 	/* Copy back the new string. */
 	if(textbox_edit_update) {
@@ -793,14 +863,34 @@ ui_entry_t *ui_textbox_create(const char *label, value_t *value) {
 	box->label = label;
 	box->value = value;
 
-	/* Create the editor window. */
-	box->editor = kmalloc(sizeof(ui_window_t));
-	ui_window_init(box->editor, &ui_textbox_editor_window_type, label);
+	/* Create the editor window if it does not exist. */
+	if(!textbox_edit_window) {
+		textbox_edit_window = kmalloc(sizeof(ui_window_t));
+		ui_window_init(textbox_edit_window, &ui_textbox_editor_window_type, label);
+	}
 
 	return &box->header;
 }
 
-/** Change the value a chooser.
+/** Create an entry to edit an environment value.
+ * @param label		Label to give the entry.
+ * @param env		Environment to operate on.
+ * @param name		Name of environment entry.
+ * @return		Pointer to created entry. */
+ui_entry_t *ui_entry_create(const char *label, environ_t *env, const char *name) {
+	value_t *value = environ_lookup(env, name);
+
+	switch(value->type) {
+	case VALUE_TYPE_BOOLEAN:
+		return ui_checkbox_create(label, value);
+	case VALUE_TYPE_STRING:
+		return ui_textbox_create(label, value);
+	default:
+		internal_error("Unhandled value type");
+	}
+}
+
+/** Change the value of a chooser.
  * @param entry		Entry to change.
  * @return		Input handling result. */
 static input_result_t ui_chooser_change(ui_entry_t *entry) {

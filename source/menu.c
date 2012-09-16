@@ -140,13 +140,15 @@ static input_result_t menu_entry_select(ui_entry_t *_entry) {
  * @return		Always returns INPUT_RENDER. */
 static input_result_t menu_entry_configure(ui_entry_t *_entry) {
 	menu_entry_t *entry = (menu_entry_t *)_entry;
+	ui_window_t *window;
 	environ_t *prev;
 
 	prev = current_environ;
 	current_environ = entry->env;
-	entry->env->loader->configure();
+	window = entry->env->loader->configure();
 	current_environ = prev;
 
+	ui_window_display(window, 0);
 	return INPUT_RENDER;
 }
 
@@ -165,14 +167,14 @@ static input_result_t menu_entry_debug(ui_entry_t *_entry) {
 /** Actions for a menu entry. */
 static ui_action_t menu_entry_actions[] = {
 	{ "Boot", '\n', menu_entry_select },
-	{ "Debug Log", CONSOLE_KEY_F2, menu_entry_debug },
+	{ NULL, CONSOLE_KEY_F10, menu_entry_debug },
 };
 
 /** Actions for a configurable menu entry. */
 static ui_action_t configurable_menu_entry_actions[] = {
 	{ "Boot", '\n', menu_entry_select },
 	{ "Configure", CONSOLE_KEY_F1, menu_entry_configure },
-	{ "Debug Log", CONSOLE_KEY_F2, menu_entry_debug },
+	{ NULL, CONSOLE_KEY_F10, menu_entry_debug },
 };
 
 /** Render a menu entry.
@@ -196,6 +198,23 @@ static ui_entry_type_t configurable_menu_entry_type = {
 	.render = menu_entry_render,
 };
 
+/** Return whether a menu entry is configurable.
+ * @param entry		Entry to check.
+ * @return		Whether configurable. */
+static bool menu_entry_configurable(menu_entry_t *entry) {
+	bool ret = false;
+	environ_t *prev;
+
+	if(entry->env->loader && entry->env->loader->configure) {
+		prev = current_environ;
+		current_environ = entry->env;
+		ret = entry->env->loader->configure() != NULL;
+		current_environ = prev;
+	}
+
+	return ret;
+}
+
 /** Display the menu interface.
  * @return		Environment for the entry to boot. */
 environ_t *menu_display(void) {
@@ -218,9 +237,9 @@ environ_t *menu_display(void) {
 		LIST_FOREACH(&menu_entries, iter) {
 			entry = list_entry(iter, menu_entry_t, link);
 
-			/* If the entry's loader type has a configure function,
+			/* If the entry's loader returns a configuration window,
 			 * use the configurable entry type. */
-			if(entry->env->loader && entry->env->loader->configure) {
+			if(menu_entry_configurable(entry)) {
 				ui_entry_init(&entry->header, &configurable_menu_entry_type);
 			} else {
 				ui_entry_init(&entry->header, &menu_entry_type);
