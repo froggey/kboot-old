@@ -110,10 +110,10 @@ extern void ui_entry_init(ui_entry_t *entry, ui_entry_type_t *type);
 extern ui_entry_t *ui_link_create(ui_window_t *window);
 extern ui_entry_t *ui_checkbox_create(const char *label, value_t *value);
 extern ui_entry_t *ui_textbox_create(const char *label, value_t *value);
-extern ui_entry_t *ui_entry_create(const char *label, environ_t *env, const char *name);
+extern ui_entry_t *ui_entry_create(const char *label, value_t *value);
 
 extern ui_entry_t *ui_chooser_create(const char *label, value_t *value);
-extern void ui_chooser_insert(ui_entry_t *entry, const char *name, void *value, bool selected);
+extern void ui_chooser_insert(ui_entry_t *entry, const value_t *value);
 
 #endif /* CONFIG_KBOOT_UI */
 #endif /* __UI_H */

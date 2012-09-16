@@ -96,8 +96,7 @@ typedef struct ui_chooser {
 typedef struct ui_choice {
 	ui_entry_t header;		/**< Entry header. */
 	ui_chooser_t *chooser;		/**< Chooser that the entry is for. */
-	const char *name;		/**< Name of the choice. */
-	void *value;			/**< Value of this entry. */
+	value_t value;			/**< Value of the choice. */
 } ui_choice_t;
 
 /** State for the textbox editor. */
@@ -872,21 +871,18 @@ ui_entry_t *ui_textbox_create(const char *label, value_t *value) {
 	return &box->header;
 }
 
-/** Create an entry to edit an environment value.
+/** Create an entry appropriate to edit a value.
  * @param label		Label to give the entry.
- * @param env		Environment to operate on.
- * @param name		Name of environment entry.
+ * @param value		Value to edit.
  * @return		Pointer to created entry. */
-ui_entry_t *ui_entry_create(const char *label, environ_t *env, const char *name) {
-	value_t *value = environ_lookup(env, name);
-
+ui_entry_t *ui_entry_create(const char *label, value_t *value) {
 	switch(value->type) {
 	case VALUE_TYPE_BOOLEAN:
 		return ui_checkbox_create(label, value);
 	case VALUE_TYPE_STRING:
 		return ui_textbox_create(label, value);
 	default:
-		internal_error("Unhandled value type");
+		assert(0 && "Unhandled value type");
 	}
 }
 
@@ -910,9 +906,11 @@ static ui_action_t ui_chooser_actions[] = {
 static void ui_chooser_render(ui_entry_t *entry) {
 	ui_chooser_t *chooser = (ui_chooser_t *)entry;
 
+	assert(chooser->selected);
+
 	kprintf("%s", chooser->label);
-	main_console->move_cursor(0 - strlen(chooser->selected->name) - 2, 0);
-	kprintf("[%s]", chooser->selected->name);
+	main_console->move_cursor(0 - strlen(chooser->selected->value.string) - 2, 0);
+	kprintf("[%s]", chooser->selected->value.string);
 }
 
 /** Chooser entry type. */
@@ -922,14 +920,25 @@ static ui_entry_type_t ui_chooser_entry_type = {
 	.render = ui_chooser_render,
 };
 
-/** Create a chooser entry.
+/**
+ * Create a chooser entry.
+ *
+ * Creates an entry that presents a list of values to choose from, and sets a
+ * value to the chosen value. The value given to this function is the value
+ * that should be modified by the entry. All entries added to the chooser should
+ * match the type of this value. The caller should ensure that its current
+ * value is a valid choice.
+ *
  * @param label		Label for the entry.
- * @param value		Value to store state in (should be VALUE_TYPE_POINTER).
- * @return		Pointer to created entry. */
+ * @param value		Value to store state in.
+ *
+ * @return		Pointer to created entry.
+ */
 ui_entry_t *ui_chooser_create(const char *label, value_t *value) {
 	ui_chooser_t *chooser = kmalloc(sizeof(ui_chooser_t));
 
-	assert(value->type == VALUE_TYPE_POINTER);
+	// TODO: Support other types.
+	assert(value->type == VALUE_TYPE_STRING && "Only string choices supported");
 
 	ui_entry_init(&chooser->header, &ui_chooser_entry_type);
 	chooser->label = label;
@@ -946,7 +955,8 @@ static input_result_t ui_choice_select(ui_entry_t *entry) {
 	ui_choice_t *choice = (ui_choice_t *)entry;
 
 	choice->chooser->selected = choice;
-	choice->chooser->value->pointer = choice->value;
+	value_destroy(choice->chooser->value);
+	value_copy(&choice->value, choice->chooser->value);
 	return INPUT_CLOSE;
 }
 
@@ -959,7 +969,7 @@ static ui_action_t ui_choice_actions[] = {
  * @param entry		Entry to render. */
 static void ui_choice_render(ui_entry_t *entry) {
 	ui_choice_t *choice = (ui_choice_t *)entry;
-	kprintf("%s", choice->name);
+	kprintf("%s", choice->value.string);
 }
 
 /** Chooser entry type. */
@@ -971,22 +981,22 @@ static ui_entry_type_t ui_choice_entry_type = {
 
 /** Insert a choice into a choice entry.
  * @param entry		Entry to insert into.
- * @param name		Name of the choice.
- * @param value		Value of the choice.
- * @param selected	Whether the choice should be selected. */
-void ui_chooser_insert(ui_entry_t *entry, const char *name, void *value, bool selected) {
+ * @param value		Value of the choice. */
+void ui_chooser_insert(ui_entry_t *entry, const value_t *value) {
 	ui_choice_t *choice = kmalloc(sizeof(ui_choice_t));
 	ui_chooser_t *chooser = (ui_chooser_t *)entry;
 
 	ui_entry_init(&choice->header, &ui_choice_entry_type);
+	value_copy(value, &choice->value);
 	choice->chooser = chooser;
-	choice->name = name;
-	choice->value = value;
 
-	ui_list_insert(chooser->list, &choice->header, selected);
-
-	if(!chooser->selected || selected) {
-		chooser->selected = choice;
-		chooser->value->pointer = value;
+	/* Check if this matches the current value and mark it as selected if
+	 * it is. */
+	if(!chooser->selected) {
+		// FIXME: other value types.
+		if(strcmp(chooser->value->string, value->string) == 0)
+			chooser->selected = choice;
 	}
+
+	ui_list_insert(chooser->list, &choice->header, (chooser->selected) == choice);
 }

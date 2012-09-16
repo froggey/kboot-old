@@ -64,9 +64,6 @@ typedef struct value {
 		VALUE_TYPE_STRING,		/**< String. */
 		VALUE_TYPE_LIST,		/**< List. */
 		VALUE_TYPE_COMMAND_LIST,	/**< Command list. */
-
-		/** Types used internally. */
-		VALUE_TYPE_POINTER,		/**< Pointer. */
 	} type;
 
 	/** Actual value. */
@@ -76,7 +73,6 @@ typedef struct value {
 		char *string;			/**< String. */
 		value_list_t *list;		/**< List. */
 		command_list_t *cmds;		/**< Command list. */
-		void *pointer;			/**< Pointer. */
 	};
 } value_t;
 
@@ -103,14 +99,14 @@ extern environ_t *root_environ;
 extern environ_t *current_environ;
 
 extern void value_init(value_t *value, int type);
-extern void value_copy(value_t *source, value_t *dest);
+extern void value_copy(const value_t *source, value_t *dest);
 extern void value_destroy(value_t *value);
 
 extern bool command_list_exec(command_list_t *list, environ_t **envp);
 
 extern environ_t *environ_create(environ_t *parent);
 extern value_t *environ_lookup(environ_t *env, const char *name);
-extern void environ_insert(environ_t *env, const char *name, value_t *value);
+extern value_t *environ_insert(environ_t *env, const char *name, value_t *value);
 extern void environ_destroy(environ_t *env);
 
 extern void config_init(void);

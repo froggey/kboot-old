@@ -21,6 +21,7 @@
 
 #include <lib/string.h>
 
+#include <assert.h>
 #include <memory.h>
 #include <video.h>
 
@@ -86,17 +87,23 @@ void video_mode_add(video_mode_t *mode) {
 #if CONFIG_KBOOT_UI
 /** Generate a video mode chooser.
  * @param label		Label to give the chooser.
- * @param value		Value to store choice in.
+ * @param value		Value to store choice in (must be VALUE_TYPE_STRING).
  * @return		Pointer to chooser. */
 ui_entry_t *video_mode_chooser(const char *label, value_t *value) {
-	ui_entry_t *chooser = ui_chooser_create(label, value);
-	void *current = value->pointer;
+	ui_entry_t *chooser;
 	video_mode_t *mode;
+	value_t entry;
+
+	assert(value->type == VALUE_TYPE_STRING);
+
+	chooser = ui_chooser_create(label, value);
 
 	LIST_FOREACH(&video_modes, iter) {
 		mode = list_entry(iter, video_mode_t, header);
 
-		ui_chooser_insert(chooser, mode->name, mode, mode == current);
+		entry.type = VALUE_TYPE_STRING;
+		entry.string = mode->name;
+		ui_chooser_insert(chooser, &entry);
 	}
 
 	return chooser;

@@ -158,9 +158,6 @@ void value_init(value_t *value, int type) {
 		value->cmds = kmalloc(sizeof(command_list_t));
 		list_init(value->cmds);
 		break;
-	case VALUE_TYPE_POINTER:
-		value->pointer = NULL;
-		break;
 	default:
 		assert(0 && "Setting invalid value type");
 	}
@@ -169,7 +166,7 @@ void value_init(value_t *value, int type) {
 /** Copy the contents of one value to another.
  * @param source	Source value.
  * @param dest		Destination value. */
-void value_copy(value_t *source, value_t *dest) {
+void value_copy(const value_t *source, value_t *dest) {
 	dest->type = source->type;
 
 	switch(dest->type) {
@@ -187,9 +184,6 @@ void value_copy(value_t *source, value_t *dest) {
 		break;
 	case VALUE_TYPE_COMMAND_LIST:
 		dest->cmds = command_list_copy(source->cmds);
-		break;
-	case VALUE_TYPE_POINTER:
-		dest->pointer = source->pointer;
 		break;
 	}
 }
@@ -626,8 +620,9 @@ value_t *environ_lookup(environ_t *env, const char *name) {
 /** Insert an entry into an environment.
  * @param env		Environment to insert into.
  * @param name		Name of entry to look up.
- * @param value		Value to insert. Will be copied. */
-void environ_insert(environ_t *env, const char *name, value_t *value) {
+ * @param value		Value to insert. Will be copied.
+ * @return		Pointer to inserted value. */
+value_t *environ_insert(environ_t *env, const char *name, value_t *value) {
 	environ_entry_t *entry;
 
 	/* Look for an existing entry with the same name. */
@@ -636,7 +631,7 @@ void environ_insert(environ_t *env, const char *name, value_t *value) {
 		if(strcmp(entry->name, name) == 0) {
 			value_destroy(&entry->value);
 			value_copy(value, &entry->value);
-			return;
+			return &entry->value;
 		}
 	}
 
@@ -646,6 +641,8 @@ void environ_insert(environ_t *env, const char *name, value_t *value) {
 	entry->name = kstrdup(name);
 	value_copy(value, &entry->value);
 	list_append(&env->entries, &entry->header);
+
+	return &entry->value;
 }
 
 /** Destroy an environment.
@@ -670,7 +667,17 @@ void environ_destroy(environ_t *env) {
  * @return		Whether successful. */
 static bool config_cmd_set(value_list_t *args) {
 	if(args->count != 2 || args->values[0].type != VALUE_TYPE_STRING) {
-		dprintf("set: invalid arguments\n");
+		dprintf("config: set: invalid arguments\n");
+		return false;
+	}
+
+	/* We make the environment immutable after the loader type has been
+	 * set as the loaders ensure that all the environment variables they
+	 * require exist and are the expected type when executing the command.
+	 * Disallowing changes after the command has been run means it is not
+	 * necessary to check everything over again. */
+	if(current_environ->loader) {
+		dprintf("config: set: environment immutable after loader has been set\n");
 		return false;
 	}
 

@@ -219,7 +219,7 @@ static void set_video_mode(kboot_data_t *data) {
 	value_t *value;
 
 	value = environ_lookup(data->env, "video_mode");
-	mode = value->pointer;
+	mode = video_mode_find_string(value->string);
 	video_enable(mode);
 
 	tag = allocate_tag(data, KBOOT_TAG_LFB, sizeof(*tag));
@@ -341,10 +341,7 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 	kboot_itag_option_t *option;
 	kboot_data_t *data = _data;
 	kboot_itag_image_t *image;
-#if CONFIG_KBOOT_HAVE_VIDEO
-	video_mode_t *mode = NULL;
-#endif
-	value_t *exist, value;
+	value_t *entry, value;
 	void *opt_default;
 
 	if(strcmp(name, "KBoot") != 0)
@@ -363,18 +360,19 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 		/* If the kernel wants a video mode, add a video mode chooser. */
 		if(image->flags & KBOOT_IMAGE_LFB) {
 #if CONFIG_KBOOT_HAVE_VIDEO
-			if((exist = environ_lookup(data->env, "video_mode"))
-				&& exist->type == VALUE_TYPE_STRING)
+			entry = environ_lookup(data->env, "video_mode");
+			if(!entry || entry->type != VALUE_TYPE_STRING
+				|| !video_mode_find_string(entry->string))
 			{
-				mode = video_mode_find_string(exist->string);
+				/* Invalid value, replace it. */
+				value.type = VALUE_TYPE_STRING;
+				value.string = default_video_mode->name;
+				entry = environ_insert(data->env, "video_mode", &value);
 			}
-
-			value.type = VALUE_TYPE_POINTER;
-			value.pointer = (mode) ? mode : default_video_mode;
-			environ_insert(data->env, "video_mode", &value);
 #if CONFIG_KBOOT_UI
-			ui_list_insert(data->config, video_mode_chooser("Video mode",
-				environ_lookup(data->env, "video_mode")), false);
+			ui_list_insert(data->config,
+				video_mode_chooser("Video Mode", entry),
+				false);
 #endif
 #else
 			boot_error("Kernel requests LFB but video mode setting support missing");
@@ -403,14 +401,12 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 			break;
 		}
 
-		exist = environ_lookup(data->env, opt_name);
-		if(!exist || exist->type != value.type)
-			environ_insert(data->env, opt_name, &value);
+		entry = environ_lookup(data->env, opt_name);
+		if(!entry || entry->type != value.type)
+			entry = environ_insert(data->env, opt_name, &value);
 
 #if CONFIG_KBOOT_UI
-		ui_list_insert(data->config,
-			ui_entry_create(opt_desc, data->env, opt_name),
-			false);
+		ui_list_insert(data->config, ui_entry_create(opt_desc, entry), false);
 #endif
 		break;
 	}

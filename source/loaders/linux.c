@@ -94,7 +94,7 @@ static loader_type_t linux_loader_type = {
  * @param args		Command arguments.
  * @return		Whether completed successfully. */
 static bool config_cmd_linux(value_list_t *args) {
-	value_t *exist, value;
+	value_t *entry, value;
 	linux_data_t *data;
 
 	if((args->count != 1 && args->count != 2)
@@ -110,8 +110,8 @@ static bool config_cmd_linux(value_list_t *args) {
 	data->initrd = (args->count == 2) ? kstrdup(args->values[1].string) : NULL;
 
 	/* Add the command line environment variable. */
-	exist = environ_lookup(current_environ, "cmdline");
-	if(!exist || exist->type != VALUE_TYPE_STRING) {
+	entry = environ_lookup(current_environ, "cmdline");
+	if(!entry || entry->type != VALUE_TYPE_STRING) {
 		value_init(&value, VALUE_TYPE_STRING);
 		environ_insert(current_environ, "cmdline", &value);
 	}
@@ -120,7 +120,7 @@ static bool config_cmd_linux(value_list_t *args) {
 	/* Create the configuration UI. */
 	data->config = ui_list_create("Kernel Options", true);
 	ui_list_insert(data->config,
-		ui_entry_create("Command Line", current_environ, "cmdline"),
+		ui_entry_create("Command Line", entry),
 		false);
 #endif
 
