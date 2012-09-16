@@ -675,7 +675,7 @@ static bool config_cmd_set(value_list_t *args) {
 	 * set as the loaders ensure that all the environment variables they
 	 * require exist and are the expected type when executing the command.
 	 * Disallowing changes after the command has been run means it is not
-	 * necessary to check everything over again. */
+	 * necessary to check everything all over again. */
 	if(current_environ->loader) {
 		dprintf("config: set: environment immutable after loader has been set\n");
 		return false;
@@ -696,7 +696,7 @@ void config_init(void) {
 			boot_error("Specified configuration file does not exist");
 	} else {
 		/* Try the various paths. */
-		for(i = 0; i < ARRAYSZ(config_file_paths); i++) {
+		for(i = 0; i < ARRAY_SIZE(config_file_paths); i++) {
 			if(config_load(config_file_paths[i]))
 				return;
 		}

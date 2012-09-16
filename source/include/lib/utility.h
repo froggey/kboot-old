@@ -61,7 +61,7 @@
 #define BITS(t)			(sizeof(t) * 8)
 
 /** Get the number of elements in an array. */
-#define ARRAYSZ(a)		(sizeof((a)) / sizeof((a)[0]))
+#define ARRAY_SIZE(a)		(sizeof((a)) / sizeof((a)[0]))
 
 /** Get the lowest value out of a pair of values. */
 #define MIN(a, b)		((a) < (b) ? (a) : (b))

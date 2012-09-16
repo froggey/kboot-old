@@ -613,7 +613,7 @@ static void ui_link_render(ui_entry_t *entry) {
 /** Link entry type. */
 static ui_entry_type_t ui_link_entry_type = {
 	.actions = ui_link_actions,
-	.action_count = ARRAYSZ(ui_link_actions),
+	.action_count = ARRAY_SIZE(ui_link_actions),
 	.render = ui_link_render,
 };
 
@@ -657,7 +657,7 @@ static void ui_checkbox_render(ui_entry_t *entry) {
 /** Check box entry type. */
 static ui_entry_type_t ui_checkbox_entry_type = {
 	.actions = ui_checkbox_actions,
-	.action_count = ARRAYSZ(ui_checkbox_actions),
+	.action_count = ARRAY_SIZE(ui_checkbox_actions),
 	.render = ui_checkbox_render,
 };
 
@@ -749,7 +749,7 @@ static input_result_t ui_textbox_editor_input(ui_window_t *window, uint16_t key)
 			return INPUT_HANDLED;
 
 		ch = key & 0xFF;
-		if(textbox_edit_len < ARRAYSZ(textbox_edit_buf)) {
+		if(textbox_edit_len < ARRAY_SIZE(textbox_edit_buf)) {
 			if(textbox_edit_offset < textbox_edit_len) {
 				memmove(&textbox_edit_buf[textbox_edit_offset + 1],
 					&textbox_edit_buf[textbox_edit_offset],
@@ -845,7 +845,7 @@ static void ui_textbox_render(ui_entry_t *entry) {
 /** Text box entry type. */
 static ui_entry_type_t ui_textbox_entry_type = {
 	.actions = ui_textbox_actions,
-	.action_count = ARRAYSZ(ui_textbox_actions),
+	.action_count = ARRAY_SIZE(ui_textbox_actions),
 	.render = ui_textbox_render,
 };
 
@@ -916,7 +916,7 @@ static void ui_chooser_render(ui_entry_t *entry) {
 /** Chooser entry type. */
 static ui_entry_type_t ui_chooser_entry_type = {
 	.actions = ui_chooser_actions,
-	.action_count = ARRAYSZ(ui_chooser_actions),
+	.action_count = ARRAY_SIZE(ui_chooser_actions),
 	.render = ui_chooser_render,
 };
 
@@ -975,7 +975,7 @@ static void ui_choice_render(ui_entry_t *entry) {
 /** Chooser entry type. */
 static ui_entry_type_t ui_choice_entry_type = {
 	.actions = ui_choice_actions,
-	.action_count = ARRAYSZ(ui_choice_actions),
+	.action_count = ARRAY_SIZE(ui_choice_actions),
 	.render = ui_choice_render,
 };
 

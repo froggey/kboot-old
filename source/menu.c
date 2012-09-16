@@ -187,14 +187,14 @@ static void menu_entry_render(ui_entry_t *_entry) {
 /** Menu entry UI entry type. */
 static ui_entry_type_t menu_entry_type = {
 	.actions = menu_entry_actions,
-	.action_count = ARRAYSZ(menu_entry_actions),
+	.action_count = ARRAY_SIZE(menu_entry_actions),
 	.render = menu_entry_render,
 };
 
 /** Configurable menu entry UI entry type. */
 static ui_entry_type_t configurable_menu_entry_type = {
 	.actions = configurable_menu_entry_actions,
-	.action_count = ARRAYSZ(configurable_menu_entry_actions),
+	.action_count = ARRAY_SIZE(configurable_menu_entry_actions),
 	.render = menu_entry_render,
 };
 

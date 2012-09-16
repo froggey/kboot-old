@@ -55,7 +55,7 @@ static bool get_memory_info(linux_params_t *params) {
 
 		memcpy(&params->e820_map[count], (void *)BIOS_MEM_BASE, sizeof(params->e820_map[count]));
 		count++;
-	} while(regs.ebx != 0 && count < ARRAYSZ(params->e820_map));
+	} while(regs.ebx != 0 && count < ARRAY_SIZE(params->e820_map));
 
 	if((params->e820_entries = count))
 		success = true;

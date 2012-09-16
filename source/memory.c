@@ -406,7 +406,7 @@ bool phys_memory_alloc(phys_ptr_t size, size_t align, phys_ptr_t min_addr, phys_
 
 	/* Find a free range that is large enough to hold the new range. */
 	if(flags & PHYS_ALLOC_HIGH) {
-		LIST_FOREACH_R(&memory_ranges, iter) {
+		LIST_FOREACH_REVERSE(&memory_ranges, iter) {
 			range = list_entry(iter, memory_range_t, header);
 			if(is_suitable_range(range, size, align, min_addr, max_addr, flags, &start))
 				break;
