@@ -497,7 +497,7 @@ static bool config_load(const char *path) {
 	char *buf;
 	bool ret;
 
-	if(!(handle = file_open(path)))
+	if(!(handle = file_open(path, NULL)))
 		return false;
 
 	size = file_size(handle);

@@ -90,9 +90,13 @@ static bool tar_open_cb(tar_header_t *header, mount_t *mount, void *a1, void *a2
 /** Open a file/directory on the filesystem.
  * @param mount		Mount to open from.
  * @param path		Path to file/directory to open.
+ * @param from		Handle on this FS to open relative to.
  * @return		Pointer to handle on success, NULL on failure. */
-static file_handle_t *tar_open(mount_t *mount, const char *path) {
+static file_handle_t *tar_open(mount_t *mount, const char *path, file_handle_t *from) {
 	file_handle_t *ret = NULL;
+
+	// TODO: relative open. Nothing actually requires it at the moment.
+	assert(!from);
 
 	while(path[0] == '/')
 		path++;

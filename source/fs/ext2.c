@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -40,6 +40,8 @@ typedef struct ext2_mount {
 	size_t block_groups;		/**< Number of block groups. */
 	size_t inode_size;		/**< Size of an inode. */
 } ext2_mount_t;
+
+static bool ext2_read(file_handle_t *handle, void *buf, size_t count, offset_t offset);
 
 /** Read a block from an Ext2 filesystem.
  * @param mount		Mount to read from.
@@ -190,8 +192,8 @@ static bool ext2_inode_block_get(file_handle_t *handle, uint32_t block, uint32_t
 			goto out;
 		}
 
-		/* Triple indirect block. I somewhat doubt this will be needed
-		 * in the bootloader. */
+		/* Triple indirect block. I somewhat doubt this will be needed,
+		 * aren't likely to need to read files that big. */
 		dprintf("ext2: tri-indirect blocks not yet supported!\n");
 		goto out;
 	}
@@ -229,14 +231,18 @@ static bool ext2_inode_block_read(file_handle_t *handle, void *buf, uint32_t blo
 
 /** Read an inode from the filesystem.
  * @param mount		Mount to read from.
- * @param id		ID of node.
+ * @param id		ID of node. If the node is a symbolic link, the link
+ *			destination will be returned.
+ * @param from		Directory that the inode was found in.
  * @return		Pointer to handle to inode on success, NULL on failure. */
-static file_handle_t *ext2_inode_get(mount_t *mount, uint32_t id) {
+static file_handle_t *ext2_inode_get(mount_t *mount, uint32_t id, file_handle_t *from) {
 	ext2_mount_t *data = mount->data;
+	file_handle_t *handle;
 	ext2_inode_t *inode;
 	size_t group, size;
 	offset_t offset;
-	bool directory;
+	uint16_t type;
+	char *dest;
 
 	/* Get the group descriptor table containing the inode. */
 	if((group = (id - 1) / data->inodes_per_group) >= data->block_groups) {
@@ -257,8 +263,45 @@ static file_handle_t *ext2_inode_get(mount_t *mount, uint32_t id) {
 		return false;
 	}
 
-	directory = (le16_to_cpu(inode->i_mode) & EXT2_S_IFMT) == EXT2_S_IFDIR;
-	return file_handle_create(mount, directory, inode);
+	type = le16_to_cpu(inode->i_mode) & EXT2_S_IFMT;
+	switch(type) {
+	case EXT2_S_IFLNK:
+		assert(from);
+
+		/* Symbolic link. Read in the link and try to open that path. */
+		size = le32_to_cpu(inode->i_size);
+		dest = kmalloc(size + 1);
+		if(le32_to_cpu(inode->i_blocks) == 0) {
+			memcpy(dest, inode->i_block, size);
+			kfree(inode);
+		} else {
+			handle = file_handle_create(mount, false, inode);
+			if(!ext2_read(handle, dest, size, 0)) {
+				file_close(handle);
+				return NULL;
+			}
+
+			file_close(handle);
+		}
+
+		dest[size] = 0;
+
+		/* Welp, recursion. TODO: Should limit this. */
+		handle = file_open(dest, from);
+		break;
+	case EXT2_S_IFDIR:
+		handle = file_handle_create(mount, true, inode);
+		break;
+	case EXT2_S_IFREG:
+		handle = file_handle_create(mount, false, inode);
+		break;
+	default:
+		/* Don't support reading other types here. */
+		handle = NULL;
+		break;
+	}
+
+	return handle;
 }
 
 /** Create an instance of an Ext2 filesystem.
@@ -300,7 +343,7 @@ static bool ext2_mount(mount_t *mount) {
 		goto fail;
 
 	/* Now get the root inode (second inode in first group descriptor) */
-	if(!(mount->root = ext2_inode_get(mount, EXT2_ROOT_INO)))
+	if(!(mount->root = ext2_inode_get(mount, EXT2_ROOT_INO, NULL)))
 		goto fail;
 
 	/* Store label and UUID. */
@@ -427,9 +470,11 @@ static bool ext2_iterate(file_handle_t *handle, dir_iterate_cb_t cb, void *arg) 
 			name[dirent->name_len] = 0;
 
 			/* Create a handle to the child. */
-			if(!(child = ext2_inode_get(handle->mount, le32_to_cpu(dirent->inode)))) {
+			child = ext2_inode_get(handle->mount, le32_to_cpu(dirent->inode), handle);
+			if(!child)
 				goto out;
-			} else if(!cb(name, child, arg)) {
+
+			if(!cb(name, child, arg)) {
 				file_close(child);
 				break;
 			}

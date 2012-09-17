@@ -66,6 +66,7 @@ sources = arch_sources + platform_sources + sources
 env.Program('loader.elf', map(env.Object, sources), LINKFLAGS = env['LINKFLAGS'] + [
 	'-Wl,-T,$LDSCRIPT',
 	'-Wl,--build-id=none',
+	'-Wl,-Map,${TARGET.dir}/loader.map',
 ])
 Depends('loader.elf', env['LDSCRIPT'])
 

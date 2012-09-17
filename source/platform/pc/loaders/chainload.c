@@ -53,7 +53,7 @@ static __noreturn void chain_loader_load(void) {
 	path = current_environ->data;
 	if(path) {
 		/* Loading from a file. */
-		file = file_open(path);
+		file = file_open(path, NULL);
 		if(!file)
 			boot_error("Could not read boot file");
 

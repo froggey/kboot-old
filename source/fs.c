@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -87,21 +87,39 @@ static bool file_open_cb(const char *name, file_handle_t *handle, void *_data) {
 	}
 }
 
-/** Open a handle to a file/directory.
- * @param path		Path to entry on the current device to open.
- * @return		Pointer to handle on success, NULL on failure. */
-file_handle_t *file_open(const char *path) {
+/**
+ * Open a handle to a file/directory.
+ *
+ * Looks up a path and returns a handle to it. If a source node is given, the
+ * path will be looked up relative to that directory, on the device of that
+ * directory. Otherwise, relative paths will not be allowed and the lookup will
+ * take place on the current device.
+ *
+ * @param path		Path to entry to open.
+ * @param from		If not NULL, a directory to look up relative to.
+ *
+ * @return		Pointer to handle on success, NULL on failure.
+ */
+file_handle_t *file_open(const char *path, file_handle_t *from) {
 	char *dup, *orig, *tok;
 	file_open_data_t data;
 	file_handle_t *handle;
 	mount_t *mount;
 
-	if(!current_device || !(mount = current_device->fs))
-		return NULL;
+	if(from) {
+		assert(from->directory);
+		mount = from->mount;
+		handle = (path[0] == '/') ? mount->root : from;
+	} else {
+		if(!current_device || !(mount = current_device->fs))
+			return NULL;
+
+		handle = mount->root;
+	}
 
 	/* Use the provided open() implementation if any. */
 	if(mount->type->open)
-		return mount->type->open(mount, path);
+		return mount->type->open(mount, path, from);
 
 	assert(mount->type->iterate);
 
@@ -109,8 +127,7 @@ file_handle_t *file_open(const char *path) {
 	while(*path == '/')
 		path++;
 
-	assert(mount->root);
-	handle = mount->root;
+	assert(handle);
 	handle->count++;
 
 	/* Loop through each element of the path string. The string must be

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +25,7 @@
 #include <pc/bios.h>
 #include <pc/pxe.h>
 
+#include <assert.h>
 #include <config.h>
 #include <disk.h>
 #include <endian.h>
@@ -98,11 +99,15 @@ static bool tftp_set_current(file_handle_t *handle) {
 /** Open a TFTP file.
  * @param mount		Mount to open from.
  * @param path		Path to file/directory to open.
+ * @param from		Handle on this FS to open relative to.
  * @return		Pointer to handle on success, NULL on failure. */
-static file_handle_t *tftp_open(mount_t *mount, const char *path) {
+static file_handle_t *tftp_open(mount_t *mount, const char *path, file_handle_t *from) {
 	file_handle_t *handle;
 	tftp_handle_t *data;
 	size_t len;
+
+	// TODO: relative open. Nothing actually requires it at the moment.
+	assert(!from);
 
 	/* Maximum path length is 128. */
 	if((len = strlen(path)) >= 128)

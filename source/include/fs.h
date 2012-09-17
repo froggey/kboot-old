@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -47,8 +47,9 @@ typedef struct fs_type {
 	 *			be used that uses iterate().
 	 * @param mount		Mount to open from.
 	 * @param path		Path to file/directory to open.
+	 * @param from		Handle on this FS to open relative to.
 	 * @return		Pointer to handle on success, NULL on failure. */
-	struct file_handle *(*open)(struct mount *mount, const char *path);
+	struct file_handle *(*open)(struct mount *mount, const char *path, struct file_handle *from);
 
 	/** Close a handle.
 	 * @param handle	Handle to close. */
@@ -107,7 +108,7 @@ extern file_handle_t *file_handle_create(mount_t *mount, bool directory, void *d
 extern mount_t *fs_probe(disk_t *disk);
 #endif
 
-extern file_handle_t *file_open(const char *path);
+extern file_handle_t *file_open(const char *path, file_handle_t *from);
 extern void file_close(file_handle_t *handle);
 extern bool file_read(file_handle_t *handle, void *buf, size_t count, offset_t offset);
 extern offset_t file_size(file_handle_t *handle);

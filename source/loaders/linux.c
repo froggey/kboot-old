@@ -57,12 +57,12 @@ static __noreturn void linux_loader_load(void) {
 	file_handle_t *kernel, *initrd = NULL;
 	value_t *cmdline;
 
-	kernel = file_open(data->kernel);
+	kernel = file_open(data->kernel, NULL);
 	if(!kernel)
 		boot_error("Failed to open kernel image");
 
 	if(data->initrd) {
-		initrd = file_open(data->initrd);
+		initrd = file_open(data->initrd, NULL);
 		if(!initrd)
 			boot_error("Failed to open initrd");
 	}
