@@ -202,12 +202,15 @@ PRIVATE_FUNCTION_START(read_inode)
 	 * inode is in (EAX) and the offset into that sector (EDX), and read
 	 * it in. */
 	movl	(temp_buffer + EXT2_GROUP_DESC_OFF_INODE_TABLE)(%edx), %eax
-	mull	block_size
+	mull	sectors_per_block
 	pop	%edx
-	add	%edx, %eax
+	xchg	%eax, %edx
+	push	%edx
 	xorl	%edx, %edx
 	movl	$512, %ecx
 	div	%ecx
+	pop	%ecx
+	add	%ecx, %eax
 	movw	$temp_buffer, %di
 	call	read_disk_sector
 
