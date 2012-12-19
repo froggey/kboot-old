@@ -29,6 +29,8 @@
 /** VGA memory address. */
 #define VGA_MEM_BASE		0xB8000
 
+extern void vga_cursor_position(uint8_t *_x, uint8_t *_y);
+
 extern void console_init(void);
 
 #endif /* __PC_CONSOLE_H */

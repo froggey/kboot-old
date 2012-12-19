@@ -24,6 +24,7 @@
 #include <lib/utility.h>
 
 #include <pc/bios.h>
+#include <pc/console.h>
 #include <pc/memory.h>
 #include <pc/vbe.h>
 
@@ -161,8 +162,7 @@ static void set_video_mode(linux_params_t *params) {
 	params->screen_info.orig_video_mode = 0x3;
 	params->screen_info.orig_video_cols = 80;
 	params->screen_info.orig_video_lines = 25;
-	params->screen_info.orig_x = 0;
-	params->screen_info.orig_y = 0;
+	vga_cursor_position(&params->screen_info.orig_x, &params->screen_info.orig_y);
 
 	/* Restore the console to a decent state. Set display page to the first
 	 * and move the cursor to (0, 0). */

@@ -55,6 +55,14 @@ static bool vga_cursor_visible = true;
 /** VGA draw region. */
 static draw_region_t vga_region;
 
+/** Get the VGA console cursor position.
+ * @param _x		Where to store cursor X position.
+ * @param _y		Where to store cursor Y position. */
+void vga_cursor_position(uint8_t *_x, uint8_t *_y) {
+	*_x = vga_cursor_x;
+	*_y = vga_cursor_y;
+}
+
 /** Update the hardware cursor. */
 static void update_hw_cursor(void) {
 	int x = (vga_cursor_visible) ? vga_cursor_x : 0;

@@ -291,6 +291,8 @@ bool pxe_detect(void) {
 	dprintf("pxe: network information:\n");
 	dprintf(" your IP:    %d.%d.%d.%d\n", bp->your_ip.a[0], bp->your_ip.a[1],
 		bp->your_ip.a[2], bp->your_ip.a[3]);
+	dprintf(" client IP:  %d.%d.%d.%d\n", bp->client_ip.a[0], bp->client_ip.a[1],
+		bp->client_ip.a[2], bp->client_ip.a[3]);
 	dprintf(" server IP:  %d.%d.%d.%d\n", bp->server_ip.a[0], bp->server_ip.a[1],
 		bp->server_ip.a[2], bp->server_ip.a[3]);
 	dprintf(" gateway IP: %d.%d.%d.%d\n", bp->gateway_ip.a[0], bp->gateway_ip.a[1],
