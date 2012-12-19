@@ -9,3 +9,4 @@ syntax: regexp
 ^build
 ^\.sconsign\.dblite
 ^\.config.*
+^documentation/markdown/output

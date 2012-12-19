@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -156,48 +156,33 @@ static void iso9660_parse_joliet_name(iso9660_directory_record_t *record, char *
 	buf[len] = 0;
 }
 
-/** Get the length of a string with all whitespace removed.
- * @param str		String to get length of.
- * @return		Length of string with all whitespace removed. */
-static size_t strlennospace(const char *str) {
-	size_t len = 0;
-
-	while(*str) {
-		if(!isspace(*(str++)))
-			len++;
-	}
-
-	return len;
-}
-
-/** Copy a string without whitespace.
- * @param dest		Destination.
- * @param src		Source string. */
-static void strcpynospace(char *dest, const char *src) {
-	char ch;
-
-	while(*src) {
-		ch = *(src++);
-		if(!isspace(ch))
-			*(dest++) = ch;
-	}
-
-	*dest = 0;
-}
-
 /** Generate a UUID.
  * @param pri		Primary volume descriptor.
  * @return		Pointer to allocated string for UUID. */
 static char *iso9660_make_uuid(iso9660_primary_volume_desc_t *pri) {
-	char *date = (char *)pri->vol_cre_time.year;
-	char *label = (char *)pri->vol_ident;
-	char *sys = (char *)pri->sys_ident;
+	iso9660_timestamp_t *time;
 	char *uuid;
+	size_t i;
 
-	uuid = kmalloc(strlennospace(label) + strlennospace(sys) + 16 + 1);
-	strcpynospace(uuid, label);
-	strcpynospace(uuid + strlen(uuid), sys);
-	sprintf(uuid + strlen(uuid), "%16.16s", date);
+	/* If the modification time is set, then base the UUID off that, else
+	 * use the creation time. The ISO9660 says that a date is unset if all
+	 * the fields are '0' and the offset is 0. */
+	time = &pri->vol_mod_time;
+	for(i = 0; i < 16; i++) {
+		if(((uint8_t *)time)[i] != 0)
+			break;
+	}
+	if(i == 16 && time->offset == 0)
+		time = &pri->vol_cre_time;
+
+	/* Create the UUID string. */
+	uuid = kmalloc(23);
+	sprintf(uuid, "%c%c%c%c-%c%c-%c%c-%c%c-%c%c-%c%c-%c%c",
+		time->year[0], time->year[1], time->year[2], time->year[3],
+		time->month[0], time->month[1], time->day[0], time->day[1],
+		time->hour[0], time->hour[1], time->minute[0], time->minute[1],
+		time->second[0], time->second[1], time->centisecond[0],
+		time->centisecond[1]);
 	return uuid;
 }
 

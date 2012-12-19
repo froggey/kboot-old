@@ -58,7 +58,7 @@ typedef struct iso9660_timestamp {
 	uint8_t hour[2];			/**< Hour (0-23). */
 	uint8_t minute[2];			/**< Minute (0-59). */
 	uint8_t second[2];			/**< Second (0-59). */
-	uint8_t centiseconds[2];		/**< Hundredths of second (0-99). */
+	uint8_t centisecond[2];			/**< Hundredths of second (0-99). */
 	uint8_t offset;				/**< Offset from GMT. */
 } __packed iso9660_timestamp_t;
 

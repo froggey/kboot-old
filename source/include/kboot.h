@@ -64,7 +64,7 @@ typedef struct kboot_tag {
 typedef struct kboot_tag_core {
 	kboot_tag_t header;			/**< Tag header. */
 
-	kboot_paddr_t kernel_phys;			/**< Physical address of the kernel image. */
+	kboot_paddr_t kernel_phys;		/**< Physical address of the kernel image. */
 } __packed kboot_tag_core_t;
 
 /** Maximum length of fields in the option tag. */
