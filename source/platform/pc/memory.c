@@ -42,7 +42,7 @@ void platform_memory_detect(void) {
 	do {
 		regs.eax = 0xE820;
 		regs.edx = E820_SMAP;
-		regs.ecx = 20;
+		regs.ecx = 64;
 		regs.edi = BIOS_MEM_BASE + (count * sizeof(e820_entry_t));
 		bios_interrupt(0x15, &regs);
 
