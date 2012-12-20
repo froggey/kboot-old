@@ -24,10 +24,13 @@ Basic Definitions
 -----------------
 
 This specification uses C syntax to define the KBoot structures. Structures are
-assumed to be implicitly padded to achieve natural alignment for each field.
-Only the standard C fixed-width integer types are used, to ensure that it is
-clear what size each field should be. The following additional type aliases are
-defined:
+assumed to be implicitly padded by the compiler to achieve natural alignment
+for each field. However, in some cases padding has been explicitly added to
+structures to ensure that 64-bit fields are aligned to an 8 byte boundary
+regardless of architecture (e.g. on 32-bit x86, 64-bit fields need only be
+aligned to 4 bytes). Only the standard C fixed-width integer types are used, to
+ensure that it is clear what size each field should be. The following
+additional type aliases are defined:
 
     typedef uint64_t kboot_paddr_t;
     typedef uint64_t kboot_vaddr_t;
@@ -71,6 +74,7 @@ The following image tag types are defined (given as "Name (type ID)"):
 
 This image tag is the only tag that is required to be present in a kernel image.
 All other tags are optional. It is used to identify the image as a KBoot kernel.
+There must only be one `KBOOT_ITAG_IMAGE` tag in a kernel image.
 
     typedef struct kboot_itag_image {
     	uint32_t version;
@@ -93,10 +97,12 @@ Fields:
 ### `KBOOT_ITAG_LOAD` (`1`)
 
 This tag can be used for more control over the physical and virtual memory
-layout set up by the boot loader.
+layout set up by the boot loader. There must be at most one `KBOOT_ITAG_LOAD`
+tag in a kernel image.
 
     typedef struct kboot_itag_load {
     	uint32_t      flags;
+	uint32_t      _pad;
     	kboot_paddr_t alignment;
     	kboot_paddr_t min_alignment;
     	kboot_paddr_t phys_address;
@@ -113,8 +119,8 @@ Fields:
       ignored.
  * `alignment`: Requested alignment of the kernel image in physical memory. If
    this is set to 0, the alignment will be chosen automatically by the boot
-   loader. Otherwise, it must be a power of 2 greater than the machine's page
-   size.
+   loader. Otherwise, it must be a power of 2 greater than or equal to the
+   machine's page size.
  * `min_alignment`: Minimum physical alignment. If non-zero and less than the
    `alignment` value, if the loader is unable to allocate at `alignment` it
    will repeatedly try to allocate at decreasing powers of 2 down to this value
@@ -194,7 +200,8 @@ for the kernel, see the _Kernel Environment_ section.
 ### `KBOOT_ITAG_VIDEO` (`4`)
 
 This tag is used to specify to the boot loader what video types are supported
-and what display mode it should attempt to set.
+and what display mode it should attempt to set. There must be at most one
+`KBOOT_ITAG_VIDEO` tag in a kernel image.
 
     typedef struct kboot_itag_video {
     	uint32_t types;
@@ -380,10 +387,13 @@ the list.
     
     	kboot_paddr_t tags_phys;
     	uint32_t      tags_size;
+    	uint32_t      _pad;
+
     	kboot_paddr_t kernel_phys;
+
     	kboot_vaddr_t stack_base;
-    	uint32_t      stack_size;
     	kboot_paddr_t stack_phys;
+    	uint32_t      stack_size;
     } kboot_tag_core_t;
 
 Fields:
@@ -393,8 +403,8 @@ Fields:
    boundary.
  * `kernel_phys`: The physical load address of the kernel image.
  * `stack_base`: The virtual address of the base of the boot stack.
- * `stack_size`: The size of the boot stack in bytes.
  * `stack_phys`: The physical address of the base of the boot stack.
+ * `stack_size`: The size of the boot stack in bytes.
 
 ### `KBOOT_TAG_OPTION` (`2`)
 
@@ -525,6 +535,7 @@ and the _Platform Specifics_ section.
     	kboot_tag_t header;
     
     	uint8_t     type;
+    	uint32_t    _pad;
     
     	union {
     		struct {
@@ -532,18 +543,19 @@ and the _Platform Specifics_ section.
     			uint8_t        lines;
     			uint8_t        x;
     			uint8_t        y;
+    			uint32_t       _pad;
     			kboot_paddr_t  mem_phys;
     			kboot_vaddr_t  mem_virt;
     			uint32_t       mem_size;
     		} vga;
     
     		struct {
-    			uint8_t        type;
     			uint32_t       flags;
     			uint32_t       width;
     			uint32_t       height;
     			uint8_t        bpp;
     			uint32_t       pitch;
+    			uint32_t       _pad;
     			kboot_paddr_t  fb_phys;
     			kboot_vaddr_t  fb_virt;
     			uint32_t       fb_size;
@@ -648,6 +660,7 @@ Fields:
       a boot image.
     - `KBOOT_METHOD_DISK` (1): Booted from a disk device.
     - `KBOOT_METHOD_NET` (2): Booted from the network.
+   
    The remainder of the structure is dependent on the method.
 
 Fields (`KBOOT_METHOD_DISK`):
@@ -669,8 +682,8 @@ Fields (`KBOOT_METHOD_DISK`):
 Fields (`KBOOT_METHOD_NET`):
 
  * `flags`: Behaviour flags. The following flags are currently defined:
-    - `KBOOT_NET_IPV6`: The given IP addresses are IPv6 addresses, rather than
-      IPv4 addresses.
+    - `KBOOT_NET_IPV6` (bit 0): The given IP addresses are IPv6 addresses,
+      rather than IPv4 addresses.
  * `server_ip`: IP address of the server that was booted from.
  * `server_port`: UDP port number of the TFTP server.
  * `gateway_ip`: Gateway IP address.
@@ -697,6 +710,7 @@ will be included in the tag list.
     	kboot_vaddr_t log_virt;
     	kboot_paddr_t log_phys;
     	uint32_t      log_size;
+    	uint32_t      _pad;
     
     	kboot_paddr_t prev_phys;
     	uint32_t      prev_size;
@@ -766,9 +780,9 @@ the mapped address by the boot loader.
     	uint32_t    entsize;
     	uint32_t    shstrndx;
     
-    	uint32_t    padding;
+    	uint32_t    _pad;
     
-    	char        sections[0];
+    	uint8_t     sections[0];
     } kboot_tag_sections_t;
 
 Fields:
