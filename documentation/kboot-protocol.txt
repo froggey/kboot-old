@@ -788,6 +788,32 @@ to set a framebuffer mode and fall back on VGA. It is recommended that a
 kernel supports VGA text mode rather than exclusively using an LFB mode, as it
 may not always be possible to set a LFB mode.
 
+There are some information tags that are specific to the PC platform. These are
+detailed below.
+
+#### `KBOOT_TAG_E820` (`11`)
+
+The PC BIOS provides more memory information than is included in the KBoot
+physical memory map. Some of this information is required to support ACPI,
+therefore KBoot will provide an unmodified copy of the BIOS E820 memory map
+to the kernel. The tag list will contain an E820 tag for each address range
+descriptor returned by INT 15h function E820h. Each tag's data will contain the
+tag header and then the data returned by the BIOS. The format of each descriptor
+as of ACPI 5.0 is as follows:
+
+    typedef struct kboot_tag_e820 {
+    	kboot_tag_t header;
+
+    	uint64_t    start;
+    	uint64_t    length;
+    	uint32_t    type;
+    	uint32_t    attr;
+    } kboot_tag_e820_t;
+
+The `start`, `length` and `type` fields are guaranteed to be present, however
+any fields following them may not be present. The kernel should check the tag
+size before accessing them.
+
 Filesystem UUIDs
 ----------------
 
