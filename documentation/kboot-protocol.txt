@@ -330,14 +330,14 @@ from the end of the virtual address space is chosen. The format of the
     typedef struct kboot_tag_pagetables {
     	kboot_tag_t header;
     
-    	kboot_paddr_t page_dir;
+    	kboot_paddr_t pml4;
     	kboot_vaddr_t mapping;
     } kboot_tag_pagetables_t;
 
 Fields:
 
- * `page_dir`: Physical address of the page directory.
- * `mapping`: Virtual address of the recursive page directory mapping.
+ * `pml4`: Physical address of the PML4.
+ * `mapping`: Virtual address of the recursive PML4 mapping.
 
 ### ARM
 
@@ -534,7 +534,7 @@ and the _Platform Specifics_ section.
     typedef struct kboot_tag_video {
     	kboot_tag_t header;
     
-    	uint8_t     type;
+    	uint32_t     type;
     	uint32_t    _pad;
     
     	union {
