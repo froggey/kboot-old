@@ -30,7 +30,7 @@
 
 #ifndef __ASM__
 
-#include <stdint.h>
+#include <types.h>
 
 /** Type used to store a physical address. */
 typedef uint64_t kboot_paddr_t;
@@ -133,7 +133,7 @@ typedef struct kboot_colour {
 typedef struct kboot_tag_video {
 	kboot_tag_t header;			/**< Tag header. */
 
-	uint8_t type;				/**< Type of the video mode set up. */
+	uint32_t type;				/**< Type of the video mode set up. */
 	uint32_t _pad;
 
 	union {
@@ -290,6 +290,20 @@ typedef struct kboot_tag_e820 {
 	uint32_t attr;
 } kboot_tag_e820_t;
 
+#if defined(__x86_64__) || defined(__i386__)
+/** Tag containing page table information. */
+typedef struct kboot_tag_pagetables {
+	kboot_tag_t header;			/**< Tag header. */
+
+#if defined(__x86_64__)
+	kboot_paddr_t pml4;			/**< Physical address of the PML4. */
+#else
+	kboot_paddr_t page_dir;			/**< Physical address of the page directory. */
+#endif
+	kboot_vaddr_t mapping;			/**< Virtual address of recursive mapping. */
+} kboot_tag_pagetables_t;
+#endif
+
 /**
  * Image tags.
  */
@@ -386,9 +400,9 @@ typedef struct kboot_itag_option {
 		"0: .asciz \"KBoot\"\n" \
 		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
 		"2: .byte " XSTRINGIFY(KBOOT_OPTION_BOOLEAN) "\n" \
-		"   .byte 0\n", \
-		"   .byte 0\n", \
-		"   .byte 0\n", \
+		"   .byte 0\n" \
+		"   .byte 0\n" \
+		"   .byte 0\n" \
 		"   .long 4f - 3f\n" \
 		"   .long 5f - 4f\n" \
 		"   .long 1\n" \
@@ -408,9 +422,9 @@ typedef struct kboot_itag_option {
 		"0: .asciz \"KBoot\"\n" \
 		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
 		"2: .byte " XSTRINGIFY(KBOOT_OPTION_INTEGER) "\n" \
-		"   .byte 0\n", \
-		"   .byte 0\n", \
-		"   .byte 0\n", \
+		"   .byte 0\n" \
+		"   .byte 0\n" \
+		"   .byte 0\n" \
 		"   .long 4f - 3f\n" \
 		"   .long 5f - 4f\n" \
 		"   .long 8\n" \
@@ -430,9 +444,9 @@ typedef struct kboot_itag_option {
 		"0: .asciz \"KBoot\"\n" \
 		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
 		"2: .byte " XSTRINGIFY(KBOOT_OPTION_STRING) "\n" \
-		"   .byte 0\n", \
-		"   .byte 0\n", \
-		"   .byte 0\n", \
+		"   .byte 0\n" \
+		"   .byte 0\n" \
+		"   .byte 0\n" \
 		"   .long 4f - 3f\n" \
 		"   .long 5f - 4f\n" \
 		"   .long 6f - 5f\n" \

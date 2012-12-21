@@ -24,7 +24,6 @@
 #include <lib/utility.h>
 
 #include <assert.h>
-#include <kboot.h>
 #include <loader.h>
 #include <memory.h>
 
@@ -37,7 +36,10 @@ typedef struct heap_chunk {
 /** Structure used to represent a physical memory range internally. */
 typedef struct memory_range {
 	list_t header;			/**< Link to range list. */
-	kboot_tag_memory_t ka;		/**< Actual range structure. */
+
+	phys_ptr_t start;		/**< Start of the range. */
+	phys_ptr_t end;			/**< End of the range. */
+	unsigned type;			/**< Type of the range. */
 } memory_range_t;
 
 /** Size of the heap (128KB). */
@@ -176,12 +178,12 @@ void kfree(void *addr) {
  * @param end		End address.
  * @param type		Type of range.
  * @return		Pointer to range structure. */
-static memory_range_t *memory_range_alloc(phys_ptr_t start, phys_ptr_t end, int type) {
+static memory_range_t *memory_range_alloc(phys_ptr_t start, phys_ptr_t end, unsigned type) {
 	memory_range_t *range = kmalloc(sizeof(memory_range_t));
 	list_init(&range->header);
-	range->ka.start = start;
-	range->ka.end = end;
-	range->ka.type = type;
+	range->start = start;
+	range->end = end;
+	range->type = type;
 	return range;
 }
 
@@ -192,16 +194,16 @@ static void memory_range_merge(memory_range_t *range) {
 
 	if(memory_ranges.next != &range->header) {
 		other = list_entry(range->header.prev, memory_range_t, header);
-		if(other->ka.end == range->ka.start && other->ka.type == range->ka.type) {
-			range->ka.start = other->ka.start;
+		if(other->end == range->start && other->type == range->type) {
+			range->start = other->start;
 			list_remove(&other->header);
 			kfree(other);
 		}
 	}
 	if(memory_ranges.prev != &range->header) {
 		other = list_entry(range->header.next, memory_range_t, header);
-		if(other->ka.start == range->ka.end && other->ka.type == range->ka.type) {
-			range->ka.end = other->ka.end;
+		if(other->start == range->end && other->type == range->type) {
+			range->end = other->end;
 			list_remove(&other->header);
 			kfree(other);
 		}
@@ -215,8 +217,8 @@ static void phys_memory_dump(void) {
 	LIST_FOREACH(&memory_ranges, iter) {
 		range = list_entry(iter, memory_range_t, header);
 
-		dprintf(" 0x%016" PRIxPHYS "-0x%016" PRIxPHYS ": ", range->ka.start, range->ka.end);
-		switch(range->ka.type) {
+		dprintf(" 0x%016" PRIxPHYS "-0x%016" PRIxPHYS ": ", range->start, range->end);
+		switch(range->type) {
 		case PHYS_MEMORY_FREE:
 			dprintf("Free\n");
 			break;
@@ -225,12 +227,6 @@ static void phys_memory_dump(void) {
 			break;
 		case PHYS_MEMORY_RECLAIMABLE:
 			dprintf("Reclaimable\n");
-			break;
-		case PHYS_MEMORY_RESERVED:
-			dprintf("Reserved\n");
-			break;
-		case PHYS_MEMORY_UNUSABLE:
-			dprintf("Unusable\n");
 			break;
 		case PHYS_MEMORY_INTERNAL:
 			dprintf("Internal\n");
@@ -246,7 +242,7 @@ static void phys_memory_dump(void) {
  * @param start		Start of the range (must be page-aligned).
  * @param end		End of the range (must be page-aligned).
  * @param type		Type of the range. */
-static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type) {
+static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, unsigned type) {
 	memory_range_t *range, *other, *split;
 
 	assert(!(start % PAGE_SIZE));
@@ -258,7 +254,7 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type)
 	/* Try to find where to insert the region in the list. */
 	LIST_FOREACH(&memory_ranges, iter) {
 		other = list_entry(iter, memory_range_t, header);
-		if(start <= other->ka.start) {
+		if(start <= other->start) {
 			list_add_before(&other->header, &range->header);
 			break;
 		}
@@ -271,13 +267,13 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type)
 	/* Check if the new range has overlapped part of the previous range. */
 	if(memory_ranges.next != &range->header) {
 		other = list_entry(range->header.prev, memory_range_t, header);
-		if(range->ka.start < other->ka.end) {
-			if(other->ka.end > range->ka.end) {
+		if(range->start < other->end) {
+			if(other->end > range->end) {
 				/* Must split the range. */
-				split = memory_range_alloc(range->ka.end, other->ka.end, other->ka.type);
+				split = memory_range_alloc(range->end, other->end, other->type);
 				list_add_after(&range->header, &split->header);
 			}
-			other->ka.end = range->ka.start;
+			other->end = range->start;
 		}
 	}
 
@@ -287,11 +283,11 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type)
 			break;
 
 		other = list_entry(iter, memory_range_t, header);
-		if(other->ka.start >= range->ka.end) {
+		if(other->start >= range->end) {
 			break;
-		} else if(other->ka.end > range->ka.end) {
+		} else if(other->end > range->end) {
 			/* Resize the range and finish. */
-			other->ka.start = range->ka.end;
+			other->start = range->end;
 			break;
 		} else {
 			/* Completely remove the range. */
@@ -307,9 +303,9 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, int type)
  * @param start		Start of the range (must be page-aligned).
  * @param end		End of the range (must be page-aligned).
  * @param type		Type of the range. */
-void phys_memory_add(phys_ptr_t start, phys_ptr_t end, int type) {
+void phys_memory_add(phys_ptr_t start, phys_ptr_t end, unsigned type) {
 	phys_memory_add_internal(start, end, type);
-	dprintf("memory: added range 0x%" PRIxPHYS "-0x%" PRIxPHYS " (type: %d)\n",
+	dprintf("memory: added range 0x%" PRIxPHYS "-0x%" PRIxPHYS " (type: %u)\n",
 		start, end, type);
 }
 
@@ -325,12 +321,12 @@ void phys_memory_protect(phys_ptr_t start, phys_ptr_t end) {
 	LIST_FOREACH_SAFE(&memory_ranges, iter) {
 		range = list_entry(iter, memory_range_t, header);
 
-		if(range->ka.type != PHYS_MEMORY_FREE) {
+		if(range->type != PHYS_MEMORY_FREE) {
 			continue;
-		} else if(start >= range->ka.start && start < range->ka.end) {
-			phys_memory_add_internal(start, MIN(end, range->ka.end), PHYS_MEMORY_INTERNAL);
-		} else if(end > range->ka.start && end <= range->ka.end) {
-			phys_memory_add_internal(MAX(start, range->ka.start), end, PHYS_MEMORY_INTERNAL);
+		} else if(start >= range->start && start < range->end) {
+			phys_memory_add_internal(start, MIN(end, range->end), PHYS_MEMORY_INTERNAL);
+		} else if(end > range->start && end <= range->end) {
+			phys_memory_add_internal(MAX(start, range->start), end, PHYS_MEMORY_INTERNAL);
 		}
 	}
 }
@@ -350,12 +346,12 @@ static bool is_suitable_range(memory_range_t *range, phys_ptr_t size, size_t ali
 {
 	phys_ptr_t start, match_start, match_end;
 
-	if(range->ka.type != PHYS_MEMORY_FREE)
+	if(range->type != PHYS_MEMORY_FREE)
 		return false;
 
 	/* Check if this range contains addresses in the requested range. */
-	match_start = MAX(min_addr, range->ka.start);
-	match_end = MIN(max_addr - 1, range->ka.end - 1);
+	match_start = MAX(min_addr, range->start);
+	match_end = MIN(max_addr - 1, range->end - 1);
 	if(match_end <= match_start)
 		return false;
 
@@ -463,14 +459,13 @@ void memory_init(void) {
  * @note		Only needs to be called when booting a KBoot kernel.
  * @return		Physical address of the first memory range tag. */
 phys_ptr_t memory_finalise(void) {
-	memory_range_t *range, *next;
-	uint32_t i = 0;
+	memory_range_t *range;
 
 	/* Reclaim all internal memory ranges. */
 	LIST_FOREACH(&memory_ranges, iter) {
 		range = list_entry(iter, memory_range_t, header);
-		if(range->ka.type == PHYS_MEMORY_INTERNAL) {
-			range->ka.type = PHYS_MEMORY_FREE;
+		if(range->type == PHYS_MEMORY_INTERNAL) {
+			range->type = PHYS_MEMORY_FREE;
 			memory_range_merge(range);
 		}
 	}
@@ -479,6 +474,7 @@ phys_ptr_t memory_finalise(void) {
 	dprintf("memory: final memory map:\n");
 	phys_memory_dump();
 
+#if 0
 	/* Set up the tag headers in the range structures. */
 	LIST_FOREACH(&memory_ranges, iter) {
 		range = list_entry(iter, memory_range_t, header);
@@ -497,4 +493,6 @@ phys_ptr_t memory_finalise(void) {
 
 	range = list_entry(memory_ranges.next, memory_range_t, header);
 	return (ptr_t)&range->ka;
+#endif
+	return 0;
 }

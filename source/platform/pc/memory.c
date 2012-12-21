@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,7 +34,6 @@ void platform_memory_detect(void) {
 	phys_ptr_t start, end;
 	size_t count = 0, i;
 	bios_regs_t regs;
-	int type;
 
 	bios_regs_init(&regs);
 
@@ -91,34 +90,23 @@ void platform_memory_detect(void) {
 			continue;
 		}
 
-		/* Work out the type to give the range. */
-		switch(mmap[i].type) {
-		case E820_TYPE_FREE:
-			type = PHYS_MEMORY_FREE;
-			break;
-		case E820_TYPE_ACPI_RECLAIM:
-			type = PHYS_MEMORY_RECLAIMABLE;
-			break;
-		case E820_TYPE_BAD:
-			type = PHYS_MEMORY_UNUSABLE;
-			break;
-		case E820_TYPE_RESERVED:
-		case E820_TYPE_ACPI_NVS:
-		case E820_TYPE_DISABLED:
-		default:
-			type = PHYS_MEMORY_RESERVED;
-			break;
+		/* We only care about free ranges here. */
+		if(mmap[i].type != E820_TYPE_FREE)
+			continue;
+
+		/* Ensure that the BIOS data area is not marked as free. BIOSes
+		 * don't mark it as reserved in the memory map as it can be
+		 * overwritten if it is no longer needed, but it may be needed
+		 * by the kernel, for example to call BIOS interrupts. */
+		if(start == 0) {
+			start = PAGE_SIZE;
+			if(start >= end)
+				continue;
 		}
 
 		/* Add the range to the physical memory manager. */
-		phys_memory_add(start, end, type);
+		phys_memory_add(start, end, PHYS_MEMORY_FREE);
 	}
-
-	/* Ensure that the BIOS data area is marked as reserved - BIOSes don't
-	 * mark it as reserved in the memory map as it can be overwritten if it
-	 * is no longer needed, but it is needed in the kernel to call BIOS
-	 * interrupts. */
-	phys_memory_add(0, PAGE_SIZE, PHYS_MEMORY_RESERVED);
 
 	/* Mark the memory area we use for BIOS calls as internal. */
 	phys_memory_add(BIOS_MEM_BASE, BIOS_MEM_BASE + BIOS_MEM_SIZE + PAGE_SIZE,

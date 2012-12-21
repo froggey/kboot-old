@@ -39,6 +39,8 @@
 #include <ui.h>
 #include <video.h>
 
+#if 0
+
 /** Data for the KBoot loader. */
 typedef struct kboot_data {
 	environ_t *env;			/**< Environment back pointer. */
@@ -268,8 +270,11 @@ static bool set_options(elf_note_t *note, const char *name, void *desc, void *_d
 	return true;
 }
 
+#endif
+
 /** Load the operating system. */
 static __noreturn void kboot_loader_load(void) {
+#if 0
 	kboot_data_t *data = current_environ->data;
 	kboot_tag_bootdev_t *bootdev;
 	kboot_tag_core_t *core;
@@ -311,14 +316,19 @@ static __noreturn void kboot_loader_load(void) {
 
 	/* Enter the kernel. */
 	kboot_arch_enter(data->mmu, data->tags);
+#endif
+	while(1);
 }
 
 #if CONFIG_KBOOT_UI
 /** Return a window for configuring the OS.
  * @return		Pointer to configuration window. */
 static ui_window_t *kboot_loader_configure(void) {
+#if 0
 	kboot_data_t *data = current_environ->data;
 	return (!ui_list_empty(data->config)) ? data->config : NULL;
+#endif
+	return NULL;
 }
 #endif
 
@@ -330,6 +340,7 @@ static loader_type_t kboot_loader_type = {
 #endif
 };
 
+#if 0
 /** Tag iterator to add options to the environment.
  * @param note		Note header.
  * @param name		Note name.
@@ -413,12 +424,13 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 
 	return true;
 }
+#endif
 
 /** Load a KBoot kernel and modules.
  * @param args		Command arguments.
  * @return		Whether completed successfully. */
 static bool config_cmd_kboot(value_list_t *args) {
-	kboot_data_t *data;
+	//kboot_data_t *data;
 
 	if((args->count != 1 && args->count != 2)
 		|| args->values[0].type != VALUE_TYPE_STRING
@@ -429,9 +441,10 @@ static bool config_cmd_kboot(value_list_t *args) {
 		return false;
 	}
 
-	data = kmalloc(sizeof(*data));
+	//data = kmalloc(sizeof(*data));
 	current_environ->loader = &kboot_loader_type;
-	current_environ->data = data;
+	//current_environ->data = data;
+#if 0
 
 	if(args->count == 2) {
 		value_copy(&args->values[1], &data->modules);
@@ -455,6 +468,8 @@ static bool config_cmd_kboot(value_list_t *args) {
 
 	/* Find all option tags. */
 	elf_note_iterate(data->kernel, add_options, data);
+	return true;
+#endif
 	return true;
 }
 

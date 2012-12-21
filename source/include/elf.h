@@ -42,14 +42,14 @@ typedef int64_t  Elf64_Sxword;
 
 /** ELF32 file header. */
 typedef struct {
-	unsigned char e_ident[16];		/**< ELF identiﬁcation. */
-	Elf32_Half    e_type;			/**< Object ﬁle type. */
+	unsigned char e_ident[16];		/**< ELF identification. */
+	Elf32_Half    e_type;			/**< Object file type. */
 	Elf32_Half    e_machine;		/**< Machine type. */
-	Elf32_Word    e_version;		/**< Object ﬁle version. */
+	Elf32_Word    e_version;		/**< Object file version. */
 	Elf32_Addr    e_entry;			/**< Entry point address. */
 	Elf32_Off     e_phoff;			/**< Program header offset. */
 	Elf32_Off     e_shoff;			/**< Section header offset. */
-	Elf32_Word    e_flags;			/**< Processor-speciﬁc ﬂags. */
+	Elf32_Word    e_flags;			/**< Processor-specific flags. */
 	Elf32_Half    e_ehsize;			/**< ELF header size. */
 	Elf32_Half    e_phentsize;		/**< Size of program header entry. */
 	Elf32_Half    e_phnum;			/**< Number of program header entries. */
@@ -60,14 +60,14 @@ typedef struct {
 
 /** ELF64 file header. */
 typedef struct {
-	unsigned char e_ident[16];		/**< ELF identiﬁcation. */
-	Elf64_Half    e_type;			/**< Object ﬁle type. */
+	unsigned char e_ident[16];		/**< ELF identification. */
+	Elf64_Half    e_type;			/**< Object file type. */
 	Elf64_Half    e_machine;		/**< Machine type. */
-	Elf64_Word    e_version;		/**< Object ﬁle version. */
+	Elf64_Word    e_version;		/**< Object file version. */
 	Elf64_Addr    e_entry;			/**< Entry point address. */
 	Elf64_Off     e_phoff;			/**< Program header offset. */
 	Elf64_Off     e_shoff;			/**< Section header offset. */
-	Elf64_Word    e_flags;			/**< Processor-speciﬁc ﬂags. */
+	Elf64_Word    e_flags;			/**< Processor-specific ﬂags. */
 	Elf64_Half    e_ehsize;			/**< ELF header size. */
 	Elf64_Half    e_phentsize;		/**< Size of program header entry. */
 	Elf64_Half    e_phnum;			/**< Number of program header entries. */
@@ -90,11 +90,11 @@ typedef struct {
 #define ELF_EI_OSABI		7		/**< OS/ABI. */
 
 /** ELF types. */
-#define ELF_ET_NONE		0		/**< No ﬁle type. */
-#define ELF_ET_REL		1		/**< Relocatable object ﬁle. */
-#define ELF_ET_EXEC		2		/**< Executable ﬁle. */
-#define ELF_ET_DYN		3		/**< Shared object ﬁle. */
-#define ELF_ET_CORE		4		/**< Core ﬁle. */
+#define ELF_ET_NONE		0		/**< No file type. */
+#define ELF_ET_REL		1		/**< Relocatable object file. */
+#define ELF_ET_EXEC		2		/**< Executable file. */
+#define ELF_ET_DYN		3		/**< Shared object file. */
+#define ELF_ET_CORE		4		/**< Core file. */
 
 /** ELF classes. */
 #define ELFCLASS32		1		/**< 32-bit. */
@@ -200,10 +200,10 @@ typedef struct {
 /** ELF32 program header. */
 typedef struct {
 	Elf32_Word    p_type;			/**< Type of segment. */
-	Elf32_Off     p_offset;			/**< Offset in ﬁle. */
+	Elf32_Off     p_offset;			/**< Offset in file. */
 	Elf32_Addr    p_vaddr;			/**< Virtual address in memory. */
 	Elf32_Addr    p_paddr;			/**< Reserved. */
-	Elf32_Word    p_filesz;			/**< Size of segment in ﬁle. */
+	Elf32_Word    p_filesz;			/**< Size of segment in file. */
 	Elf32_Word    p_memsz;			/**< Size of segment in memory. */
 	Elf32_Word    p_flags;			/**< Segment attributes. */
 	Elf32_Word    p_align;			/**< Alignment of segment. */
@@ -213,10 +213,10 @@ typedef struct {
 typedef struct {
 	Elf64_Word  p_type;			/**< Type of segment. */
 	Elf64_Word  p_flags;			/**< Segment attributes. */
-	Elf64_Off   p_offset;			/**< Offset in ﬁle. */
+	Elf64_Off   p_offset;			/**< Offset in file. */
 	Elf64_Addr  p_vaddr;			/**< Virtual address in memory. */
 	Elf64_Addr  p_paddr;			/**< Reserved. */
-	Elf64_Xword p_filesz;			/**< Size of segment in ﬁle. */
+	Elf64_Xword p_filesz;			/**< Size of segment in file. */
 	Elf64_Xword p_memsz;			/**< Size of segment in memory. */
 	Elf64_Xword p_align;			/**< Alignment of segment. */
 } __packed Elf64_Phdr;
@@ -244,7 +244,7 @@ typedef struct {
 	Elf32_Word    sh_type;			/**< Section type. */
 	Elf32_Word    sh_flags;			/**< Section attributes. */
 	Elf32_Addr    sh_addr;			/**< Virtual address in memory. */
-	Elf32_Off     sh_offset;		/**< Offset in ﬁle. */
+	Elf32_Off     sh_offset;		/**< Offset in file. */
 	Elf32_Word    sh_size;			/**< Size of section. */
 	Elf32_Word    sh_link;			/**< Link to other section. */
 	Elf32_Word    sh_info;			/**< Miscellaneous information. */
@@ -258,7 +258,7 @@ typedef struct {
 	Elf64_Word  sh_type;			/**< Section type. */
 	Elf64_Xword sh_flags;			/**< Section attributes. */
 	Elf64_Addr  sh_addr;			/**< Virtual address in memory. */
-	Elf64_Off   sh_offset;			/**< Offset in ﬁle. */
+	Elf64_Off   sh_offset;			/**< Offset in file. */
 	Elf64_Xword sh_size;			/**< Size of section. */
 	Elf64_Word  sh_link;			/**< Link to other section. */
 	Elf64_Word  sh_info;			/**< Miscellaneous information. */
@@ -268,14 +268,14 @@ typedef struct {
 
 /** Section header types. */
 #define ELF_SHT_NULL		0		/**< Marks an unused section header. */
-#define ELF_SHT_PROGBITS	1		/**< Contains information deﬁned by the program. */
+#define ELF_SHT_PROGBITS	1		/**< Contains information defined by the program. */
 #define ELF_SHT_SYMTAB		2		/**< Contains a linker symbol table. */
 #define ELF_SHT_STRTAB		3		/**< Contains a string table. */
 #define ELF_SHT_RELA		4		/**< Contains "Rela" type relocation entries. */
 #define ELF_SHT_HASH		5		/**< Contains a symbol hash table. */
 #define ELF_SHT_DYNAMIC		6		/**< Contains dynamic linking tables. */
 #define ELF_SHT_NOTE		7		/**< Contains note information. */
-#define ELF_SHT_NOBITS		8		/**< Contains uninitialised space; does not occupy any space in the ﬁle. */
+#define ELF_SHT_NOBITS		8		/**< Contains uninitialised space; does not occupy any space in the file. */
 #define ELF_SHT_REL		9		/**< Contains "Rel" type relocation entries. */
 #define ELF_SHT_SHLIB		10		/**< Reserved. */
 #define ELF_SHT_DYNSYM		11		/**< Contains a dynamic loader symbol table. */
