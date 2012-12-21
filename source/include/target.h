@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2011 Alex Smith
+ * Copyright (C) 2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,21 +16,29 @@
 
 /**
  * @file
- * @brief		x86 paging definitions.
+ * @brief		Target system definitions.
+ *
+ * On some platforms a single build of the loader may support loading kernels
+ * for multiple different configurations (targets), for example the x86 loader
+ * can load both 32- and 64-bit kernels. This file provides definitions to help
+ * deal with multiple targets.
+ *
+ * @todo		Multi-endian systems?
  */
 
-#ifndef __X86_PAGE_H
-#define __X86_PAGE_H
+#ifndef __TARGET_H
+#define __TARGET_H
 
-/** Definitions of paging structure bits. */
-#define PG_PRESENT		(1<<0)		/**< Page is present. */
-#define PG_WRITE		(1<<1)		/**< Page is writable. */
-#define PG_USER			(1<<2)		/**< Page is accessible in CPL3. */
-#define PG_PWT			(1<<3)		/**< Page has write-through caching. */
-#define PG_PCD			(1<<4)		/**< Page has caching disabled. */
-#define PG_ACCESSED		(1<<5)		/**< Page has been accessed. */
-#define PG_DIRTY		(1<<6)		/**< Page has been written to. */
-#define PG_LARGE		(1<<7)		/**< Page is a large page. */
-#define PG_GLOBAL		(1<<8)		/**< Page won't be cleared in TLB. */
+#include <types.h>
 
-#endif /* __X86_PAGE_H */
+/** Integer types that can represent pointers/sizes for all targets. */
+typedef uint64_t target_ptr_t;
+typedef uint64_t target_size_t;
+
+/** Possible target operating mode types. */
+typedef enum target_type {
+	TARGET_TYPE_32BIT,		/**< 32-bit. */
+	TARGET_TYPE_64BIT,		/**< 64-bit. */
+} target_type_t;
+
+#endif /* __TARGET_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,8 +22,14 @@
 #ifndef __MMU_H
 #define __MMU_H
 
-#include <arch/mmu.h>
+#include <target.h>
 
-extern bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size_t size);
+/** Type of an MMU context. */
+typedef struct mmu_context mmu_context_t;
+
+extern bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys,
+	target_size_t size);
+
+extern mmu_context_t *mmu_context_create(target_type_t target);
 
 #endif /* __MMU_H */

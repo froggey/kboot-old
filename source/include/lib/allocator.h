@@ -24,6 +24,8 @@
 
 #include <lib/list.h>
 
+#include <target.h>
+
 /** Structure containing an allocator. */
 typedef struct allocator {
 	target_ptr_t start;		/**< Start of the region that the allocator manages. */

@@ -60,8 +60,4 @@ typedef unsigned long ptr_t;
 /** Integer type that can represent a physical address. */
 typedef unsigned long phys_ptr_t;
 
-/** Integer type that can represent a pointer on the loaded system. */
-typedef unsigned long target_ptr_t;
-typedef unsigned long target_size_t;
-
 #endif /* __ARCH_TYPES_H */

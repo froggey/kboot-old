@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +22,7 @@
 #include <arch/page.h>
 
 #include <x86/cpu.h>
-#include <x86/page.h>
+#include <x86/mmu.h>
 
 #include <lib/string.h>
 
@@ -53,9 +53,9 @@ static uint64_t *get_pdir64(mmu_context_t *ctx, uint64_t virt) {
 
 	/* Get the page directory pointer number. A PDP covers 512GB. */
 	pml4e = (virt & 0x0000FFFFFFFFF000) / 0x8000000000;
-	if(!(pml4[pml4e] & PG_PRESENT)) {
+	if(!(pml4[pml4e] & X86_PTE_PRESENT)) {
 		addr = allocate_structure();
-		pml4[pml4e] = addr | PG_PRESENT | PG_WRITE;
+		pml4[pml4e] = addr | X86_PTE_PRESENT | X86_PTE_WRITE;
 	}
 
 	/* Get the PDP from the PML4. */
@@ -63,9 +63,9 @@ static uint64_t *get_pdir64(mmu_context_t *ctx, uint64_t virt) {
 
 	/* Get the page directory number. A page directory covers 1GB. */
 	pdpe = (virt % 0x8000000000) / 0x40000000;
-	if(!(pdp[pdpe] & PG_PRESENT)) {
+	if(!(pdp[pdpe] & X86_PTE_PRESENT)) {
 		addr = allocate_structure();
-		pdp[pdpe] = addr | PG_PRESENT | PG_WRITE;
+		pdp[pdpe] = addr | X86_PTE_PRESENT | X86_PTE_WRITE;
 	}
 
 	/* Return the page directory address. */
@@ -85,7 +85,7 @@ static void map_large64(mmu_context_t *ctx, uint64_t virt, uint64_t phys) {
 
 	pdir = get_pdir64(ctx, virt);
 	pde = (virt % 0x40000000) / 0x200000;
-	pdir[pde] = phys | PG_PRESENT | PG_WRITE | PG_LARGE;
+	pdir[pde] = phys | X86_PTE_PRESENT | X86_PTE_WRITE | X86_PTE_LARGE;
 }
 
 /** Map a small page in a 64-bit context.
@@ -104,9 +104,9 @@ static void map_small64(mmu_context_t *ctx, uint64_t virt, uint64_t phys) {
 
 	/* Get the page directory entry number. */
 	pde = (virt % 0x40000000) / 0x200000;
-	if(!(pdir[pde] & PG_PRESENT)) {
+	if(!(pdir[pde] & X86_PTE_PRESENT)) {
 		addr = allocate_structure();
-		pdir[pde] = addr | PG_PRESENT | PG_WRITE;
+		pdir[pde] = addr | X86_PTE_PRESENT | X86_PTE_WRITE;
 	}
 
 	/* Get the page table from the page directory. */
@@ -114,7 +114,7 @@ static void map_small64(mmu_context_t *ctx, uint64_t virt, uint64_t phys) {
 
 	/* Map the page. */
 	pte = (virt % 0x200000) / PAGE_SIZE;
-	ptbl[pte] = phys | PG_PRESENT | PG_WRITE;
+	ptbl[pte] = phys | X86_PTE_PRESENT | X86_PTE_WRITE;
 }
 
 /** Create a mapping in a 64-bit MMU context.
@@ -166,7 +166,7 @@ static void map_large32(mmu_context_t *ctx, uint32_t virt, uint32_t phys) {
 
 	pdir = (uint32_t *)((ptr_t)ctx->cr3);
 	pde = virt / 0x400000;
-	pdir[pde] = phys | PG_PRESENT | PG_WRITE | PG_LARGE;
+	pdir[pde] = phys | X86_PTE_PRESENT | X86_PTE_WRITE | X86_PTE_LARGE;
 }
 
 /** Map a small page in a 32-bit context.
@@ -185,9 +185,9 @@ static void map_small32(mmu_context_t *ctx, uint32_t virt, uint32_t phys) {
 
 	/* Get the page directory entry number. */
 	pde = virt / 0x400000;
-	if(!(pdir[pde] & PG_PRESENT)) {
+	if(!(pdir[pde] & X86_PTE_PRESENT)) {
 		addr = allocate_structure();
-		pdir[pde] = addr | PG_PRESENT | PG_WRITE;
+		pdir[pde] = addr | X86_PTE_PRESENT | X86_PTE_WRITE;
 	}
 
 	/* Get the page table from the page directory. */
@@ -195,7 +195,7 @@ static void map_small32(mmu_context_t *ctx, uint32_t virt, uint32_t phys) {
 
 	/* Map the page. */
 	pte = (virt % 0x400000) / PAGE_SIZE;
-	ptbl[pte] = phys | PG_PRESENT | PG_WRITE;
+	ptbl[pte] = phys | X86_PTE_PRESENT | X86_PTE_WRITE;
 }
 
 /** Create a mapping in a 32-bit MMU context.
@@ -255,12 +255,12 @@ bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size
 }
 
 /** Create a new MMU context.
- * @param is64		Whether to create a 64-bit context. */
-mmu_context_t *mmu_context_create(bool is64) {
+ * @param target	Target operation mode definition. */
+mmu_context_t *mmu_context_create(target_type_t target) {
 	mmu_context_t *ctx;
 
 	ctx = kmalloc(sizeof(*ctx));
-	ctx->is64 = is64;
+	ctx->is64 = target == TARGET_TYPE_64BIT;
 	ctx->cr3 = allocate_structure();
 	return ctx;
 }
