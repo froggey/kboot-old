@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -19,134 +19,162 @@
  * @brief		Test kernel support functions.
  */
 
+#include <lib/ctype.h>
+#include <lib/printf.h>
 #include <lib/string.h>
+
 #include <loader.h>
 
 extern void console_putc(char ch);
 
-/** Print a character.
- * @param ch		Character to print. */
-static inline void printf_print_char(char ch) {
+/** Get the length of a string.
+ * @param str		Pointer to the string.
+ * @return		Length of the string. */
+size_t strlen(const char *str) {
+	size_t ret;
+
+	for(ret = 0; *str; str++, ret++) {}
+	return ret;
+}
+
+/** Get length of a string with limit.
+ * @param str		Pointer to the string.
+ * @param count		Maximum length of the string.
+ * @return		Length of the string. */
+size_t strnlen(const char *str, size_t count) {
+	size_t ret;
+
+	for(ret = 0; *str && ret < count; str++, ret++) {}
+	return ret;
+}
+
+/** Macro to implement strtoul() and strtoull(). */
+#define __strtoux(type, cp, endp, base)		\
+	__extension__ \
+	({ \
+		type result = 0, value; \
+		if(!base) { \
+			if(*cp == '0') { \
+				if((tolower(*(++cp)) == 'x') && isxdigit(cp[1])) { \
+					cp++; \
+					base = 16; \
+				} else { \
+					base = 8; \
+				} \
+			} else { \
+				base = 10; \
+			} \
+		} else if(base == 16) { \
+			if(cp[0] == '0' && tolower(cp[1]) == 'x') \
+				cp += 2; \
+		} \
+		\
+		while(isxdigit(*cp) && (value = isdigit(*cp) \
+			? *cp - '0' : tolower(*cp) - 'a' + 10) < base) \
+		{ \
+			result = result * base + value; \
+			cp++; \
+		} \
+		\
+		if(endp) \
+			*endp = (char *)cp; \
+		result; \
+	})
+
+/**
+ * Convert a string to an unsigned long.
+ *
+ * Converts a string to an unsigned long using the specified number base.
+ *
+ * @param cp		The start of the string.
+ * @param endp		Pointer to the end of the parsed string placed here.
+ * @param base		The number base to use (if zero will guess).
+ *
+ * @return		Converted value.
+ */
+unsigned long strtoul(const char *cp, char **endp, unsigned int base) {
+	return __strtoux(unsigned long, cp, endp, base);
+}
+
+/**
+ * Convert a string to a signed long.
+ *
+ * Converts a string to an signed long using the specified number base.
+ *
+ * @param cp		The start of the string.
+ * @param endp		Pointer to the end of the parsed string placed here.
+ * @param base		The number base to use.
+ *
+ * @return		Converted value.
+ */
+long strtol(const char *cp, char **endp, unsigned int base) {
+	if(*cp == '-')
+		return -strtoul(cp + 1, endp, base);
+
+	return strtoul(cp, endp, base);
+}
+
+/**
+ * Convert a string to an unsigned long long.
+ *
+ * Converts a string to an unsigned long long using the specified number base.
+ *
+ * @param cp		The start of the string.
+ * @param endp		Pointer to the end of the parsed string placed here.
+ * @param base		The number base to use.
+ *
+ * @return		Converted value.
+ */
+unsigned long long strtoull(const char *cp, char **endp, unsigned int base) {
+	return __strtoux(unsigned long long, cp, endp, base);
+}
+
+/**
+ * Convert a string to an signed long long.
+ *
+ * Converts a string to an signed long long using the specified number base.
+ *
+ * @param cp		The start of the string.
+ * @param endp		Pointer to the end of the parsed string placed here.
+ * @param base		The number base to use.
+ *
+ * @return		Converted value.
+ */
+long long strtoll(const char *cp, char **endp, unsigned int base) {
+	if(*cp == '-')
+		return -strtoull(cp + 1, endp, base);
+
+	return strtoull(cp, endp, base);
+}
+
+/** Helper for kvprintf().
+ * @param ch		Character to display.
+ * @param data		Console to use.
+ * @param total		Pointer to total character count. */
+static void kvprintf_helper(char ch, void *data, int *total) {
 	console_putc(ch);
+	*total = *total + 1;
 }
 
-/** Print a string.
- * @param str		String to print. */
-static inline void printf_print_string(const char *str) {
-	while(*str) {
-		printf_print_char(*(str++));
-	}
+/** Output a formatted message to the console.
+ * @param fmt		Format string used to create the message.
+ * @param args		Arguments to substitute into format.
+ * @return		Number of characters printed. */
+int kvprintf(const char *fmt, va_list args) {
+	return do_printf(kvprintf_helper, NULL, fmt, args);
 }
 
-/** Print a hexadecimal value.
- * @param val		Value to print. */
-static inline void printf_print_base16(unsigned long val) {
-	char buf[20], *pos = buf + sizeof(buf);
-
-	*--pos = 0;
-	do {
-		if((val & 0xF) <= 0x09) {
-			*--pos = '0' + (val & 0xF);
-		} else {
-			*--pos = 'a' + ((val & 0xF) - 0xA);
-		}
-		val >>= 4;
-	} while(val > 0);
-
-	*--pos = 'x';
-	*--pos = '0';
-	printf_print_string(pos);
-}
-
-/** Print a decimal value.
- * @param val		Value to print. */
-static inline void printf_print_base10(unsigned long val) {
-	char buf[20], *pos = buf + sizeof(buf);
-
-	*--pos = 0;
-	do {
-		*--pos = '0' + (val % 10); \
-		val /= 10;
-	} while(val > 0);
-
-	printf_print_string(pos);
-}
-
-/** Quick and dirty printf()-style function.
- * @param format	Format string.
- * @param ...		Format arguments. */
-static void do_printf(const char *format, va_list args) {
-	int state = 0, dec;
-	unsigned int udec;
-	const char *str;
-	void *ptr;
-
-	for(; *format; format++) {
-		switch(state) {
-		case 0:
-			if(*format == '%') {
-				state = 1;
-				break;
-			}
-			printf_print_char(format[0]);
-			break;
-		case 1:
-			/* Handle literal %. */
-			if(*format == '%') {
-				printf_print_char('%');
-				state = 0;
-				break;
-			}
-
-			/* Handle conversion characters. */
-			switch(*format) {
-			case 's':
-				str = va_arg(args, const char *);
-				printf_print_string(str);
-				break;
-			case 'c':
-				dec = va_arg(args, int);
-				printf_print_char(dec);
-				break;
-			case 'd':
-				dec = va_arg(args, int);
-				if(dec < 0) {
-					printf_print_string("-");
-					dec = -dec;
-				}
-				printf_print_base10((unsigned long)dec);
-				break;
-			case 'u':
-				udec = va_arg(args, unsigned int);
-				printf_print_base10((unsigned long)udec);
-				break;
-			case 'x':
-				udec = va_arg(args, unsigned int);
-				printf_print_base16((unsigned long)udec);
-				break;
-			case 'p':
-				ptr = va_arg(args, void *);
-				printf_print_base16((unsigned long)ptr);
-				break;
-			case 'z':
-				continue;
-			}
-			state = 0;
-			break;
-		}
-	}
-}
-
-/** Quick and dirty printf()-style function.
- * @note		Does not return the right value.
- * @param format	Format string.
- * @param ...		Format arguments. */
-int kprintf(const char *format, ...) {
+/** Output a formatted message to the console.
+ * @param fmt		Format string used to create the message.
+ * @param ...		Arguments to substitute into format.
+ * @return		Number of characters printed. */
+int kprintf(const char *fmt, ...) {
 	va_list args;
+	int ret;
 
-	va_start(args, format);
-	do_printf(format, args);
+	va_start(args, fmt);
+	ret = kvprintf(fmt, args);
 	va_end(args);
 
-	return 0;
+	return ret;
 }

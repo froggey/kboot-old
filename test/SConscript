@@ -21,6 +21,7 @@ sources = map(File, [
 	'%s/console.c' % (config['PLATFORM']),
 	'main.c',
 	'support.c',
+	'../source/lib/printf.c',
 ])
 
 # Link the test kernel.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -19,18 +19,302 @@
  * @brief		KBoot test kernel.
  */
 
+#include <lib/utility.h>
+
+#include <elf.h>
 #include <kboot.h>
 #include <loader.h>
 
-extern void kmain(uint32_t magic, phys_ptr_t tags);
+#ifdef __LP64__
+typedef Elf64_Shdr elf_shdr_t;
+typedef Elf64_Sym  elf_sym_t;
+typedef Elf64_Addr elf_addr_t;
+#else
+typedef Elf32_Shdr elf_shdr_t;
+typedef Elf32_Sym  elf_sym_t;
+typedef Elf32_Addr elf_addr_t;
+#endif
+
+extern void kmain(uint32_t magic, kboot_tag_t *tags);
 
 KBOOT_IMAGE(0);
 KBOOT_BOOLEAN_OPTION("test_option", "Test Option", true);
 
+/** Dump a core tag. */
+static void dump_core_tag(kboot_tag_core_t *tag) {
+	kprintf("KBOOT_TAG_CORE:\n");
+	kprintf("  tags_phys   = 0x%" PRIx64 "\n", tag->tags_phys);
+	kprintf("  tags_size   = %" PRIu32 "\n", tag->tags_size);
+	kprintf("  kernel_phys = 0x%" PRIx64 "\n", tag->kernel_phys);
+	kprintf("  stack_base  = 0x%" PRIx64 "\n", tag->stack_base);
+	kprintf("  stack_phys  = 0x%" PRIx64 "\n", tag->stack_phys);
+	kprintf("  stack_size  = %" PRIu32 "\n", tag->stack_size);
+}
+
+/** Dump an option tag. */
+static void dump_option_tag(kboot_tag_option_t *tag) {
+	const char *name;
+	void *value;
+
+	kprintf("KBOOT_TAG_OPTION:\n");
+	kprintf("  type       = %" PRIu8 "\n", tag->type);
+	kprintf("  name_size  = %" PRIu32 "\n", tag->name_size);
+	kprintf("  value_size = %" PRIu32 "\n", tag->value_size);
+
+	name = (const char *)ROUND_UP((ptr_t)tag + tag->header.size, 8);
+	kprintf("  name       = `%s'\n", name);
+
+	value = (void *)ROUND_UP((ptr_t)name + tag->name_size, 8);
+	switch(tag->type) {
+	case KBOOT_OPTION_BOOLEAN:
+		kprintf("  value      = boolean: %d\n", *(bool *)value);
+		break;
+	case KBOOT_OPTION_STRING:
+		kprintf("  value      = string: `%s'\n", (const char *)value);
+		break;
+	case KBOOT_OPTION_INTEGER:
+		kprintf("  value      = integer: %" PRIu64 "\n", *(uint64_t *)value);
+		break;
+	default:
+		kprintf("  <unknown type>\n");
+		break;
+	}
+}
+
+/** Dump a memory tag. */
+static void dump_memory_tag(kboot_tag_memory_t *tag) {
+	kprintf("KBOOT_TAG_MEMORY:\n");
+	kprintf("  start = 0x%" PRIx64 "\n", tag->start);
+	kprintf("  size  = 0x%" PRIx64 "\n", tag->size);
+	kprintf("  end   = 0x%" PRIx64 "\n", tag->start + tag->size);
+	kprintf("  type  = %u\n", tag->type);
+}
+
+/** Dump a virtual memory tag. */
+static void dump_vmem_tag(kboot_tag_vmem_t *tag) {
+	kprintf("KBOOT_TAG_VMEM:\n");
+	kprintf("  start = 0x%" PRIx64 "\n", tag->start);
+	kprintf("  size  = 0x%" PRIx64 "\n", tag->size);
+	kprintf("  end   = 0x%" PRIx64 "\n", tag->start + tag->size);
+	kprintf("  phys  = 0x%" PRIx64 "\n", tag->phys);
+}
+
+/** Dump a pagetables tag. */
+static void dump_pagetables_tag(kboot_tag_pagetables_t *tag) {
+	kprintf("KBOOT_TAG_PAGETABLES:\n");
+#ifdef __x86_64__
+	kprintf("  pml4    = 0x%" PRIx64 "\n", tag->pml4);
+	kprintf("  mapping = 0x%" PRIx64 "\n", tag->mapping);
+#elif defined(__i386__)
+	kprintf("  page_dir = 0x%" PRIx64 "\n", tag->page_dir);
+	kprintf("  mapping  = 0x%" PRIx64 "\n", tag->mapping);
+#endif
+}
+
+/** Dump a module tag. */
+static void dump_module_tag(kboot_tag_module_t *tag) {
+	kprintf("KBOOT_TAG_MODULE:\n");
+	kprintf("  addr = 0x%" PRIx64 "\n", tag->addr);
+	kprintf("  size = %" PRIu32 "\n", tag->size);
+}
+
+/** Dump a video tag. */
+static void dump_video_tag(kboot_tag_video_t *tag) {
+	kprintf("KBOOT_TAG_VIDEO:\n");
+
+	switch(tag->type) {
+	case KBOOT_VIDEO_VGA:
+		kprintf("  type     = %u (KBOOT_VIDEO_VGA)\n", tag->type);
+		kprintf("  cols     = %u\n", tag->vga.cols);
+		kprintf("  lines    = %u\n", tag->vga.lines);
+		kprintf("  x        = %u\n", tag->vga.x);
+		kprintf("  y        = %u\n", tag->vga.y);
+		kprintf("  mem_phys = 0x%" PRIx64 "\n", tag->vga.mem_phys);
+		kprintf("  mem_virt = 0x%" PRIx64 "\n", tag->vga.mem_virt);
+		kprintf("  mem_size = 0x%" PRIx32 "\n", tag->vga.mem_size);
+		break;
+	case KBOOT_VIDEO_LFB:
+		kprintf("  type       = %u (KBOOT_VIDEO_LFB)\n", tag->type);
+		kprintf("  flags      = 0x%" PRIx32 "\n", tag->lfb.flags);
+		if(tag->lfb.flags & KBOOT_LFB_RGB)
+			kprintf("    KBOOT_LFB_RGB\n");
+		if(tag->lfb.flags & KBOOT_LFB_INDEXED)
+			kprintf("    KBOOT_LFB_INDEXED\n");
+		kprintf("  width      = %" PRIu32 "\n", tag->lfb.width);
+		kprintf("  height     = %" PRIu32 "\n", tag->lfb.height);
+		kprintf("  bpp        = %" PRIu8 "\n", tag->lfb.bpp);
+		kprintf("  pitch      = %" PRIu32 "\n", tag->lfb.pitch);
+		kprintf("  fb_phys    = 0x%" PRIx64 "\n", tag->lfb.fb_phys);
+		kprintf("  fb_virt    = 0x%" PRIx64 "\n", tag->lfb.fb_virt);
+		kprintf("  fb_size    = 0x%" PRIx32 "\n", tag->lfb.fb_size);
+
+		if(tag->lfb.flags & KBOOT_LFB_RGB) {
+			kprintf("  red_size   = %" PRIu8 "\n", tag->lfb.red_size);
+			kprintf("  red_pos    = %" PRIu8 "\n", tag->lfb.red_pos);
+			kprintf("  green_size = %" PRIu8 "\n", tag->lfb.green_size);
+			kprintf("  green_pos  = %" PRIu8 "\n", tag->lfb.green_pos);
+			kprintf("  blue_size  = %" PRIu8 "\n", tag->lfb.blue_size);
+			kprintf("  blue_pos   = %" PRIu8 "\n", tag->lfb.blue_pos);
+		} else if(tag->lfb.flags & KBOOT_LFB_INDEXED) {
+			kprintf("  palette (%" PRIu16 " entries):\n", tag->lfb.palette_size);
+			for(uint16_t i = 0; i < tag->lfb.palette_size; i++) {
+				kprintf("    r = %-3u, g = %-3u, b = %-3u\n",
+					tag->lfb.palette[i].red, tag->lfb.palette[i].green,
+					tag->lfb.palette[i].blue);
+			}
+		}
+
+		break;
+	default:
+		kprintf("  type = %u (unknown)\n", tag->type);
+		break;
+	}
+}
+
+/** Print an IP address.
+ * @param addr		Address to print.
+ * @param flags		Behaviour flags. */
+static void print_ip_addr(kboot_ip_addr_t *addr, uint32_t flags) {
+	if(flags & KBOOT_NET_IPV6) {
+		kprintf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
+			addr->v6[0], addr->v6[1], addr->v6[2], addr->v6[3],
+			addr->v6[4], addr->v6[5], addr->v6[6], addr->v6[7],
+			addr->v6[8], addr->v6[9], addr->v6[10], addr->v6[11],
+			addr->v6[12], addr->v6[13], addr->v6[14], addr->v6[15]);
+	} else {
+		kprintf("%u.%u.%u.%u\n", addr->v4[0], addr->v4[1], addr->v4[2], addr->v4[3]);
+	}
+}
+
+/** Dump a boot device tag. */
+static void dump_bootdev_tag(kboot_tag_bootdev_t *tag) {
+	kprintf("KBOOT_TAG_BOOTDEV:\n");
+
+	switch(tag->method) {
+	case KBOOT_METHOD_NONE:
+		kprintf("  method = %" PRIu32 " (KBOOT_METHOD_NONE)\n", tag->method);
+		break;
+	case KBOOT_METHOD_DISK:
+		kprintf("  method        = %" PRIu32 " (KBOOT_METHOD_DISK)\n", tag->method);
+		kprintf("  flags         = 0x%" PRIx32 "\n", tag->disk.flags);
+		kprintf("  uuid          = `%s'\n", tag->disk.uuid);
+		kprintf("  device        = 0x%x\n", tag->disk.device);
+		kprintf("  partition     = 0x%x\n", tag->disk.partition);
+		kprintf("  sub_partition = 0x%x\n", tag->disk.sub_partition);
+		break;
+	case KBOOT_METHOD_NET:
+		kprintf("  method      = %" PRIu32 " (KBOOT_METHOD_NET)\n", tag->method);
+		kprintf("  flags       = 0x%" PRIx32 "\n", tag->net.flags);
+		if(tag->net.flags & KBOOT_NET_IPV6)
+			kprintf("    KBOOT_NET_IPV6\n");
+		kprintf("  server_ip   = "); print_ip_addr(&tag->net.server_ip, tag->net.flags);
+		kprintf("  server_port = %" PRIu16 "\n", tag->net.server_port);
+		kprintf("  gateway_ip  = "); print_ip_addr(&tag->net.gateway_ip, tag->net.flags);
+		kprintf("  client_ip   = "); print_ip_addr(&tag->net.client_ip, tag->net.flags);
+		kprintf("  client_mac  = %02x:%02x:%02x:%02x:%02x:%02x\n",
+			tag->net.client_mac[0], tag->net.client_mac[1],
+			tag->net.client_mac[2], tag->net.client_mac[3],
+			tag->net.client_mac[4], tag->net.client_mac[5]);
+		break;
+	default:
+		kprintf("  method = %" PRIu32 " (unknown)\n", tag->method);
+		break;
+	}
+}
+
+/** Dump a log tag. */
+static void dump_log_tag(kboot_tag_log_t *tag) {
+	kprintf("KBOOT_TAG_LOG:\n");
+	kprintf("  log_virt  = 0x%" PRIx64 "\n", tag->log_virt);
+	kprintf("  log_phys  = 0x%" PRIx64 "\n", tag->log_phys);
+	kprintf("  log_size  = %" PRIu32 "\n", tag->log_size);
+	kprintf("  prev_phys = 0x%" PRIx64 "\n", tag->prev_phys);
+	kprintf("  prev_size = %" PRIu32 "\n", tag->prev_size);
+}
+
+/** Get a section by index.
+ * @param tag		Tag to get from.
+ * @param index		Index to get. */
+static elf_shdr_t *find_elf_section(kboot_tag_sections_t *tag, uint32_t index) {
+	return (elf_shdr_t *)&tag->sections[index * tag->entsize];
+}
+
+/** Dump a sections tag. */
+static void dump_sections_tag(kboot_tag_sections_t *tag) {
+	const char *strtab;
+
+	kprintf("KBOOT_TAG_SECTIONS:\n");
+	kprintf("  num      = %" PRIu32 "\n", tag->num);
+	kprintf("  entsize  = %" PRIu32 "\n", tag->entsize);
+	kprintf("  shstrndx = %" PRIu32 "\n", tag->shstrndx);
+
+	strtab = (const char *)find_elf_section(tag, tag->shstrndx)->sh_addr;
+	kprintf("  shstrtab = %p\n", strtab);
+
+	for(uint32_t i = 0; i < tag->num; i++) {
+		elf_shdr_t *shdr = find_elf_section(tag, i);
+
+		kprintf(" section %u (`%s'):\n", i, (shdr->sh_name) ? strtab + shdr->sh_name : "");
+		kprintf("   sh_type  = %" PRIu32 "\n", shdr->sh_type);
+		kprintf("   sh_flags = 0x%" PRIx32 "\n", shdr->sh_flags);
+		kprintf("   sh_addr  = %p\n", shdr->sh_addr);
+		kprintf("   sh_size  = %" PRIu32 "\n", shdr->sh_size);
+	}
+}
+
+/** Dump an E820 tag. */
+static void dump_e820_tag(kboot_tag_e820_t *tag) {
+	kprintf("KBOOT_TAG_E820:\n");
+	kprintf("  start  = 0x%" PRIx64 "\n", tag->start);
+	kprintf("  length = 0x%" PRIx64 "\n", tag->length);
+	kprintf("  type   = %" PRIu32 "\n", tag->type);
+}
+
 /** Entry point of the test kernel.
  * @param magic		KBoot magic number.
- * @param tags		Tag list address. */
-void kmain(uint32_t magic, phys_ptr_t tags) {
-	kprintf("Hello World! magic: %x, tags: %x\n", magic, tags);
+ * @param tags		Tag list pointer. */
+void kmain(uint32_t magic, kboot_tag_t *tags) {
+	kprintf("Test kernel loaded: magic: %x, tags: %p\n", magic, tags);
+
+	while(tags->type != KBOOT_TAG_NONE) {
+		switch(tags->type) {
+		case KBOOT_TAG_CORE:
+			dump_core_tag((kboot_tag_core_t *)tags);
+			break;
+		case KBOOT_TAG_OPTION:
+			dump_option_tag((kboot_tag_option_t *)tags);
+			break;
+		case KBOOT_TAG_MEMORY:
+			dump_memory_tag((kboot_tag_memory_t *)tags);
+			break;
+		case KBOOT_TAG_VMEM:
+			dump_vmem_tag((kboot_tag_vmem_t *)tags);
+			break;
+		case KBOOT_TAG_PAGETABLES:
+			dump_pagetables_tag((kboot_tag_pagetables_t *)tags);
+			break;
+		case KBOOT_TAG_MODULE:
+			dump_module_tag((kboot_tag_module_t *)tags);
+			break;
+		case KBOOT_TAG_VIDEO:
+			dump_video_tag((kboot_tag_video_t *)tags);
+			break;
+		case KBOOT_TAG_BOOTDEV:
+			dump_bootdev_tag((kboot_tag_bootdev_t *)tags);
+			break;
+		case KBOOT_TAG_LOG:
+			dump_log_tag((kboot_tag_log_t *)tags);
+			break;
+		case KBOOT_TAG_SECTIONS:
+			dump_sections_tag((kboot_tag_sections_t *)tags);
+			break;
+		case KBOOT_TAG_E820:
+			dump_e820_tag((kboot_tag_e820_t *)tags);
+			break;
+		}
+
+		tags = (kboot_tag_t *)ROUND_UP((ptr_t)tags + tags->size, 8);
+	}
+
 	while(true);
 }
