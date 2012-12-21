@@ -50,9 +50,9 @@
 				note = (elf_note_t *)(buf + offset); \
 				offset += sizeof(elf_note_t); \
 				name = (const char *)(buf + offset); \
-				offset += ROUND_UP(note->n_namesz, 4); \
+				offset += ROUND_UP(note->n_namesz, _bits / 8); \
 				desc = buf + offset; \
-				offset += ROUND_UP(note->n_descsz, 4); \
+				offset += ROUND_UP(note->n_descsz, _bits / 8); \
 				if(!cb(note, name, desc, data)) { \
 					kfree(buf); \
 					kfree(phdrs); \
