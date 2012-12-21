@@ -33,6 +33,8 @@
 
 #include <lib/string.h>
 
+#include <loaders/linux.h>
+
 #include <assert.h>
 #include <fs.h>
 #include <loader.h>
@@ -47,9 +49,6 @@ typedef struct linux_data {
 	ui_window_t *config;		/**< Configuration window. */
 #endif
 } linux_data_t;
-
-extern __noreturn void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd,
-	const char *cmdline);
 
 /** Load the operating system. */
 static __noreturn void linux_loader_load(void) {

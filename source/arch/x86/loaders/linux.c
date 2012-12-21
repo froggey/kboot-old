@@ -33,13 +33,13 @@
 #include <lib/string.h>
 #include <lib/utility.h>
 
+#include <loaders/linux.h>
+
 #include <assert.h>
 #include <fs.h>
 #include <loader.h>
 #include <memory.h>
 
-extern __noreturn void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd,
-	const char *cmdline);
 extern __noreturn void linux_arch_enter(ptr_t entry, ptr_t params, ptr_t sp);
 
 /** Allocate memory to load the kernel to.
