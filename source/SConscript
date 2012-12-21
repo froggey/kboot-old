@@ -23,6 +23,7 @@ sources = FeatureSources(config, [
 	('KBOOT_FS_ISO9660', 'fs/iso9660.c'),
 	('!KBOOT_HAVE_DISK', 'fs/tar.c'),
 
+	'lib/allocator.c',
 	'lib/printf.c',
 	'lib/string.c',
 	'lib/support.c',
