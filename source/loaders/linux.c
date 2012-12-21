@@ -42,17 +42,17 @@
 #include <ui.h>
 
 /** Structure containing Linux kernel loading arguments. */
-typedef struct linux_data {
+typedef struct linux_loader {
 	const char *kernel;		/**< Kernel image path. */
 	const char *initrd;		/**< Initrd path. */
 #if CONFIG_KBOOT_UI
 	ui_window_t *config;		/**< Configuration window. */
 #endif
-} linux_data_t;
+} linux_loader_t;
 
 /** Load the operating system. */
 static __noreturn void linux_loader_load(void) {
-	linux_data_t *data = current_environ->data;
+	linux_loader_t *data = current_environ->data;
 	file_handle_t *kernel, *initrd = NULL;
 	value_t *cmdline;
 
@@ -76,7 +76,7 @@ static __noreturn void linux_loader_load(void) {
 /** Return a window for configuring the OS.
  * @return		Pointer to configuration window. */
 static ui_window_t *linux_loader_configure(void) {
-	linux_data_t *data = current_environ->data;
+	linux_loader_t *data = current_environ->data;
 	return data->config;
 }
 #endif
@@ -94,7 +94,7 @@ static loader_type_t linux_loader_type = {
  * @return		Whether completed successfully. */
 static bool config_cmd_linux(value_list_t *args) {
 	value_t *entry, value;
-	linux_data_t *data;
+	linux_loader_t *data;
 
 	if((args->count != 1 && args->count != 2)
 		|| args->values[0].type != VALUE_TYPE_STRING
