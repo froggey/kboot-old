@@ -104,4 +104,6 @@ typedef struct vbe_mode_info {
 #define VBE_FUNCTION_MODE_INFO		0x4F01	/**< Return VBE Mode Information. */
 #define VBE_FUNCTION_SET_MODE		0x4F02	/**< Set VBE Mode. */
 
+extern void vbe_init(void);
+
 #endif /* __PLATFORM_VBE_H */

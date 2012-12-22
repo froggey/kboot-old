@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief		VBE video setup code.
+ * @brief		VBE video mode support.
  */
 
 #include <lib/list.h>
@@ -28,8 +28,11 @@
 #include <loader.h>
 #include <memory.h>
 #include <menu.h>
-#include <video.h>
 
+/** Override for video mode from Multiboot command line. */
+char *video_mode_override = NULL;
+
+#if 0
 /** Structure describing a VBE video mode. */
 typedef struct vbe_mode {
 	video_mode_t header;		/**< Video mode header structure. */
@@ -41,9 +44,6 @@ typedef struct vbe_mode {
 #define PREFERRED_MODE_HEIGHT		768
 #define FALLBACK_MODE_WIDTH		800
 #define FALLBACK_MODE_HEIGHT		600
-
-/** Override for video mode from Multiboot command line. */
-char *video_mode_override = NULL;
 
 /** Detect available video modes.
  * @todo		Handle VBE not being supported. */
@@ -151,4 +151,10 @@ void video_enable(video_mode_t *mode) {
 
 	dprintf("video: set video mode %dx%dx%d (framebuffer: 0x%" PRIxPHYS ")\n",
 		mode->width, mode->height, mode->bpp, mode->addr);
+}
+#endif
+
+/** Detect available video modes. */
+void vbe_init(void) {
+
 }

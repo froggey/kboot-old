@@ -28,7 +28,6 @@
 #include <loader.h>
 #include <memory.h>
 #include <menu.h>
-#include <video.h>
 
 /** Main function for the Kiwi bootloader. */
 void loader_main(void) {
@@ -40,10 +39,6 @@ void loader_main(void) {
 	/* We must have a filesystem to boot from. */
 	if(!boot_device || !boot_device->fs)
 		boot_error("Could not find boot filesystem");
-
-#if CONFIG_KBOOT_HAVE_VIDEO
-	video_init();
-#endif
 
 	/* Load the configuration file. */
 	config_init();

@@ -29,7 +29,7 @@ sources = FeatureSources(config, [
 	'platform.c',
 	'pxe.c',
 	'start.S',
-	'video.c',
+	'vbe.c',
 ])
 
 # Build the stage 1 loaders.

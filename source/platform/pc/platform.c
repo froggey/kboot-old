@@ -27,6 +27,7 @@
 
 #include <pc/console.h>
 #include <pc/multiboot.h>
+#include <pc/vbe.h>
 
 #include <config.h>
 #include <loader.h>
@@ -57,6 +58,10 @@ void platform_init(void) {
 		}
 	}
 
+	/* Initialize hardware. */
+	vbe_init();
+
+	/* Call the main function. */
 	loader_main();
 }
 
