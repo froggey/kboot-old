@@ -127,7 +127,7 @@ Fields:
    until it is able to make an allocation. If 0, `alignment` will also be the
    minimum alignment.
  * `phys_address`: If `KBOOT_LOAD_FIXED` set, load at this exact physical
-   address.
+   address (must be a multiple of the machine's page size).
  * `virt_map_base`/`virt_map_size`: The boot loader allocates regions of the
    virtual address space to map certain things into, such as the tag list for
    the kernel and the video framebuffer. These fields specify the region of
