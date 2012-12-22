@@ -153,13 +153,20 @@ bool allocator_alloc(allocator_t *alloc, target_size_t size, target_ptr_t *addrp
  * @param addr		Address of region to reserve.
  * @param size		Size of region to reserve. */
 void allocator_reserve(allocator_t *alloc, target_ptr_t addr, target_size_t size) {
+	target_ptr_t region_end, alloc_end;
 	allocator_region_t *region;
 
 	assert((addr % alloc->align) == 0);
 	assert((size % alloc->align) == 0);
-	assert(addr >= alloc->start);
 	assert(size);
-	assert(addr + size - 1 <= alloc->start + alloc->size - 1);
+
+	/* Trim given range to be within the allocator. */
+	region_end = addr + size - 1;
+	alloc_end = alloc->start + alloc->size - 1;
+	addr = MAX(addr, alloc->start);
+	size = MIN(region_end, alloc_end) - addr + 1;
+	if(!size)
+		return;
 
 	region = allocator_region_create(addr, size, true);
 	insert_region(alloc, region);
