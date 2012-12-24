@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief		Region allocator.
+ * @brief		Virtual memory region allocator.
  */
 
 #ifndef __LIB_ALLOCATOR_H
@@ -26,18 +26,17 @@
 
 #include <target.h>
 
-/** Structure containing an allocator. */
+/** Structure containing a virtual region allocator. */
 typedef struct allocator {
 	target_ptr_t start;		/**< Start of the region that the allocator manages. */
 	target_size_t size;		/**< Size of the region that the allocator manages. */
-	target_size_t align;		/**< Minimum alignment of allocations. */
 	list_t regions;			/**< List of regions. */
 } allocator_t;
 
 extern bool allocator_alloc(allocator_t *alloc, target_size_t size, target_ptr_t *addrp);
+extern bool allocator_insert(allocator_t *alloc, target_ptr_t addr, target_size_t size);
 extern void allocator_reserve(allocator_t *alloc, target_ptr_t addr, target_size_t size);
 
-extern void allocator_init(allocator_t *alloc, target_ptr_t start, target_size_t size,
-	target_size_t align);
+extern void allocator_init(allocator_t *alloc, target_ptr_t start, target_size_t size);
 
 #endif /* __LIB_ALLOCATOR_H */

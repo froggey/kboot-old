@@ -40,7 +40,6 @@ extern void kmain(uint32_t magic, kboot_tag_t *tags);
 KBOOT_IMAGE(0);
 KBOOT_BOOLEAN_OPTION("bool_option", "Boolean Option", true);
 KBOOT_STRING_OPTION("string_option", "String Option", "Default Value");
-KBOOT_MAPPING(0xffffffffffffffff, 0x100000, 0x1000);
 
 /** Dump a core tag. */
 static void dump_core_tag(kboot_tag_core_t *tag) {

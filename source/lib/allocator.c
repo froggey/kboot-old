@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief		Region allocator.
+ * @brief		Virtual memory region allocator.
  */
 
 #include <lib/allocator.h>
@@ -123,7 +123,7 @@ static void insert_region(allocator_t *alloc, allocator_region_t *region) {
 bool allocator_alloc(allocator_t *alloc, target_size_t size, target_ptr_t *addrp) {
 	allocator_region_t *region;
 
-	assert((size % alloc->align) == 0);
+	assert(!(size % PAGE_SIZE));
 	assert(size);
 
 	LIST_FOREACH(&alloc->regions, iter) {
@@ -142,16 +142,59 @@ bool allocator_alloc(allocator_t *alloc, target_size_t size, target_ptr_t *addrp
 	return false;
 }
 
-/** Mark an address range as allocated.
+/**
+ * Mark a region as allocated.
+ *
+ * Tries to mark a region of the address space as allocated, ensuring that no
+ * other regions are already allocated within it.
+ *
+ * @param alloc		Allocator to insert into.
+ * @param addr		Start of region to insert.
+ * @param size		Size of region to insert.
+ *
+ * @return		Whether successfully inserted.
+ */
+bool allocator_insert(allocator_t *alloc, target_ptr_t addr, target_size_t size) {
+	target_ptr_t region_end, other_end;
+	allocator_region_t *other;
+
+	assert(!(addr % PAGE_SIZE));
+	assert(!(size % PAGE_SIZE));
+	assert(size);
+
+	region_end = addr + size - 1;
+
+	/* Check for conflicts with other allocated regions. */
+	LIST_FOREACH(&alloc->regions, iter) {
+		other = list_entry(iter, allocator_region_t, header);
+		if(!other->allocated)
+			continue;
+
+		other_end = other->start + other->size - 1;
+		if(MAX(addr, other->start) <= MIN(region_end, other_end))
+			return false;
+	}
+
+	allocator_reserve(alloc, addr, size);
+	return true;
+}
+
+/**
+ * Block a region from being allocated.
+ *
+ * Prevents any future allocations from returning any address within the given
+ * region.
+ *
  * @param alloc		Allocator to reserve in.
  * @param addr		Address of region to reserve.
- * @param size		Size of region to reserve. */
+ * @param size		Size of region to reserve.
+ */
 void allocator_reserve(allocator_t *alloc, target_ptr_t addr, target_size_t size) {
 	target_ptr_t region_end, alloc_end;
 	allocator_region_t *region;
 
-	assert((addr % alloc->align) == 0);
-	assert((size % alloc->align) == 0);
+	assert(!(addr % PAGE_SIZE));
+	assert(!(size % PAGE_SIZE));
 	assert(size);
 
 	/* Trim given range to be within the allocator. */
@@ -171,24 +214,17 @@ void allocator_reserve(allocator_t *alloc, target_ptr_t addr, target_size_t size
  * @param start		Start of range that the allocator manages.
  * @param size		Size of range that the allocator manages. A size of 0
  *			can be used in conjunction with 0 start to mean the
- *			entire address space.
- * @param align		Alignment of ranges. */
-void allocator_init(allocator_t *alloc, target_ptr_t start, target_size_t size,
-	target_size_t align)
-{
+ *			entire address space. */
+void allocator_init(allocator_t *alloc, target_ptr_t start, target_size_t size) {
 	allocator_region_t *region;
 
-	if(!align)
-		align = 1;
-
-	assert((start % align) == 0);
-	assert((size % align) == 0);
+	assert(!(start % PAGE_SIZE));
+	assert(!(size % PAGE_SIZE));
 	assert((start + size) > start || (start + size) == 0);
 
 	list_init(&alloc->regions);
 	alloc->start = start;
 	alloc->size = size;
-	alloc->align = align;
 
 	/* Add a free region covering the entire space. */
 	region = allocator_region_create(start, size, false);

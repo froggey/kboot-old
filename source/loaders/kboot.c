@@ -133,7 +133,7 @@ kboot_vaddr_t kboot_allocate_virtual(kboot_loader_t *loader, kboot_paddr_t phys,
 	kboot_vaddr_t addr;
 
 	if(!allocator_alloc(&loader->alloc, size, &addr))
-		internal_error("Unable to allocate %zu bytes of virtual memory", size);
+		boot_error("Unable to allocate %zu bytes of virtual address space", size);
 
 	if(phys != ~(kboot_paddr_t)0)
 		mmu_map(loader->mmu, addr, phys, size);
@@ -150,9 +150,8 @@ kboot_vaddr_t kboot_allocate_virtual(kboot_loader_t *loader, kboot_paddr_t phys,
 void kboot_map_virtual(kboot_loader_t *loader, kboot_vaddr_t addr, kboot_paddr_t phys,
 	kboot_vaddr_t size)
 {
-	// FIXME: Need to check for conflicts here and that address range is
-	// valid!
-	allocator_reserve(&loader->alloc, addr, size);
+	if(!allocator_insert(&loader->alloc, addr, size))
+		boot_error("Specified mapping conflicts with another");
 
 	if(phys != ~(kboot_paddr_t)0)
 		mmu_map(loader->mmu, addr, phys, size);
@@ -372,6 +371,7 @@ static void add_memory_tags(kboot_loader_t *loader) {
 /** Load the operating system. */
 static __noreturn void kboot_loader_load(void) {
 	kboot_loader_t *loader = current_environ->data;
+	ptr_t loader_start, loader_size;
 	kboot_itag_load_t *load;
 	kboot_tag_core_t *core;
 
@@ -440,8 +440,7 @@ static __noreturn void kboot_loader_load(void) {
 	/* Create the virtual address space and address allocator. Try to
 	 * reserve a page to ensure that we never allocate virtual address 0. */
 	loader->mmu = mmu_context_create(loader->target);
-	allocator_init(&loader->alloc, load->virt_map_base, load->virt_map_size,
-		PAGE_SIZE);
+	allocator_init(&loader->alloc, load->virt_map_base, load->virt_map_size);
 	allocator_reserve(&loader->alloc, 0, PAGE_SIZE);
 
 	/* Load the kernel image. */
@@ -496,25 +495,28 @@ static __noreturn void kboot_loader_load(void) {
 
 	/* Now we have the interesting task of setting things up so that we
 	 * can enter the kernel. It is not always possible to identity map the
-	 * boot loader: things (including the kernel) could already be mapped
-	 * in the virtual address space at the identity mapped location. So,
-	 * we allocate a page of virtual memory, then construct a temporary
-	 * address space to use in the transition to the kernel that maps that
-	 * page and identity maps the boot loader. The architecture entry code
-	 * uses the transition address space to enable the MMU and switch to
-	 * the target operating mode, then copies a chunk of code to the page
-	 * and jumps to it. That code can then switch to the real address space
-	 * and call the kernel. FIXME: Should mark this page and all allocated
-	 * page tables as internal so the kernel won't see them as in use. */
+	 * boot loader: it is possible that something has been mapped into the
+	 * virtual address space at the identity mapped location. So, the
+	 * procedure we use to enter the kernel is as follows:
+	 *  - Allocate a page of the virtual address space, ensuring it does
+	 *    not conflict with the physical addresses of the loader.
+	 *  - Construct a temporary address space that identity maps the loader
+	 *    and the allocated page.
+	 *  - Architecture entry code copies a piece of trampoline code to the
+	 *    page, then enables the MMU and switches to the target operating
+	 *    mode using the temporary address space.
+	 *  - Jump to the trampoline code which switches to the real address
+	 *    space and then jumps to the kernel.
+	 * FIXME: Should mark this page and all allocated page tables as
+	 * internal so the kernel won't see them as in use at all. */
+	loader_start = ROUND_DOWN((ptr_t)__start, PAGE_SIZE);
+	loader_size = ROUND_UP((ptr_t)__end - (ptr_t)__start, PAGE_SIZE);
+	allocator_reserve(&loader->alloc, loader_start, loader_size);
 	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_ALLOC_RECLAIM, &loader->trampoline_phys);
 	loader->trampoline_virt = kboot_allocate_virtual(loader, loader->trampoline_phys,
 		PAGE_SIZE);
-	// FIXME! Need to make this allocate a virtual address that does not
-	// conflict with id mapping!
 	loader->transition = mmu_context_create(loader->target);
-	mmu_map(loader->transition, ROUND_DOWN((ptr_t)__start, PAGE_SIZE),
-		ROUND_DOWN((ptr_t)__start, PAGE_SIZE),
-		ROUND_UP((ptr_t)__end - (ptr_t)__start, PAGE_SIZE));
+	mmu_map(loader->transition, loader_start, loader_start, loader_size);
 	mmu_map(loader->transition, loader->trampoline_phys, loader->trampoline_phys,
 		PAGE_SIZE);
 	mmu_map(loader->transition, loader->trampoline_virt, loader->trampoline_phys,
