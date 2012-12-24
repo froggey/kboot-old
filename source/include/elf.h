@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2011 Alex Smith
+ * Copyright (C) 2007-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +22,10 @@
 #ifndef __ELF_H
 #define __ELF_H
 
-#include <types.h>
+#include <lib/string.h>
+
+#include <fs.h>
+#include <loader.h>
 
 /** Basic 32-bit ELF types. */
 typedef uint32_t Elf32_Addr;
@@ -568,5 +571,33 @@ typedef struct {
 	Elf64_Word n_descsz;			/**< Length of the note's descriptor. */
 	Elf64_Word n_type;			/**< Type of the note. */
 } __packed Elf64_Note;
+
+/** Check whether a file is a certain ELF type.
+ * @param handle	Handle to file to check.
+ * @param bitsize	ELF class definition.
+ * @param endian	ELF endian definition (or 0).
+ * @param machine	ELF machine definition (or 0).
+ * @return		Whether the file is this type. */
+static inline bool elf_check(file_handle_t *handle, uint8_t bitsize, uint8_t endian, uint8_t machine) {
+	Elf32_Ehdr ehdr;
+
+	if(!file_read(handle, &ehdr, sizeof(ehdr), 0)) {
+		boot_error("Could not read kernel image");
+	} else if(strncmp((const char *)ehdr.e_ident, ELF_MAGIC, 4) != 0) {
+		return false;
+	} else if(ehdr.e_ident[ELF_EI_VERSION] != 1 || ehdr.e_version != 1) {
+		return false;
+	} else if(ehdr.e_ident[ELF_EI_CLASS] != bitsize) {
+		return false;
+	} else if(endian != 0 && ehdr.e_ident[ELF_EI_DATA] != endian) {
+		return false;
+	} else if(machine != 0 && ehdr.e_machine != machine) {
+		return false;
+	} else if(ehdr.e_type != ELF_ET_EXEC) {
+		return false;
+	}
+
+	return true;
+}
 
 #endif /* __ELF_H */

@@ -223,7 +223,7 @@ void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd, const char *c
 
 	/* Not actually necessary as Linux doesn't want a KBoot memory map,
 	 * but it dumps the internal memory map for debugging purposes. */
-	memory_finalise();
+	memory_finalize();
 
 	/* Start the kernel. Stack is positioned points below the parameters. */
 	dprintf("linux: kernel entry point at 0x%x, params at %p\n", params->hdr.code32_start, params);

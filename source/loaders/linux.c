@@ -20,8 +20,8 @@
  *
  * This file implements the 'linux' command for loading a Linux kernel. The
  * actual loading work is deferred to the architecture, as each architecture
- * has its own boot protocol. This just implements the actual configuration
- * command and the settings interface.
+ * has its own boot protocol. This just implements the configuration command
+ * and the settings interface.
  *
  * The 'linux' command is used as follows:
  *

@@ -16,3 +16,9 @@
 
 config KBOOT_HAVE_LOADER_LINUX
 	def_bool y
+
+config KBOOT_HAVE_LOADER_KBOOT32
+	def_bool y
+
+config KBOOT_HAVE_LOADER_KBOOT64
+	def_bool y

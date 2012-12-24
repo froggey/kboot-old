@@ -67,6 +67,7 @@ menu "Operating system support"
 config KBOOT_LOADER_KBOOT
 	bool "KBoot kernel support"
 	default y
+	depends on KBOOT_HAVE_LOADER_KBOOT32 || KBOOT_HAVE_LOADER_KBOOT64
 	help
 	  Enable support for loading kernels using the KBoot boot format.
 

@@ -56,6 +56,7 @@ typedef struct builtin {
 	void *object;
 } builtin_t;
 
+extern char __start[], __end[];
 extern builtin_t __builtins_start[], __builtins_end[];
 
 /** Define a builtin object. */

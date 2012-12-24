@@ -24,6 +24,17 @@
 
 #include <arch/page.h>
 
+#include <lib/list.h>
+
+/** Structure used to represent a physical memory range. */
+typedef struct memory_range {
+	list_t header;			/**< Link to range list. */
+
+	phys_ptr_t start;		/**< Start of the range. */
+	phys_ptr_t end;			/**< End of the range. */
+	unsigned type;			/**< Type of the range. */
+} memory_range_t;
+
 /** Physical memory range types. */
 #define PHYS_MEMORY_FREE	0
 #define PHYS_MEMORY_ALLOCATED	1
@@ -46,6 +57,6 @@ extern bool phys_memory_alloc(phys_ptr_t size, size_t align, phys_ptr_t min_addr
 
 extern void platform_memory_detect(void);
 extern void memory_init(void);
-extern phys_ptr_t memory_finalise(void);
+extern list_t *memory_finalize(void);
 
 #endif /* __MEMORY_H */

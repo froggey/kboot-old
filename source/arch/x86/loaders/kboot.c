@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,28 +22,31 @@
  */
 
 #include <x86/cpu.h>
+#include <x86/mmu.h>
 
-#include <elf_load.h>
-#include <fs.h>
-#include <kboot.h>
+#include <loaders/kboot.h>
+
+#include <elf.h>
 #include <loader.h>
 #include <mmu.h>
 
-extern mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp);
-extern void kboot_arch_enter(mmu_context_t *ctx, phys_ptr_t tags) __noreturn;
-extern void kboot_arch_enter64(phys_ptr_t tags, ptr_t cr3, uint64_t entry) __noreturn;
-extern void kboot_arch_enter32(phys_ptr_t tags, ptr_t cr3, uint32_t entry) __noreturn;
+/** Entry arguments for the kernel. */
+typedef struct entry_args {
+	target_ptr_t transition_cr3;	/**< Transition address space CR3. */
+	target_ptr_t virt;		/**< Virtual location of trampoline. */
+	target_ptr_t kernel_cr3;	/**< Kernel address space CR3. */
+	target_ptr_t sp;		/**< Stack pointer for the kernel. */
+	target_ptr_t entry;		/**< Entry point for kernel. */
+	target_ptr_t tags;		/**< Tag list virtual address. */
 
-/** IA32 kernel loader function. */
-DEFINE_ELF_LOADER(load_elf32_kernel, 32, 0x400000);
+	char trampoline[];
+} entry_args_t;
 
-/** AMD64 kernel loader function. */
-DEFINE_ELF_LOADER(load_elf64_kernel, 64, 0x200000);
+extern void kboot_arch_enter64(entry_args_t *args) __noreturn;
+extern void kboot_arch_enter32(entry_args_t *args) __noreturn;
 
-/** Information on the loaded kernel. */
-static bool kernel_is_64bit = false;
-static Elf32_Addr kernel_entry32;
-static Elf64_Addr kernel_entry64;
+extern char kboot_trampoline64[], kboot_trampoline32[];
+extern size_t kboot_trampoline64_size, kboot_trampoline32_size;
 
 /** Check for long mode support.
  * @return		Whether long mode is supported. */
@@ -61,51 +64,9 @@ static inline bool have_long_mode(void) {
 	return false;
 }
 
-/** Load an AMD64 KBoot image into memory.
- * @param handle	Handle to image.
- * @param physp		Where to store physical address of kernel image.
- * @return		Created MMU context for kernel. */
-static mmu_context_t *kboot_arch_load64(file_handle_t *handle, phys_ptr_t *physp) {
-	mmu_context_t *ctx;
-
-	/* Check for 64-bit support. */
-	if(!have_long_mode())
-		boot_error("64-bit kernel requires 64-bit CPU");
-
-	/* Create the MMU context. */
-	ctx = mmu_context_create(true);
-
-	/* Load the kernel. */
-	load_elf64_kernel(handle, ctx, &kernel_entry64, physp);
-	kernel_is_64bit = true;
-	dprintf("kboot: 64-bit kernel entry point is 0x%llx, CR3 is 0x%llx\n",
-		kernel_entry64, ctx->cr3);
-	return ctx;
-}
-
-/** Load an IA32 KBoot image into memory.
- * @param handle	Handle to image.
- * @param physp		Where to store physical address of kernel image.
- * @return		Created MMU context for kernel. */
-static mmu_context_t *kboot_arch_load32(file_handle_t *handle, phys_ptr_t *physp) {
-	mmu_context_t *ctx;
-
-	/* Create the MMU context. */
-	ctx = mmu_context_create(false);
-
-	/* Load the kernel. */
-	load_elf32_kernel(handle, ctx, &kernel_entry32, physp);
-	dprintf("kboot: 32-bit kernel entry point is 0x%lx, CR3 is 0x%llx\n",
-		kernel_entry32, ctx->cr3);
-	return ctx;
-}
-
-/** Load a KBoot image into memory.
- * @param handle	Handle to image.
- * @param physp		Where to store physical address of kernel image.
- * @return		Created MMU context for kernel. */
-mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp) {
-	mmu_context_t *ctx;
+/** Check a kernel image and determine the target type.
+ * @param loader	KBoot loader data structure. */
+void kboot_arch_check(kboot_loader_t *loader) {
 	unsigned long flags;
 
 	/* Check if CPUID is supported - if we can change EFLAGS.ID, it is. */
@@ -114,30 +75,94 @@ mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp) {
 	if((x86_read_flags() & X86_FLAGS_ID) == (flags & X86_FLAGS_ID))
 		boot_error("CPU does not support CPUID");
 
-	if(elf_check(handle, ELFCLASS64, ELF_EM_X86_64)) {
-		ctx = kboot_arch_load64(handle, physp);
-	} else if(elf_check(handle, ELFCLASS32, ELF_EM_386)) {
-		ctx = kboot_arch_load32(handle, physp);
+	if(elf_check(loader->kernel, ELFCLASS64, ELFDATA2LSB, ELF_EM_X86_64)) {
+		loader->target = TARGET_TYPE_64BIT;
+
+		/* Check for 64-bit support. */
+		if(!have_long_mode())
+			boot_error("64-bit kernel requires 64-bit CPU");
+	} else if(elf_check(loader->kernel, ELFCLASS32, ELFDATA2LSB, ELF_EM_386)) {
+		loader->target = TARGET_TYPE_32BIT;
 	} else {
 		boot_error("Kernel image is not for this architecture");
 	}
+}
 
-	/* Identity map the loader (first 4MB). */
-	mmu_map(ctx, 0, 0, 0x400000);
-	return ctx;
+/** Check whether an address is canonical.
+ * @param addr		Address to check.
+ * @return		Result of check. */
+static inline bool is_canonical_addr(target_ptr_t addr) {
+	return ((addr >> 47) + 1) <= 1;
+}
+
+/** Check whether an address range is canonical.
+ * @param start		Start of range to check.
+ * @param size		Size of address range.
+ * @return		Result of check. */
+static inline bool is_canonical_range(target_ptr_t start, target_size_t size) {
+	target_ptr_t end = start + size - 1;
+	return (is_canonical_addr(start) && is_canonical_addr(end)
+		&& (start & (1ULL<<47)) == (end & (1ULL<<47)));
+}
+
+/** Validate kernel load parameters.
+ * @param loader	KBoot loader data structure.
+ * @param load		Load image tag. */
+void kboot_arch_load_params(kboot_loader_t *loader, kboot_itag_load_t *load) {
+	if(!(load->flags & KBOOT_LOAD_FIXED) && !load->alignment) {
+		/* Set default alignment parameters. Try to align to the large
+		 * page size so we can map using large pages, but fall back to
+		 * 1MB if we're tight on memory. */
+		load->alignment = (loader->target == TARGET_TYPE_64BIT)
+			? 0x200000 : 0x400000;
+		load->min_alignment = 0x100000;
+	}
+
+	if(load->virt_map_base || load->virt_map_size) {
+		if(loader->target == TARGET_TYPE_64BIT
+			&& !is_canonical_range(load->virt_map_base,
+				load->virt_map_size)) {
+			boot_error("Kernel specifies invalid virtual map range");
+		}
+	} else {
+		/* On 64-bit we can't default to the whole 64-bit address space
+		 * so just use the bottom half. */
+		if(loader->target == TARGET_TYPE_64BIT) {
+			load->virt_map_base = 0;
+			load->virt_map_size = 0x800000000000ULL;
+		}
+	}
+}
+
+/** Perform architecture-specific setup tasks.
+ * @param loader	KBoot loader data structure. */
+void kboot_arch_setup(kboot_loader_t *loader) {
+	// TODO: Set up pagetables tag.
 }
 
 /** Enter a loaded KBoot kernel.
- * @param ctx		MMU context.
- * @param tags		Tag list address. */
-__noreturn void kboot_arch_enter(mmu_context_t *ctx, phys_ptr_t tags) {
+ * @param loader	KBoot loader data structure. */
+__noreturn void kboot_arch_enter(kboot_loader_t *loader) {
+	entry_args_t *args;
+
 	/* Enter with interrupts disabled. */
 	__asm__ volatile("cli");
 
-	/* Call the appropriate entry function. */
-	if(kernel_is_64bit) {
-		kboot_arch_enter64(tags, ctx->cr3, kernel_entry64);
+	/* Store information for the entry code. */
+	args = (void *)((ptr_t)loader->trampoline_phys);
+	args->transition_cr3 = loader->transition->cr3;
+	args->virt = loader->trampoline_virt;
+	args->kernel_cr3 = loader->mmu->cr3;
+	args->sp = loader->stack_virt + loader->stack_size;
+	args->entry = loader->entry;
+	args->tags = loader->tags_virt;
+
+	/* Copy the trampoline and call the entry code. */
+	if(loader->target == TARGET_TYPE_64BIT) {
+		memcpy(args->trampoline, kboot_trampoline64, kboot_trampoline64_size);
+		kboot_arch_enter64(args);
 	} else {
-		kboot_arch_enter32(tags, ctx->cr3, kernel_entry32);
+		memcpy(args->trampoline, kboot_trampoline32, kboot_trampoline32_size);
+		kboot_arch_enter32(args);
 	}
 }

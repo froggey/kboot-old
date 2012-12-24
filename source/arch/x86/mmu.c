@@ -228,7 +228,7 @@ static bool mmu_map32(mmu_context_t *ctx, uint32_t virt, uint32_t phys, uint32_t
 	for(i = 0; i < size; i += PAGE_SIZE)
 		map_small32(ctx, virt + i, phys + i);
 
-	return false;
+	return true;
 }
 
 /** Create a mapping in an MMU context.

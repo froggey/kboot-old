@@ -113,12 +113,6 @@ static void insert_region(allocator_t *alloc, allocator_region_t *region) {
 			list_remove(&other->header);
 		}
 	}
-
-	dprintf("inserted [0x%llx,0x%llx), contents:\n", region->start, region_end);
-	LIST_FOREACH(&alloc->regions, iter) {
-		region = list_entry(iter, allocator_region_t, header);
-		dprintf(" 0x%016llx-0x%016llx %d\n", region->start, region->start + region->size - 1, region->allocated);
-	}
 }
 
 /** Allocate a region from an allocator.

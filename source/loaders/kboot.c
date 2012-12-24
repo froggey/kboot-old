@@ -18,86 +18,191 @@
  * @file
  * @brief		KBoot kernel loader.
  *
- * There are 2 forms of the 'kboot' configuration command:
+ * There are 3 forms of the 'kboot' configuration command:
  *  - kboot <kernel path> <module list>
  *    Loads the specified kernel and all modules specified in the given list.
  *  - kboot <kernel path> <module dir>
  *    Loads the specified kernel and all modules in the given directory.
+ *  - kboot <kernel path>
+ *    Loads the specified kernel and no modules.
+ *
+ * @todo		For 32-bit kernels we should ensure that we do all
+ *			physical memory allocations under 4GB so that the
+ *			kernel doesn't need to support PAE. In practice this
+ *			will happen anyway at the moment because the allocator
+ *			return lowest available address first.
  */
 
-#include <arch/mmu.h>
-
 #include <lib/string.h>
+#include <lib/utility.h>
+
+#include <loaders/kboot.h>
 
 #include <assert.h>
 #include <config.h>
-#include <elf_load.h>
 #include <fs.h>
-#include <kboot.h>
 #include <loader.h>
 #include <memory.h>
 #include <ui.h>
-#include <video.h>
 
-#if 0
+/** Structure describing a virtual memory mapping. */
+typedef struct virt_mapping {
+	list_t header;			/**< List header. */
 
-/** Data for the KBoot loader. */
-typedef struct kboot_data {
-	environ_t *env;			/**< Environment back pointer. */
-	file_handle_t *kernel;		/**< Handle to the kernel image. */
-	bool is_kboot;			/**< Whether the image is a KBoot image. */
-	value_t modules;		/**< Modules to load. */
-	phys_ptr_t tags;		/**< Start of the tag list. */
-#if CONFIG_KBOOT_UI
-	ui_window_t *config;		/**< Configuration window. */
-#endif
-	mmu_context_t *mmu;		/**< MMU context. */
-} kboot_data_t;
+	kboot_vaddr_t start;		/**< Start of the virtual memory range. */
+	kboot_vaddr_t size;		/**< Size of the virtual memory range. */
+	kboot_paddr_t phys;		/**< Physical address that this range maps to. */
+} virt_mapping_t;
 
-extern mmu_context_t *kboot_arch_load(file_handle_t *handle, phys_ptr_t *physp);
-extern void kboot_arch_enter(mmu_context_t *ctx, phys_ptr_t tags) __noreturn;
-
-/** Add a tag to the tag list.
- * @param data		Loader data structure.
- * @param tag		Address of tag to add. */
-static void append_tag(kboot_data_t *data, phys_ptr_t tag) {
-	kboot_tag_t *exist;
-	phys_ptr_t addr;
-
-	if(data->tags) {
-		for(addr = data->tags; addr; addr = exist->next)
-			exist = (kboot_tag_t *)((ptr_t)addr);
-
-		exist->next = tag;
-	} else {
-		data->tags = tag;
-	}
-}
-
-/** Allocate a tag in the tag list.
- * @param data		Loader data structure.
+/** Add an image tag to the image tag list.
+ * @param loader	Loader to add to.
  * @param type		Type of the tag.
  * @param size		Size of the tag.
- * @return		Address of allocated tag. */
-static void *allocate_tag(kboot_data_t *data, uint32_t type, size_t size) {
-	kboot_tag_t *tag;
+ * @return		Address of created tag. Will be cleared to 0. */
+static inline void *add_image_tag(kboot_loader_t *loader, uint32_t type, size_t size) {
+	kboot_itag_t *tag;
 
-	assert(size >= sizeof(kboot_tag_t));
-
-	tag = kmalloc(size);
-	tag->next = 0;
+	tag = kmalloc(sizeof(kboot_itag_t) + size);
+	list_init(&tag->header);
 	tag->type = type;
-	tag->size = size;
+	memset(&tag[1], 0, size);
+	list_append(&loader->itags, &tag->header);
+	return &tag[1];
+}
 
-	append_tag(data, (ptr_t)tag);
-	return tag;
+/** Allocate a tag list entry.
+ * @param loader	KBoot loader data structure.
+ * @param type		Type of the tag.
+ * @param size		Size of the tag data.
+ * @return		Pointer to allocated tag. Will be cleared to 0. */
+void *kboot_allocate_tag(kboot_loader_t *loader, uint32_t type, size_t size) {
+	kboot_tag_core_t *core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
+	kboot_tag_t *ret;
+
+	ret = (kboot_tag_t *)((ptr_t)loader->tags_phys + core->tags_size);
+	memset(ret, 0, size);
+	ret->type = type;
+	ret->size = size;
+
+	core->tags_size += ROUND_UP(size, 8);
+	if(core->tags_size > PAGE_SIZE)
+		internal_error("Exceeded maximum tag list size");
+
+	return ret;
+}
+
+/** Insert a virtual address mapping.
+ * @param loader	KBoot loader data structure.
+ * @param start		Virtual address of start of mapping.
+ * @param size		Size of the mapping.
+ * @param phys		Physical address. */
+static void add_virt_mapping(kboot_loader_t *loader, kboot_vaddr_t start,
+	kboot_vaddr_t size, kboot_vaddr_t phys)
+{
+	virt_mapping_t *mapping, *other;
+
+	/* All virtual memory tags should be provided together in the tag list,
+	 * sorted in address order. To do this, we must maintain mapping info
+	 * separately in sorted order, then add it all to the tag list at once. */
+	mapping = kmalloc(sizeof(*mapping));
+	list_init(&mapping->header);
+	mapping->start = start;
+	mapping->size = size;
+	mapping->phys = phys;
+
+	LIST_FOREACH(&loader->mappings, iter) {
+		other = list_entry(iter, virt_mapping_t, header);
+		if(mapping->start <= other->start) {
+			list_add_before(&other->header, &mapping->header);
+			break;
+		}
+	}
+
+	if(list_empty(&mapping->header))
+		list_append(&loader->mappings, &mapping->header);
+}
+
+/** Allocate space in the virtual address space.
+ * @param loader	KBoot loader data structure.
+ * @param phys		Physical address to map to (or ~0 for no mapping).
+ * @param size		Size of the range.
+ * @return		Virtual address of mapping. */
+kboot_vaddr_t kboot_allocate_virtual(kboot_loader_t *loader, kboot_paddr_t phys,
+	kboot_vaddr_t size)
+{
+	kboot_vaddr_t addr;
+
+	if(!allocator_alloc(&loader->alloc, size, &addr))
+		internal_error("Unable to allocate %zu bytes of virtual memory", size);
+
+	if(phys != ~(kboot_paddr_t)0)
+		mmu_map(loader->mmu, addr, phys, size);
+
+	add_virt_mapping(loader, addr, size, phys);
+	return addr;
+}
+
+/** Map at a location in the virtual address space.
+ * @param loader	KBoot loader data structure.
+ * @param addr		Virtual address to map at.
+ * @param phys		Physical address to map to (or ~0 for no mapping).
+ * @param size		Size of the range. */
+void kboot_map_virtual(kboot_loader_t *loader, kboot_vaddr_t addr, kboot_paddr_t phys,
+	kboot_vaddr_t size)
+{
+	// FIXME: Need to check for conflicts here and that address range is
+	// valid!
+	allocator_reserve(&loader->alloc, addr, size);
+
+	if(phys != ~(kboot_paddr_t)0)
+		mmu_map(loader->mmu, addr, phys, size);
+
+	add_virt_mapping(loader, addr, size, phys);
+}
+
+/** Allocate memory for the kernel image.
+ * @param loader	KBoot loader data structure.
+ * @param size		Total size of kernel image.
+ * @return		Physical address allocated for kernel. */
+phys_ptr_t kboot_allocate_kernel(kboot_loader_t *loader, size_t size) {
+	kboot_itag_load_t *load;
+	kboot_tag_core_t *core;
+	phys_ptr_t ret;
+	size_t align;
+
+	/* Get the load parameters. */
+	load = kboot_itag_find(loader, KBOOT_ITAG_LOAD);
+
+	if(load->flags & KBOOT_LOAD_FIXED) {
+		/* Just load at the specified address and fail if we can't. */
+		phys_memory_alloc(size, 0, load->phys_address, load->phys_address + size, 0, &ret);
+		dprintf("kboot: loading kernel at fixed address 0x%" PRIxPHYS " (size: 0x%zx)\n",
+			ret, size);
+	} else {
+		/* Try to find some space to load to. Iterate down in powers of
+		 * 2 until we reach the minimum alignment. */
+		align = load->alignment;
+		while(!phys_memory_alloc(size, align, 0, 0, PHYS_ALLOC_CANFAIL, &ret)) {
+			align >>= 1;
+			if(align < load->min_alignment || align < PAGE_SIZE)
+				boot_error("You do not have enough memory available");
+		}
+
+		dprintf("kboot: loading kernel to 0x%" PRIxPHYS " (alignment: 0x%" PRIxPHYS
+			", min_alignment: 0x%" PRIxPHYS ", size: 0x%zx)\n", ret,
+			load->alignment, load->min_alignment, size);
+	}
+
+	core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
+	core->kernel_phys = ret;
+	return ret;
 }
 
 /** Load a single module.
- * @param data		Loader data structure.
+ * @param loader	KBoot loader data structure.
  * @param handle	Handle to module to load.
  * @param name		Name of the module. */
-static void load_module(kboot_data_t *data, file_handle_t *handle, const char *name) {
+static void load_module(kboot_loader_t *loader, file_handle_t *handle, const char *name) {
 	kboot_tag_module_t *tag;
 	phys_ptr_t addr;
 	offset_t size;
@@ -109,12 +214,12 @@ static void load_module(kboot_data_t *data, file_handle_t *handle, const char *n
 
 	/* Allocate a chunk of memory to load to. */
 	size = file_size(handle);
-	phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), PAGE_SIZE, 0, 0, PHYS_ALLOC_RECLAIM, &addr);
+	phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), 0, 0, 0, PHYS_ALLOC_RECLAIM, &addr);
 	if(!file_read(handle, (void *)((ptr_t)addr), size, 0))
-		boot_error("Could not read module %s", name);
+		boot_error("Could not read module `%s'", name);
 
 	/* Add the module to the tag list. */
-	tag = allocate_tag(data, KBOOT_TAG_MODULE, sizeof(*tag));
+	tag = kboot_allocate_tag(loader, KBOOT_TAG_MODULE, sizeof(*tag));
 	tag->addr = addr;
 	tag->size = size;
 
@@ -123,9 +228,9 @@ static void load_module(kboot_data_t *data, file_handle_t *handle, const char *n
 }
 
 /** Load a list of modules.
- * @param data		Loader data structure.
+ * @param loader	KBoot loader data structure.
  * @param list		List to load. */
-static void load_module_list(kboot_data_t *data, value_list_t *list) {
+static void load_module_list(kboot_loader_t *loader, value_list_t *list) {
 	file_handle_t *handle;
 	size_t i;
 
@@ -134,7 +239,7 @@ static void load_module_list(kboot_data_t *data, value_list_t *list) {
 		if(!handle)
 			boot_error("Could not open module %s", list->values[i].string);
 
-		load_module(data, handle, strrchr(list->values[i].string, '/') + 1);
+		load_module(loader, handle, strrchr(list->values[i].string, '/') + 1);
 		file_close(handle);
 	}
 }
@@ -142,260 +247,429 @@ static void load_module_list(kboot_data_t *data, value_list_t *list) {
 /** Callback to load a module from a directory.
  * @param name		Name of the entry.
  * @param handle	Handle to entry.
- * @param data		Data argument passed to dir_iterate().
+ * @param _loader	KBoot loader data structure.
  * @return		Whether to continue iteration. */
-static bool load_modules_cb(const char *name, file_handle_t *handle, void *arg) {
-	load_module(arg, handle, name);
+static bool load_modules_cb(const char *name, file_handle_t *handle, void *_loader) {
+	load_module(_loader, handle, name);
 	return true;
 }
 
 /** Load a directory of modules.
- * @param data		Loader data structure.
+ * @param loader	KBoot loader data structure.
  * @param path		Path to directory. */
-static void load_module_dir(kboot_data_t *data, const char *path) {
+static void load_module_dir(kboot_loader_t *loader, const char *path) {
 	file_handle_t *handle;
 
-	if(!(handle = file_open(path, NULL))) {
-		boot_error("Could not find module directory %s", path);
+	handle = file_open(path, NULL);
+	if(!handle) {
+		boot_error("Could not find module directory `%s'", path);
 	} else if(!handle->directory) {
-		boot_error("Module directory %s not directory", path);
+		boot_error("Module directory `%s' not directory", path);
 	} else if(!handle->mount->type->iterate) {
 		boot_error("Cannot use module directory on non-listable FS");
 	}
 
-	if(!dir_iterate(handle, load_modules_cb, data))
+	if(!dir_iterate(handle, load_modules_cb, loader))
 		boot_error("Failed to iterate module directory");
 
 	file_close(handle);
 }
 
 /** Set a single option.
- * @param data		Loader data pointer.
+ * @param loader	KBoot loader data structure.
  * @param name		Name of the option.
  * @param type		Type of the option. */
-static void set_option(kboot_data_t *data, const char *name, uint32_t type) {
+static void set_option(kboot_loader_t *loader, const char *name, uint32_t type) {
+	size_t name_size, value_size;
 	kboot_tag_option_t *tag;
-	value_t *value;
-	size_t size;
+	value_t *env;
+	void *value;
 
-	value = environ_lookup(data->env, name);
+	name_size = strlen(name) + 1;
+
+	env = environ_lookup(current_environ, name);
 	switch(type) {
 	case KBOOT_OPTION_BOOLEAN:
-		size = 1;
+		value = &env->boolean;
+		value_size = 1;
 		break;
 	case KBOOT_OPTION_STRING:
-		size = strlen(value->string) + 1;
+		value = env->string;
+		value_size = strlen(env->string) + 1;
 		break;
 	case KBOOT_OPTION_INTEGER:
-		size = sizeof(uint64_t);
+		value = &env->integer;
+		value_size = sizeof(uint64_t);
 		break;
 	default:
 		internal_error("Shouldn't get here");
 	}
 
-	tag = allocate_tag(data, KBOOT_TAG_OPTION, sizeof(*tag) + size);
-	strncpy(tag->name, name, sizeof(tag->name));
-	tag->name[sizeof(tag->name) - 1] = 0;
+	tag = kboot_allocate_tag(loader, KBOOT_TAG_OPTION, ROUND_UP(sizeof(*tag), 8)
+		+ ROUND_UP(name_size, 8) + value_size);
 	tag->type = type;
-	tag->size = size;
+	tag->name_size = name_size;
+	tag->value_size = value_size;
 
-	switch(type) {
-	case KBOOT_OPTION_BOOLEAN:
-		*(bool *)&tag[1] = value->boolean;
-		break;
-	case KBOOT_OPTION_STRING:
-		memcpy(&tag[1], value->string, size);
-		break;
-	case KBOOT_OPTION_INTEGER:
-		*(uint64_t *)&tag[1] = value->integer;
-		break;
+	memcpy((char *)tag + ROUND_UP(sizeof(*tag), 8), name, name_size);
+	memcpy((char *)tag + ROUND_UP(sizeof(*tag), 8) + ROUND_UP(name_size, 8),
+		value, value_size);
+}
+
+/** Add virtual memory tags to the tag list.
+ * @param loader	KBoot loader data structure. */
+static void add_vmem_tags(kboot_loader_t *loader) {
+	virt_mapping_t *mapping;
+	kboot_tag_vmem_t *tag;
+
+	dprintf("kboot: final virtual memory map:\n");
+
+	LIST_FOREACH(&loader->mappings, iter) {
+		mapping = list_entry(iter, virt_mapping_t, header);
+
+		tag = kboot_allocate_tag(loader, KBOOT_TAG_VMEM, sizeof(*tag));
+		tag->start = mapping->start;
+		tag->size = mapping->size;
+		tag->phys = mapping->phys;
+
+		dprintf(" 0x%" PRIx64 "-0x%" PRIx64 " -> 0x%" PRIx64 "\n", tag->start,
+			tag->start + tag->size - 1, tag->phys);
 	}
 }
 
-#if CONFIG_KBOOT_HAVE_VIDEO
-/** Set the video mode.
- * @param data		Loader data pointer. */
-static void set_video_mode(kboot_data_t *data) {
-	kboot_tag_lfb_t *tag;
-	video_mode_t *mode;
-	value_t *value;
+/** Add physical memory tags to the tag list.
+ * @param loader	KBoot loader data structure. */
+static void add_memory_tags(kboot_loader_t *loader) {
+	kboot_tag_memory_t *tag;
+	memory_range_t *range;
+	list_t *ranges;
 
-	value = environ_lookup(data->env, "video_mode");
-	mode = video_mode_find_string(value->string);
-	video_enable(mode);
+	/* Reclaim all memory used internally and get the range list. */
+	ranges = memory_finalize();
 
-	tag = allocate_tag(data, KBOOT_TAG_LFB, sizeof(*tag));
-	tag->width = mode->width;
-	tag->height = mode->height;
-	tag->depth = mode->bpp;
-	tag->addr = mode->addr;
-}
-#endif
+	/* Add tags for each range. */
+	LIST_FOREACH(ranges, iter) {
+		range = list_entry(iter, memory_range_t, header);
 
-/** Tag iterator to set options in the tag list.
- * @param note		Note header.
- * @param name		Note name.
- * @param desc		Note data.
- * @param _data		KBoot loader data pointer.
- * @return		Whether to continue iteration. */
-static bool set_options(elf_note_t *note, const char *name, void *desc, void *_data) {
-	kboot_itag_mapping_t *mapping;
-	kboot_itag_option_t *option;
-	kboot_data_t *data = _data;
-	kboot_itag_image_t *image;
+		tag = kboot_allocate_tag(loader, KBOOT_TAG_MEMORY, sizeof(*tag));
+		tag->start = range->start;
+		tag->size = range->end - range->start;
 
-	if(strcmp(name, "KBoot") != 0)
-		return true;
-
-	switch(note->n_type) {
-	case KBOOT_ITAG_IMAGE:
-		image = desc;
-#if CONFIG_KBOOT_HAVE_VIDEO
-		/* Set the video mode if requested. */
-		if(image->flags & KBOOT_IMAGE_LFB)
-			set_video_mode(data);
-#endif
-		break;
-	case KBOOT_ITAG_OPTION:
-		option = desc;
-		set_option(data, desc + sizeof(*option), option->type);
-		break;
-	case KBOOT_ITAG_MAPPING:
-		mapping = desc;
-		if(!mmu_map(data->mmu, mapping->virt, mapping->phys, mapping->size))
-			boot_error("Kernel specifies an invalid memory mapping");
-		break;
+		switch(range->type) {
+		case PHYS_MEMORY_FREE:
+			tag->type = KBOOT_MEMORY_FREE;
+			break;
+		case PHYS_MEMORY_ALLOCATED:
+			tag->type = KBOOT_MEMORY_ALLOCATED;
+			break;
+		case PHYS_MEMORY_RECLAIMABLE:
+			tag->type = KBOOT_MEMORY_RECLAIMABLE;
+			break;
+		}
 	}
-
-	return true;
 }
-
-#endif
 
 /** Load the operating system. */
 static __noreturn void kboot_loader_load(void) {
-#if 0
-	kboot_data_t *data = current_environ->data;
-	kboot_tag_bootdev_t *bootdev;
+	kboot_loader_t *loader = current_environ->data;
+	kboot_itag_load_t *load;
 	kboot_tag_core_t *core;
-	phys_ptr_t addr;
 
-	/* We don't report these errors until the user actually tries to run a
-	 * menu entry. */
-	if(!data->kernel) {
+	/* These errors are detected in config_cmd_kboot(), but shouldn't be
+	 * reported until the user actually tries to boot the entry. */
+	if(!loader->kernel) {
 		boot_error("Could not find kernel image");
-	} else if(!data->is_kboot) {
+	} else if(!loader->image) {
 		boot_error("Kernel is not a valid KBoot kernel");
 	}
 
-	/* Create the core information tag. */
-	core = allocate_tag(data, KBOOT_TAG_CORE, sizeof(*core));
+	/* Create the tag list. It will be mapped into virtual memory later,
+	 * as we cannot yet perform virtual allocations. For now, assume that
+	 * the tag list never exceeds a page, which is probably reasonable. */
+	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_ALLOC_RECLAIM, &loader->tags_phys);
+	core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
+	memset(core, 0, sizeof(kboot_tag_core_t));
+	core->header.type = KBOOT_TAG_CORE;
+	core->header.size = sizeof(kboot_tag_core_t);
+	core->tags_phys = loader->tags_phys;
+	core->tags_size = ROUND_UP(sizeof(kboot_tag_core_t), 8);
 
-	/* Load the kernel image into memory. */
-	kprintf("Loading kernel...\n");
-	data->mmu = kboot_arch_load(data->kernel, (phys_ptr_t *)&core->kernel_phys);
+	/* Check the image and determine the target type. */
+	kboot_arch_check(loader);
 
-	/* Record the boot device. */
-	bootdev = allocate_tag(data, KBOOT_TAG_BOOTDEV, sizeof(*bootdev));
-	strncpy(bootdev->uuid, current_device->fs->uuid, sizeof(bootdev->uuid));
-	bootdev->uuid[sizeof(bootdev->uuid) - 1] = 0;
+	/* Validate the load parameters. If there is no load tag specified in
+	 * the image, add one and initialize everything to 0. */
+	load = kboot_itag_find(loader, KBOOT_ITAG_LOAD);
+	if(load) {
+		if(load->flags & KBOOT_LOAD_FIXED) {
+			if(load->phys_address % PAGE_SIZE)
+				boot_error("Kernel specifies invalid load address");
+		} else {
+			if((load->alignment && (load->alignment < PAGE_SIZE
+					|| !IS_POW2(load->alignment)))
+				|| (load->min_alignment && (load->min_alignment < PAGE_SIZE
+					|| load->min_alignment > load->alignment
+					|| !IS_POW2(load->min_alignment)))) {
+				boot_error("Kernel specifies invalid alignment parameters");
+			}
 
-	/* Load modules. */
-	if(data->modules.type == VALUE_TYPE_LIST) {
-		load_module_list(data, data->modules.list);
-	} else if(data->modules.type == VALUE_TYPE_STRING) {
-		load_module_dir(data, data->modules.string);
+			if(!load->min_alignment)
+				load->min_alignment = load->alignment;
+		}
+
+		if(loader->target == TARGET_TYPE_32BIT && !load->virt_map_base && !load->virt_map_size)
+			load->virt_map_size = 0x100000000ULL;
+
+		if(load->virt_map_base % PAGE_SIZE || load->virt_map_size % PAGE_SIZE
+			|| (load->virt_map_base && !load->virt_map_size)
+			|| (load->virt_map_base + load->virt_map_size - 1)
+				< load->virt_map_base
+			|| (loader->target == TARGET_TYPE_32BIT
+				&& (load->virt_map_base >= 0x100000000ULL
+					|| load->virt_map_base + load->virt_map_size
+						> 0x100000000ULL))) {
+			boot_error("Kernel specifies invalid virtual map range");
+		}
+	} else {
+		load = add_image_tag(loader, KBOOT_ITAG_LOAD, sizeof(kboot_itag_load_t));
 	}
 
-	/* Create option tags, set video mode and set up memory mappings. */
-	elf_note_iterate(data->kernel, set_options, data);
+	/* Have the architecture do its own validation and fill in defaults. */
+	kboot_arch_load_params(loader, load);
 
-	/* Finish off the memory map and add memory ranges to the tag list. */
-	addr = memory_finalise();
-	append_tag(data, addr);
+	/* Create the virtual address space and address allocator. Try to
+	 * reserve a page to ensure that we never allocate virtual address 0. */
+	loader->mmu = mmu_context_create(loader->target);
+	allocator_init(&loader->alloc, load->virt_map_base, load->virt_map_size,
+		PAGE_SIZE);
+	allocator_reserve(&loader->alloc, 0, PAGE_SIZE);
 
-	/* Enter the kernel. */
-	kboot_arch_enter(data->mmu, data->tags);
-#endif
-	while(1);
+	/* Load the kernel image. */
+	kprintf("Loading kernel...\n");
+	kboot_elf_load_kernel(loader);
+
+	/* Now we need to perform all mappings specified by the image tags. */
+	KBOOT_ITAG_ITERATE(loader, KBOOT_ITAG_MAPPING, kboot_itag_mapping_t, mapping) {
+		if((mapping->virt != ~(kboot_vaddr_t)0 && mapping->virt % PAGE_SIZE)
+			|| mapping->phys % PAGE_SIZE
+			|| mapping->size % PAGE_SIZE)
+		{
+			boot_error("Kernel specifies invalid virtual mapping");
+		}
+
+		if(mapping->virt == ~(kboot_vaddr_t)0) {
+			/* Allocate an address to map at. */
+			kboot_allocate_virtual(loader, mapping->phys, mapping->size);
+		} else {
+			kboot_map_virtual(loader, mapping->virt, mapping->phys, mapping->size);
+		}
+	}
+
+	/* Do architecture-specific setup, e.g. for page tables. */
+	kboot_arch_setup(loader);
+
+	/* Now we can allocate a virtual mapping for the tag list. */
+	loader->tags_virt = kboot_allocate_virtual(loader, core->tags_phys, PAGE_SIZE);
+
+	/* Pass all of the option values. */
+	KBOOT_ITAG_ITERATE(loader, KBOOT_ITAG_OPTION, kboot_itag_option_t, option) {
+		set_option(loader, (char *)option + sizeof(*option), option->type);
+	}
+
+	/* Load modules. */
+	if(loader->modules.type == VALUE_TYPE_LIST) {
+		load_module_list(loader, loader->modules.list);
+	} else if(loader->modules.type == VALUE_TYPE_STRING) {
+		load_module_dir(loader, loader->modules.string);
+	}
+
+	// TODO: boot device
+
+	/* Do platform-specific setup, including setting the video mode. */
+	kboot_platform_setup(loader);
+
+	/* Create a stack for the kernel. */
+	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, 0, &core->stack_phys);
+	core->stack_base = loader->stack_virt = kboot_allocate_virtual(loader,
+		core->stack_phys, PAGE_SIZE);
+	core->stack_size = loader->stack_size = PAGE_SIZE;
+
+	/* Now we have the interesting task of setting things up so that we
+	 * can enter the kernel. It is not always possible to identity map the
+	 * boot loader: things (including the kernel) could already be mapped
+	 * in the virtual address space at the identity mapped location. So,
+	 * we allocate a page of virtual memory, then construct a temporary
+	 * address space to use in the transition to the kernel that maps that
+	 * page and identity maps the boot loader. The architecture entry code
+	 * uses the transition address space to enable the MMU and switch to
+	 * the target operating mode, then copies a chunk of code to the page
+	 * and jumps to it. That code can then switch to the real address space
+	 * and call the kernel. FIXME: Should mark this page and all allocated
+	 * page tables as internal so the kernel won't see them as in use. */
+	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_ALLOC_RECLAIM, &loader->trampoline_phys);
+	loader->trampoline_virt = kboot_allocate_virtual(loader, loader->trampoline_phys,
+		PAGE_SIZE);
+	// FIXME! Need to make this allocate a virtual address that does not
+	// conflict with id mapping!
+	loader->transition = mmu_context_create(loader->target);
+	mmu_map(loader->transition, ROUND_DOWN((ptr_t)__start, PAGE_SIZE),
+		ROUND_DOWN((ptr_t)__start, PAGE_SIZE),
+		ROUND_UP((ptr_t)__end - (ptr_t)__start, PAGE_SIZE));
+	mmu_map(loader->transition, loader->trampoline_phys, loader->trampoline_phys,
+		PAGE_SIZE);
+	mmu_map(loader->transition, loader->trampoline_virt, loader->trampoline_phys,
+		PAGE_SIZE);
+
+	/* All virtual memory allocations should now have been done, we can
+	 * insert the final set of sorted virtual memory tags. */
+	add_vmem_tags(loader);
+
+	/* Add physical memory information. */
+	add_memory_tags(loader);
+
+	/* End the tag list. */
+	kboot_allocate_tag(loader, KBOOT_TAG_NONE, sizeof(kboot_tag_t));
+
+	/* Start the kernel. */
+	dprintf("kboot: entering kernel at 0x%" PRIx64 " (stack: 0x%" PRIx64 ", "
+		"trampoline_phys: 0x%" PRIxPHYS ", trampoline_virt: 0x%" PRIx64 ")\n",
+		loader->entry, loader->stack_virt, loader->trampoline_phys,
+		loader->trampoline_virt);
+	kboot_arch_enter(loader);
 }
 
 #if CONFIG_KBOOT_UI
 /** Return a window for configuring the OS.
  * @return		Pointer to configuration window. */
 static ui_window_t *kboot_loader_configure(void) {
-#if 0
-	kboot_data_t *data = current_environ->data;
-	return (!ui_list_empty(data->config)) ? data->config : NULL;
-#endif
-	return NULL;
+	kboot_loader_t *loader = current_environ->data;
+	return (!ui_list_empty(loader->config)) ? loader->config : NULL;
 }
 #endif
 
 /** KBoot loader type. */
 static loader_type_t kboot_loader_type = {
 	.load = kboot_loader_load,
-#if CONFIG_KBOOT_UI
+	#if CONFIG_KBOOT_UI
 	.configure = kboot_loader_configure,
-#endif
+	#endif
 };
 
-#if 0
 /** Tag iterator to add options to the environment.
  * @param note		Note header.
- * @param name		Note name.
  * @param desc		Note data.
- * @param _data		KBoot loader data pointer.
+ * @param loader	KBoot loader data structure.
  * @return		Whether to continue iteration. */
-static bool add_options(elf_note_t *note, const char *name, void *desc, void *_data) {
+static bool add_image_tags(elf_note_t *note, void *desc, kboot_loader_t *loader) {
+	size_t size;
+	void *tag;
+
+	/* Validate the tag type and check that we don't have more than one of
+	 * certain tag types. */
+	switch(note->n_type) {
+	case KBOOT_ITAG_IMAGE:
+		if(kboot_itag_find(loader, KBOOT_ITAG_IMAGE)) {
+			dprintf("kboot: warning: ignoring duplicate KBOOT_ITAG_IMAGE tag\n");
+			return true;
+		}
+
+		size = sizeof(kboot_itag_image_t);
+		break;
+	case KBOOT_ITAG_LOAD:
+		if(kboot_itag_find(loader, KBOOT_ITAG_LOAD)) {
+			dprintf("kboot: warning: ignoring duplicate KBOOT_ITAG_LOAD tag\n");
+			return true;
+		}
+
+		size = sizeof(kboot_itag_load_t);
+		break;
+	case KBOOT_ITAG_VIDEO:
+		if(kboot_itag_find(loader, KBOOT_ITAG_VIDEO)) {
+			dprintf("kboot: warning: ignoring duplicate KBOOT_ITAG_VIDEO tag\n");
+			return true;
+		}
+
+		size = sizeof(kboot_itag_video_t);
+		break;
+	case KBOOT_ITAG_OPTION:
+		size = sizeof(kboot_itag_option_t);
+		break;
+	case KBOOT_ITAG_MAPPING:
+		size = sizeof(kboot_itag_mapping_t);
+		break;
+	default:
+		dprintf("kboot: warning: unrecognized image tag type %" PRIu32 "\n", note->n_type);
+		return true;
+	}
+
+	/* Add to the tag list. */
+	tag = add_image_tag(loader, note->n_type, MAX(size, note->n_descsz));
+	memcpy(tag, desc, note->n_descsz);
+
+	return true;
+}
+
+/** Load a KBoot kernel and modules.
+ * @param args		Command arguments.
+ * @return		Whether completed successfully. */
+static bool config_cmd_kboot(value_list_t *args) {
 	const char *opt_name, *opt_desc;
-	kboot_itag_option_t *option;
-	kboot_data_t *data = _data;
-	kboot_itag_image_t *image;
+	kboot_loader_t *loader;
 	value_t *entry, value;
 	void *opt_default;
 
-	if(strcmp(name, "KBoot") != 0)
+	if((args->count != 1 && args->count != 2)
+		|| args->values[0].type != VALUE_TYPE_STRING
+		|| (args->count == 2 && args->values[1].type != VALUE_TYPE_LIST
+			&& args->values[1].type != VALUE_TYPE_STRING)) {
+		dprintf("kboot: invalid arguments\n");
+		return false;
+	}
+
+	loader = kmalloc(sizeof(*loader));
+	list_init(&loader->itags);
+	list_init(&loader->mappings);
+
+	current_environ->loader = &kboot_loader_type;
+	current_environ->data = loader;
+
+	/* Copy the modules value. If there isn't one, just set an empty list. */
+	if(args->count == 2) {
+		value_copy(&args->values[1], &loader->modules);
+	} else {
+		value_init(&loader->modules, VALUE_TYPE_LIST);
+	}
+
+	#if CONFIG_KBOOT_UI
+	loader->config = ui_list_create("Kernel Options", true);
+	#endif
+
+	/* Open the kernel image. If it cannot be opened, return immediately.
+	 * The error will be reported when the user tries to boot. */
+	loader->kernel = file_open(args->values[0].string, NULL);
+	if(!loader->kernel)
 		return true;
 
-	switch(note->n_type) {
-	case KBOOT_ITAG_IMAGE:
-		image = desc;
+	/* Read in all image tags from the image. */
+	kboot_elf_note_iterate(loader, add_image_tags);
 
-		if(data->is_kboot) {
-			dprintf("kboot: warning: image contains multiple image tags, ignoring extras\n");
-			break;
-		}
-		data->is_kboot = true;
+	/* Store a pointer to the image tag as it is used frequently. If there
+	 * is no image tag, return immediately as this is not a valid KBoot
+	 * image. The error will be reported when the user tries to boot. */
+	loader->image = kboot_itag_find(loader, KBOOT_ITAG_IMAGE);
+	if(!loader->image)
+		return true;
 
-		/* If the kernel wants a video mode, add a video mode chooser. */
-		if(image->flags & KBOOT_IMAGE_LFB) {
-#if CONFIG_KBOOT_HAVE_VIDEO
-			entry = environ_lookup(data->env, "video_mode");
-			if(!entry || entry->type != VALUE_TYPE_STRING
-				|| !video_mode_find_string(entry->string))
-			{
-				/* Invalid value, replace it. */
-				value.type = VALUE_TYPE_STRING;
-				value.string = default_video_mode->name;
-				entry = environ_insert(data->env, "video_mode", &value);
-			}
-#if CONFIG_KBOOT_UI
-			ui_list_insert(data->config,
-				video_mode_chooser("Video Mode", entry),
-				false);
-#endif
-#else
-			boot_error("Kernel requests LFB but video mode setting support missing");
-#endif
-		}
+	dprintf("kboot: KBoot version %" PRIu32 " image, flags 0x%" PRIx32 "\n",
+		loader->image->version, loader->image->flags);
 
-		break;
-	case KBOOT_ITAG_OPTION:
-		option = desc;
-		opt_name = desc + sizeof(*option);
-		opt_desc = desc + sizeof(*option) + option->name_len;
-		opt_default = desc + sizeof(*option) + option->name_len + option->desc_len;
+	/* Parse the option tags to add options to the environment and build
+	 * the configuration menu. */
+	KBOOT_ITAG_ITERATE(loader, KBOOT_ITAG_OPTION, kboot_itag_option_t, option) {
+		opt_name = (char *)option + sizeof(*option);
+		opt_desc = (char *)option + sizeof(*option) + option->name_len;
+		opt_default = (char *)option + sizeof(*option) + option->name_len
+			+ option->desc_len;
 
 		switch(option->type) {
 		case KBOOT_OPTION_BOOLEAN:
@@ -412,64 +686,22 @@ static bool add_options(elf_note_t *note, const char *name, void *desc, void *_d
 			break;
 		}
 
-		entry = environ_lookup(data->env, opt_name);
+		/* Don't overwrite an existing value. */
+		entry = environ_lookup(current_environ, opt_name);
 		if(!entry || entry->type != value.type)
-			entry = environ_insert(data->env, opt_name, &value);
+			entry = environ_insert(current_environ, opt_name, &value);
 
-#if CONFIG_KBOOT_UI
-		ui_list_insert(data->config, ui_entry_create(opt_desc, entry), false);
-#endif
-		break;
+		#if CONFIG_KBOOT_UI
+		ui_list_insert(loader->config, ui_entry_create(opt_desc, entry), false);
+		#endif
 	}
 
-	return true;
-}
-#endif
+	#if CONFIG_KBOOT_HAVE_VIDEO
+	/* Call the platform to deal with the video tag and add a video mode
+	 * chooser to the UI. */
+	kboot_platform_video_init(loader);
+	#endif
 
-/** Load a KBoot kernel and modules.
- * @param args		Command arguments.
- * @return		Whether completed successfully. */
-static bool config_cmd_kboot(value_list_t *args) {
-	//kboot_data_t *data;
-
-	if((args->count != 1 && args->count != 2)
-		|| args->values[0].type != VALUE_TYPE_STRING
-		|| (args->count == 2 && args->values[1].type != VALUE_TYPE_LIST
-			&& args->values[1].type != VALUE_TYPE_STRING))
-	{
-		dprintf("kboot: invalid arguments\n");
-		return false;
-	}
-
-	//data = kmalloc(sizeof(*data));
-	current_environ->loader = &kboot_loader_type;
-	//current_environ->data = data;
-#if 0
-
-	if(args->count == 2) {
-		value_copy(&args->values[1], &data->modules);
-	} else {
-		value_init(&data->modules, VALUE_TYPE_LIST);
-	}
-
-	data->env = current_environ;
-	data->is_kboot = false;
-	data->tags = 0;
-#if CONFIG_KBOOT_UI
-	data->config = ui_list_create("Kernel Options", true);
-#endif
-
-	/* Open the kernel image. */
-	data->kernel = file_open(args->values[0].string, NULL);
-	if(!data->kernel) {
-		/* The error will be reported when the user tries to boot. */
-		return true;
-	}
-
-	/* Find all option tags. */
-	elf_note_iterate(data->kernel, add_options, data);
-	return true;
-#endif
 	return true;
 }
 

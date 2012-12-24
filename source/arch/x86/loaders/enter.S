@@ -32,19 +32,28 @@
 
 #if CONFIG_KBOOT_LOADER_KBOOT
 
+#define ENTRY_ARGS_TRANSITION_CR3	0
+#define ENTRY_ARGS_VIRT			8
+#define ENTRY_ARGS_KERNEL_CR3		16
+#define ENTRY_ARGS_SP			24
+#define ENTRY_ARGS_ENTRY		32
+#define ENTRY_ARGS_TAGS			40
+#define ENTRY_ARGS_TRAMPOLINE		48
+
 /** Enter a 64-bit KBoot kernel.
- * @param tags		Address of tag list.
- * @param cr3		Value to load into CR3.
- * @param entry		Entry point address. */
+ * @param args		Entry arguments structure. */
 FUNCTION_START(kboot_arch_enter64)
 .code32
+	/* Store arguments address in EDI. */
+	movl	4(%esp), %edi
+
 	/* Enable PAE. */
 	movl	%cr4, %eax
 	orl	$X86_CR4_PAE, %eax
 	movl	%eax, %cr4
 
-	/* Point CR3 to the boot PML4. */
-	movl	12(%esp), %eax
+	/* Point CR3 to the transition PML4. */
+	movl	ENTRY_ARGS_TRANSITION_CR3(%edi), %eax
 	movl	%eax, %cr3
 
 	/* Enable long mode by setting EFER.LME. */
@@ -64,48 +73,61 @@ FUNCTION_START(kboot_arch_enter64)
 .code64
 .Llmode:
 	/* Set data segments. */
-	mov	$SEGMENT_DS64, %ax
-	mov	%ax, %ss
 	xorl	%eax, %eax
 	mov	%ax, %ds
 	mov	%ax, %es
 	mov	%ax, %fs
 	mov	%ax, %gs
+	mov	%ax, %ss
 
-        /* Clear the high 32 bits of %rsp. */
-        mov	%esp, %esp
+	/* Clear high 32 bits of arguments address. */
+	mov	%edi, %edi
 
-	/* Retreive the tag list address and entry point. */
-	movq	$KBOOT_MAGIC, %rdi
-	movq	4(%rsp), %rsi
-	movq	16(%rsp), %rax
+	/* Get the trampoline location and jump to it. */
+	movq	ENTRY_ARGS_VIRT(%rdi), %rdi
+	leaq	ENTRY_ARGS_TRAMPOLINE(%rdi), %rax
+	jmp	*%rax
 
-	/* Set the stack pointer to the top of the stack. */
-	addl	$PAGE_SIZE, %esp
-	andl	$0xFFFFF000, %esp
+SYMBOL(kboot_trampoline64)
+	/* Switch to the real kernel page directory. */
+	movq	ENTRY_ARGS_KERNEL_CR3(%rdi), %rax
+	movq	%rax, %cr3
+
+	/* Set the stack pointer. */
+	movq	ENTRY_ARGS_SP(%rdi), %rsp
 
 	/* Clear the stack frame/RFLAGS. */
 	xorq	%rbp, %rbp
 	push	$0
 	popf
 
+	/* Retrieve tag list address and entry point. */
+	movq	ENTRY_ARGS_TAGS(%rdi), %rsi
+	movq	ENTRY_ARGS_ENTRY(%rdi), %rax
+
 	/* Call the kernel. */
+	movq	$KBOOT_MAGIC, %rdi
 	call	*%rax
+1:	jmp	1b
+
+SYMBOL(kboot_trampoline64_size)
+	.long	. - kboot_trampoline64
 FUNCTION_END(kboot_arch_enter64)
 
 /** Enter a 32-bit KBoot kernel.
- * @param tags		Address of tag list.
- * @param cr3		Value to load into CR3.
- * @param entry		Entry point address. */
+ * @param args		Entry arguments structure. */
 FUNCTION_START(kboot_arch_enter32)
 .code32
+	/* Store arguments address in EDI. */
+	movl	4(%esp), %edi
+
 	/* Enable PSE, the MMU code may have created mappings with large pages. */
 	movl	%cr4, %eax
 	orl	$X86_CR4_PSE, %eax
 	movl	%eax, %cr4
 
-	/* Point CR3 to the boot page directory. */
-	movl	12(%esp), %eax
+	/* Point CR3 to the transition page directory. */
+	movl	ENTRY_ARGS_TRANSITION_CR3(%edi), %eax
 	movl	%eax, %cr3
 
 	/* Set PG (Paging Enable). */
@@ -113,26 +135,36 @@ FUNCTION_START(kboot_arch_enter32)
 	orl	$X86_CR0_PG, %ecx
 	movl	%ecx, %cr0
 
-	/* Retreive the tag list address (phys_ptr_t, 64-bit) and entry point. */
-	movl	4(%esp), %edi
-	movl	8(%esp), %esi
-	movl	16(%esp), %eax
+	/* Get the trampoline location and jump to it. */
+	movl	ENTRY_ARGS_VIRT(%edi), %edi
+	leal	ENTRY_ARGS_TRAMPOLINE(%edi), %eax
+	jmp	*%eax
 
-	/* Set the stack pointer to the top of the stack. */
-	addl	$PAGE_SIZE, %esp
-	andl	$0xFFFFF000, %esp
+SYMBOL(kboot_trampoline32)
+	/* Switch to the real kernel page directory. */
+	movl	ENTRY_ARGS_KERNEL_CR3(%edi), %eax
+	movl	%eax, %cr3
+
+	/* Set the stack pointer. */
+	movl	ENTRY_ARGS_SP(%edi), %esp
 
 	/* Clear the stack frame/EFLAGS. */
 	xorl	%ebp, %ebp
 	push	$0
 	popf
 
+	/* Retrieve tag list address and entry point. */
+	movl	ENTRY_ARGS_TAGS(%edi), %edx
+	movl	ENTRY_ARGS_ENTRY(%edi), %eax
+
 	/* Call the kernel. */
-	push	%esi
-	push	%edi
+	push	%edx
 	push	$KBOOT_MAGIC
 	call	*%eax
 1:	jmp	1b
+
+SYMBOL(kboot_trampoline32_size)
+	.long	. - kboot_trampoline32
 FUNCTION_END(kboot_arch_enter32)
 
 #endif /* CONFIG_KBOOT_LOADER_KBOOT */

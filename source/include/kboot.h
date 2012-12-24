@@ -374,11 +374,11 @@ typedef struct kboot_itag_load {
 		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
 		"2: .long " STRINGIFY(flags) "\n" \
 		"   .long 0\n" \
-		"   .long " STRINGIFY(alignment) "\n" \
-		"   .long " STRINGIFY(min_alignment) "\n" \
-		"   .long " STRINGIFY(phys_address) "\n" \
-		"   .long " STRINGIFY(virt_map_base) "\n" \
-		"   .long " STRINGIFY(virt_map_size) "\n" \
+		"   .quad " STRINGIFY(alignment) "\n" \
+		"   .quad " STRINGIFY(min_alignment) "\n" \
+		"   .quad " STRINGIFY(phys_address) "\n" \
+		"   .quad " STRINGIFY(virt_map_base) "\n" \
+		"   .quad " STRINGIFY(virt_map_size) "\n" \
 		"3: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
 		"   .popsection\n")
 
@@ -466,7 +466,7 @@ typedef struct kboot_itag_mapping {
 /** Macro to declare a virtual memory mapping itag. */
 #define KBOOT_MAPPING(virt, phys, size) \
 	__asm__( \
-		"   .pushsection \".note.kboot.mapping.b" STRINGIFY(virt) "\", \"a\"\n" \
+		"   .pushsection \".note.kboot.mapping.b" STRINGIFY(virt) STRINGIFY(phys) "\", \"a\"\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_MAPPING) "\n" \

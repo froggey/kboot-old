@@ -353,6 +353,8 @@ of the tag list is aligned to the page size, and the start of each tag is
 aligned on an 8 byte boundary after the end of the previous tag. The tag list
 is terminated with an `KBOOT_TAG_NONE` tag. The tag list is mapped in a virtual
 memory range, and the physical memory containing it is marked as reclaimable.
+Multiple tags of the same type are guaranteed to be grouped together in the
+tag list.
 
 The header of each tag is in the following format:
 
@@ -442,8 +444,8 @@ the same type are coalesced into a single range. Note that this memory map does
 _not_ describe platform-specific memory regions such as memory used for ACPI
 data. It only contains information about usable RAM. Depending on the platform,
 additional information may be included in the tag list about such regions. See
-the _Platform Specifics_ section for more information. All memory tags must be
-grouped together in the tag list, and sorted by lowest start address first.
+the _Platform Specifics_ section for more information. All memory tags are
+sorted in the tag list by lowest start address first.
 
     typedef struct kboot_tag_memory {
     	kboot_tag_t   header;
@@ -468,7 +470,8 @@ Fields:
 ### `KBOOT_TAG_VMEM` (`4`)
 
 The set of `KBOOT_TAG_VMEM` tags describe all virtual memory mappings that
-exist in the kernel virtual address space.
+exist in the kernel virtual address space. All virtual memory tags are sorted
+in the tag list by lowest start address first.
 
     typedef struct kboot_tag_vmem {
     	kboot_tag_t   header;
@@ -810,10 +813,10 @@ The PC BIOS provides more memory information than is included in the KBoot
 physical memory map. Some of this information is required to support ACPI,
 therefore KBoot will provide an unmodified copy of the BIOS E820 memory map
 to the kernel. The tag list will contain an E820 tag for each address range
-descriptor returned by INT 15h function E820h. All E820 tags will be grouped
-together in the tag list, in the order in which they were returned by the BIOS.
-Each tag's data will contain the tag header and then the data returned by the
-BIOS. The format of each descriptor as of ACPI 5.0 is as follows:
+descriptor returned by INT 15h function E820h. All E820 tags will be placed in
+the tag list in the order in which they were returned by the BIOS. Each tag's
+data will contain the tag header and then the data returned by the BIOS. The
+format of each descriptor as of ACPI 5.0 is as follows:
 
     typedef struct kboot_tag_e820 {
     	kboot_tag_t header;

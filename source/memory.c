@@ -33,19 +33,10 @@ typedef struct heap_chunk {
 	unsigned long size;		/**< Size of chunk including struct (low bit == used). */
 } heap_chunk_t;
 
-/** Structure used to represent a physical memory range internally. */
-typedef struct memory_range {
-	list_t header;			/**< Link to range list. */
-
-	phys_ptr_t start;		/**< Start of the range. */
-	phys_ptr_t end;			/**< End of the range. */
-	unsigned type;			/**< Type of the range. */
-} memory_range_t;
-
 /** Size of the heap (128KB). */
 #define HEAP_SIZE		131072
 
-extern char __start[], __end[], loader_stack[];
+extern char loader_stack[];
 
 /** Statically allocated heap. */
 static uint8_t heap[HEAP_SIZE] __aligned(PAGE_SIZE);
@@ -455,10 +446,9 @@ void memory_init(void) {
 	phys_memory_dump();
 }
 
-/** Finalise the memory map.
- * @note		Only needs to be called when booting a KBoot kernel.
- * @return		Physical address of the first memory range tag. */
-phys_ptr_t memory_finalise(void) {
+/** Finalize the memory map.
+ * @return		Pointer to the memory range list. */
+list_t *memory_finalize(void) {
 	memory_range_t *range;
 
 	/* Reclaim all internal memory ranges. */
@@ -474,25 +464,5 @@ phys_ptr_t memory_finalise(void) {
 	dprintf("memory: final memory map:\n");
 	phys_memory_dump();
 
-#if 0
-	/* Set up the tag headers in the range structures. */
-	LIST_FOREACH(&memory_ranges, iter) {
-		range = list_entry(iter, memory_range_t, header);
-
-		range->ka.header.type = KBOOT_TAG_MEMORY;
-		range->ka.header.size = sizeof(range->ka);
-		if(range->header.next != &memory_ranges) {
-			next = list_entry(range->header.next, memory_range_t, header);
-			range->ka.header.next = (ptr_t)&next->ka;
-		} else {
-			range->ka.header.next = 0;
-		}
-
-		i++;
-	}
-
-	range = list_entry(memory_ranges.next, memory_range_t, header);
-	return (ptr_t)&range->ka;
-#endif
-	return 0;
+	return &memory_ranges;
 }
