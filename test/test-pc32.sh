@@ -1,17 +1,17 @@
 #!/bin/bash -ex
 
 scons
-scons test
+scons build/x86-pc/test/test32.elf
 
 mkdir -p isobuild/boot
 cat build/x86-pc/source/platform/pc/stage1/cdboot build/x86-pc/source/loader > isobuild/boot/cdboot.img
-cp build/x86-pc/test/test.elf isobuild/
+cp build/x86-pc/test/test32.elf isobuild/test.elf
 
 cat > isobuild/boot/loader.cfg << EOF
 set "timeout" 5
 
-entry "Test" {
-	kboot "/test.elf"
+entry "Test (32-bit)" {
+	kboot "/test.elf" ["/test.elf"]
 }
 
 entry "Chainload (hd0)" {

@@ -38,7 +38,9 @@ typedef Elf32_Addr elf_addr_t;
 extern void kmain(uint32_t magic, kboot_tag_t *tags);
 
 KBOOT_IMAGE(0);
-KBOOT_BOOLEAN_OPTION("test_option", "Test Option", true);
+KBOOT_BOOLEAN_OPTION("bool_option", "Boolean Option", true);
+KBOOT_STRING_OPTION("string_option", "String Option", "Default Value");
+KBOOT_MAPPING(0xffffffffffffffff, 0x100000, 0x1000);
 
 /** Dump a core tag. */
 static void dump_core_tag(kboot_tag_core_t *tag) {
@@ -61,7 +63,7 @@ static void dump_option_tag(kboot_tag_option_t *tag) {
 	kprintf("  name_size  = %" PRIu32 "\n", tag->name_size);
 	kprintf("  value_size = %" PRIu32 "\n", tag->value_size);
 
-	name = (const char *)ROUND_UP((ptr_t)tag + tag->header.size, 8);
+	name = (const char *)ROUND_UP((ptr_t)tag + sizeof(kboot_tag_option_t), 8);
 	kprintf("  name       = `%s'\n", name);
 
 	value = (void *)ROUND_UP((ptr_t)name + tag->name_size, 8);

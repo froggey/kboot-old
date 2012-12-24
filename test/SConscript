@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011 Alex Smith
+# Copyright (C) 2011-2012 Alex Smith
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,11 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+import os
+
 Import('env', 'config')
+
+targets = [('32', []), ('64', ['-mcmodel=kernel'])]
 
 # List of our own sources.
 sources = map(File, [
@@ -24,9 +28,18 @@ sources = map(File, [
 	'../source/lib/printf.c',
 ])
 
-# Link the test kernel.
-target = env.LDScript('link.ld', 'link-%s.ld.in' % (config['PLATFORM']))
-env.Program('test.elf', map(env.Object, sources), LINKFLAGS = env['LINKFLAGS'] + ["-Wl,-T,${File('link.ld')}"])
-Depends('test.elf', target)
+# Build test kernel for each supported configuration.
+for (target, flags) in [(x, y) for (x, y) in targets if config['KBOOT_HAVE_LOADER_KBOOT' + x]]:
+	ldscript = env.LDScript('link%s.ld' % (target),
+		'link-%s%s.ld.in' % (config['PLATFORM'], target))
+	ccflags = [x for x in env['CCFLAGS'] if x not in ['-m32', '-m64']] + ['-m%s' % target] + flags
+	linkflags = [x for x in env['LINKFLAGS'] if x not in ['-m32', '-m64']] + [
+		'-m%s' % target, "-Wl,-T,${File('link%s.ld')}" % target]
 
-Alias('test', File('test.elf'))
+	env.Program('test%s.elf' % (target),
+		map(lambda x: env.Object('%s%s.o'
+			% (os.path.splitext(os.path.basename(str(x)))[0], target), x,
+			CCFLAGS = ccflags), sources),
+		LINKFLAGS = linkflags)
+	Depends('test%s.elf' % target, ldscript)
+	Alias('test', File('test%s.elf' % target))
