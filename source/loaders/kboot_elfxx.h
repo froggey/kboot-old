@@ -63,9 +63,9 @@ static bool FUNC(note_iterate)(kboot_loader_t *loader, kboot_note_cb_t cb) {
 			note = (elf_note_t *)(buf + offset);
 			offset += sizeof(elf_note_t);
 			name = (const char *)(buf + offset);
-			offset += ROUND_UP(note->n_namesz, ELF_BITS / 8);
+			offset += ROUND_UP(note->n_namesz, 4);
 			desc = buf + offset;
-			offset += ROUND_UP(note->n_descsz, ELF_BITS / 8);
+			offset += ROUND_UP(note->n_descsz, 4);
 
 			if(strcmp(name, "KBoot") == 0) {
 				if(!cb(note, desc, loader)) {

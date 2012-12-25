@@ -54,11 +54,8 @@ ELF notes have the following format:
  * _Desc Size_: 32-bit integer. Size of the Desc field, in bytes.
  * _Type_: 32-bit integer. Type of the note.
  * _Name_: String identifying the vendor who defined the format of the note.
-   Padded to a 4 or 8 byte boundary.
- * _Desc_: Data contained in the note. Padded to a 4 or 8 byte boundary.
-
-The padding of the Name and Desc fields is 4 bytes for 32-bit ELF files, and 8
-bytes for 64-bit.
+   Padded to a 4 byte boundary.
+ * _Desc_: Data contained in the note. Padded to a 4 byte boundary.
 
 For a KBoot image tag, the Name field is set to `"KBoot\0"`, the Type field is
 set to the identifier of the image tag type, and the Desc field contains the

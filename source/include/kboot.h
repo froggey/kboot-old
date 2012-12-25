@@ -311,13 +311,6 @@ typedef struct kboot_tag_pagetables {
 /** KBoot ELF note name. */
 #define KBOOT_NOTE_NAME			"KBoot"
 
-/** Power-of-2 alignment of note fields (ELF32 requires 4 bytes, ELF64 requires 8). */
-#ifdef __LP64__
-# define KBOOT_NOTE_ALIGN		3
-#else
-# define KBOOT_NOTE_ALIGN		2
-#endif
-
 /** KBoot image tag types (used as ELF note type field). */
 #define KBOOT_ITAG_IMAGE		0	/**< Basic image information (required). */
 #define KBOOT_ITAG_LOAD			1	/**< Memory layout options. */
@@ -343,10 +336,10 @@ typedef struct kboot_itag_image {
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_IMAGE) "\n" \
 		"0: .asciz \"KBoot\"\n" \
-		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"1: .p2align 2\n" \
 		"2: .long " XSTRINGIFY(KBOOT_VERSION) "\n" \
 		"   .long " STRINGIFY(flags) "\n" \
-		"3: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"3: .p2align 2\n" \
 		"   .popsection\n")
 
 /** Image tag specifying loading parameters. */
@@ -371,7 +364,7 @@ typedef struct kboot_itag_load {
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_LOAD) "\n" \
 		"0: .asciz \"KBoot\"\n" \
-		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"1: .p2align 2\n" \
 		"2: .long " STRINGIFY(flags) "\n" \
 		"   .long 0\n" \
 		"   .quad " STRINGIFY(alignment) "\n" \
@@ -379,7 +372,7 @@ typedef struct kboot_itag_load {
 		"   .quad " STRINGIFY(phys_address) "\n" \
 		"   .quad " STRINGIFY(virt_map_base) "\n" \
 		"   .quad " STRINGIFY(virt_map_size) "\n" \
-		"3: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"3: .p2align 2\n" \
 		"   .popsection\n")
 
 /** Image tag containing an option description. */
@@ -398,7 +391,7 @@ typedef struct kboot_itag_option {
 		"   .long 6f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_OPTION) "\n" \
 		"0: .asciz \"KBoot\"\n" \
-		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"1: .p2align 2\n" \
 		"2: .byte " XSTRINGIFY(KBOOT_OPTION_BOOLEAN) "\n" \
 		"   .byte 0\n" \
 		"   .byte 0\n" \
@@ -409,7 +402,7 @@ typedef struct kboot_itag_option {
 		"3: .asciz \"" name "\"\n" \
 		"4: .asciz \"" desc "\"\n" \
 		"5: .byte " STRINGIFY(default) "\n" \
-		"6: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"6: .p2align 2\n" \
 		"   .popsection\n")
 
 /** Macro to declare an integer option itag. */
@@ -420,7 +413,7 @@ typedef struct kboot_itag_option {
 		"   .long 6f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_OPTION) "\n" \
 		"0: .asciz \"KBoot\"\n" \
-		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"1: .p2align 2\n" \
 		"2: .byte " XSTRINGIFY(KBOOT_OPTION_INTEGER) "\n" \
 		"   .byte 0\n" \
 		"   .byte 0\n" \
@@ -431,7 +424,7 @@ typedef struct kboot_itag_option {
 		"3: .asciz \"" name "\"\n" \
 		"4: .asciz \"" desc "\"\n" \
 		"5: .quad " STRINGIFY(default) "\n" \
-		"6: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"6: .p2align 2\n" \
 		"   .popsection\n")
 
 /** Macro to declare an string option itag. */
@@ -442,7 +435,7 @@ typedef struct kboot_itag_option {
 		"   .long 6f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_OPTION) "\n" \
 		"0: .asciz \"KBoot\"\n" \
-		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"1: .p2align 2\n" \
 		"2: .byte " XSTRINGIFY(KBOOT_OPTION_STRING) "\n" \
 		"   .byte 0\n" \
 		"   .byte 0\n" \
@@ -453,7 +446,7 @@ typedef struct kboot_itag_option {
 		"3: .asciz \"" name "\"\n" \
 		"4: .asciz \"" desc "\"\n" \
 		"5: .asciz \"" default "\"\n" \
-		"6: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"6: .p2align 2\n" \
 		"   .popsection\n")
 
 /** Image tag containing a virtual memory mapping description. */
@@ -471,11 +464,11 @@ typedef struct kboot_itag_mapping {
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_MAPPING) "\n" \
 		"0: .asciz \"KBoot\"\n" \
-		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"1: .p2align 2\n" \
 		"2: .quad " STRINGIFY(virt) "\n" \
 		"   .quad " STRINGIFY(phys) "\n" \
 		"   .quad " STRINGIFY(size) "\n" \
-		"3: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"3: .p2align 2\n" \
 		"   .popsection\n")
 
 /** Image tag specifying the kernel's requested video mode. */
@@ -494,12 +487,12 @@ typedef struct kboot_itag_video {
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_VIDEO) "\n" \
 		"0: .asciz \"KBoot\"\n" \
-		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"1: .p2align 2\n" \
 		"2: .long " STRINGIFY(types) "\n" \
 		"   .long " STRINGIFY(width) "\n" \
 		"   .long " STRINGIFY(height) "\n" \
 		"   .byte " STRINGIFY(bpp) "\n" \
-		"3: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
+		"3: .p2align 2\n" \
 		"   .popsection\n")
 
 #endif /* __ASM__ */
