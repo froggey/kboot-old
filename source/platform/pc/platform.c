@@ -34,7 +34,6 @@
 #include <time.h>
 
 extern void platform_init(void);
-extern char *video_mode_override;
 
 /** Main function of the PC loader. */
 void platform_init(void) {
@@ -50,9 +49,7 @@ void platform_init(void) {
 	if(multiboot_magic == MB_LOADER_MAGIC) {
 		cmdline = multiboot_cmdline;
 		while((tok = strsep(&cmdline, " "))) {
-			if(strncmp(tok, "video-mode=", 11) == 0) {
-				video_mode_override = tok + 11;
-			} else if(strncmp(tok, "config-file=", 12) == 0) {
+			if(strncmp(tok, "config-file=", 12) == 0) {
 				config_file_override = tok + 12;
 			}
 		}

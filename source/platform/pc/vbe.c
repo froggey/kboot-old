@@ -19,7 +19,6 @@
  * @brief		VBE video mode support.
  */
 
-#include <lib/list.h>
 #include <lib/string.h>
 
 #include <pc/bios.h>
@@ -29,15 +28,14 @@
 #include <memory.h>
 #include <menu.h>
 
-/** Override for video mode from Multiboot command line. */
-char *video_mode_override = NULL;
+/** VBE controller information. */
+vbe_info_t vbe_info;
 
-#if 0
-/** Structure describing a VBE video mode. */
-typedef struct vbe_mode {
-	video_mode_t header;		/**< Video mode header structure. */
-	uint16_t id;			/**< ID of the mode. */
-} vbe_mode_t;
+/** List of detected VBE modes. */
+LIST_DECLARE(vbe_modes);
+
+/** Default VBE mode. */
+vbe_mode_t *default_vbe_mode = NULL;
 
 /** Preferred/fallback video modes. */
 #define PREFERRED_MODE_WIDTH		1024
@@ -45,11 +43,51 @@ typedef struct vbe_mode {
 #define FALLBACK_MODE_WIDTH		800
 #define FALLBACK_MODE_HEIGHT		600
 
-/** Detect available video modes.
- * @todo		Handle VBE not being supported. */
-void video_init(void) {
+/** Set a VBE video mode.
+ * @param mode		Mode to set. */
+void vbe_mode_set(vbe_mode_t *mode) {
+	bios_regs_t regs;
+
+	/* Set the mode. Bit 14 in the mode ID indicates that we wish to use
+	 * the linear framebuffer model. */
+	bios_regs_init(&regs);
+	regs.eax = VBE_FUNCTION_SET_MODE;
+	regs.ebx = mode->id | (1<<14);
+	bios_interrupt(0x10, &regs);
+
+	dprintf("vbe: set VBE mode 0x%x: %dx%dx%d (framebuffer: 0x%" PRIxPHYS ")\n",
+		mode->id, mode->info.x_resolution, mode->info.y_resolution,
+		mode->info.bits_per_pixel);
+}
+
+/** Find a video mode.
+ * @param width		Width of the mode.
+ * @param height	Height of the mode.
+ * @param depth		Depth of the mode, or 0 to search for highest depth.
+ * @return		Pointer to mode found, or NULL if no matching mode. */
+vbe_mode_t *vbe_mode_find(uint16_t width, uint16_t height, uint8_t depth) {
+	vbe_mode_t *mode, *ret = NULL;
+
+	LIST_FOREACH(&vbe_modes, iter) {
+		mode = list_entry(iter, vbe_mode_t, header);
+
+		if(mode->info.x_resolution == width && mode->info.y_resolution == height) {
+			if(depth) {
+				if(mode->info.bits_per_pixel == depth)
+					return mode;
+			} else if(!ret || mode->info.bits_per_pixel > ret->info.bits_per_pixel) {
+				ret = mode;
+			}
+		}
+	}
+
+	return ret;
+}
+
+/** Detect available video modes. */
+void vbe_init(void) {
 	vbe_mode_info_t *minfo = (vbe_mode_info_t *)(BIOS_MEM_BASE + sizeof(vbe_info_t));
-	vbe_info_t *info = (vbe_info_t *)(BIOS_MEM_BASE);
+	vbe_info_t *info = (vbe_info_t *)BIOS_MEM_BASE;
 	uint16_t *location;
 	bios_regs_t regs;
 	vbe_mode_t *mode;
@@ -62,9 +100,11 @@ void video_init(void) {
 	regs.edi = BIOS_MEM_BASE;
 	bios_interrupt(0x10, &regs);
 	if((regs.eax & 0xFF) != 0x4F) {
-		boot_error("VBE is not supported");
+		dprintf("vbe: VBE is not supported\n");
+		return;
 	} else if((regs.eax & 0xFF00) != 0) {
-		boot_error("Could not obtain VBE information (0x%x)", regs.eax & 0xFFFF);
+		dprintf("vbe: could not obtain VBE information (0x%x)\n", regs.eax & 0xFFFF);
+		return;
 	}
 
 	dprintf("vbe: vbe presence was detected:\n");
@@ -76,6 +116,8 @@ void video_init(void) {
 	if(info->vbe_version_major >= 2)
 		dprintf(" OEM revision: 0x%" PRIx16 "\n", info->oem_software_rev);
 
+	memcpy(&vbe_info, info, sizeof(vbe_info_t));
+
 	/* Iterate through the modes. 0xFFFF indicates the end of the list. */
 	location = (uint16_t *)SEGOFF2LIN(info->video_mode_ptr);
 	for(i = 0; location[i] != 0xFFFF; i++) {
@@ -84,15 +126,15 @@ void video_init(void) {
 		regs.ecx = location[i];
 		regs.edi = BIOS_MEM_BASE + sizeof(vbe_info_t);
 		bios_interrupt(0x10, &regs);
-		if((regs.eax & 0xFF00) != 0)
-			boot_error("Could not obtain VBE mode information (0x%x)", regs.eax & 0xFFFF);
+		if((regs.eax & 0xFF00) != 0) {
+			dprintf("vbe: could not obtain VBE mode information (0x%x)\n",
+				regs.eax & 0xFFFF);
+			continue;
+		}
 
 		/* Check if the mode is suitable. */
 		if(minfo->memory_model != 4 && minfo->memory_model != 6) {
 			/* Not packed-pixel or direct colour. */
-			continue;
-		} else if(minfo->phys_base_ptr == 0) {
-			/* Lulwhut? */
 			continue;
 		} else if((minfo->mode_attributes & (1<<0)) == 0) {
 			/* Not supported. */
@@ -106,55 +148,21 @@ void video_init(void) {
 		} else if((minfo->mode_attributes & (1<<7)) == 0) {
 			/* Not usable in linear mode. */
 			continue;
-		} else if(minfo->bits_per_pixel != 8 && minfo->bits_per_pixel != 16 &&
-			minfo->bits_per_pixel != 24 && minfo->bits_per_pixel != 32)
-		{
+		} else if(minfo->bits_per_pixel < 8) {
+			continue;
+		} else if(minfo->phys_base_ptr == 0) {
 			continue;
 		}
 
 		/* Add the mode to the list. */
 		mode = kmalloc(sizeof(vbe_mode_t));
+		list_init(&mode->header);
 		mode->id = location[i];
-		mode->header.width = minfo->x_resolution;
-		mode->header.height = minfo->y_resolution;
-		mode->header.bpp = minfo->bits_per_pixel;
-		mode->header.addr = minfo->phys_base_ptr;
-		video_mode_add(&mode->header);
+		memcpy(&mode->info, minfo, sizeof(mode->info));
+		list_append(&vbe_modes, &mode->header);
 	}
 
-	/* Try to find the mode to use. */
-	if(!video_mode_override || !(default_video_mode = video_mode_find_string(video_mode_override))) {
-		if(!(default_video_mode = video_mode_find(PREFERRED_MODE_WIDTH,
-			PREFERRED_MODE_HEIGHT, 0)))
-		{
-			if(!(default_video_mode = video_mode_find(FALLBACK_MODE_WIDTH,
-				FALLBACK_MODE_HEIGHT, 0)))
-			{
-				boot_error("Could not find a usable video mode");
-			}
-		}
-	}
-}
-
-/** Set the video mode.
- * @param mode		Mode to set. */
-void video_enable(video_mode_t *mode) {
-	vbe_mode_t *vmode = (vbe_mode_t *)mode;
-	bios_regs_t regs;
-
-	/* Set the mode. Bit 14 in the mode ID indicates that we wish to use
-	 * the linear framebuffer model. */
-	bios_regs_init(&regs);
-	regs.eax = VBE_FUNCTION_SET_MODE;
-	regs.ebx = vmode->id | (1<<14);
-	bios_interrupt(0x10, &regs);
-
-	dprintf("video: set video mode %dx%dx%d (framebuffer: 0x%" PRIxPHYS ")\n",
-		mode->width, mode->height, mode->bpp, mode->addr);
-}
-#endif
-
-/** Detect available video modes. */
-void vbe_init(void) {
-
+	/* Try to find the mode to use. FIXME: Make this more reliable. */
+	if(!(default_vbe_mode = vbe_mode_find(PREFERRED_MODE_WIDTH, PREFERRED_MODE_HEIGHT, 0)))
+		default_vbe_mode = vbe_mode_find(FALLBACK_MODE_WIDTH, FALLBACK_MODE_HEIGHT, 0);
 }

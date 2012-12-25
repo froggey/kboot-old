@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Alex Smith
+ * Copyright (C) 2009-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +22,7 @@
 #ifndef __PLATFORM_VBE_H
 #define __PLATFORM_VBE_H
 
-#include <types.h>
+#include <lib/list.h>
 
 /** VBE information structure. */
 typedef struct vbe_info {
@@ -99,10 +99,25 @@ typedef struct vbe_mode_info {
 	uint8_t  reserved4[189];
 } __packed vbe_mode_info_t;
 
+/** Structure describing a VBE video mode. */
+typedef struct vbe_mode {
+	list_t header;			/**< Link to mode list. */
+
+	uint16_t id;			/**< ID of the mode. */
+	vbe_mode_info_t info;		/**< Mode information. */
+} vbe_mode_t;
+
 /** VBE function definitions. */
 #define VBE_FUNCTION_CONTROLLER_INFO	0x4F00	/**< Return VBE Controller Information. */
 #define VBE_FUNCTION_MODE_INFO		0x4F01	/**< Return VBE Mode Information. */
 #define VBE_FUNCTION_SET_MODE		0x4F02	/**< Set VBE Mode. */
+
+extern vbe_info_t vbe_info;
+extern list_t vbe_modes;
+extern vbe_mode_t *default_vbe_mode;
+
+extern void vbe_mode_set(vbe_mode_t *mode);
+extern vbe_mode_t *vbe_mode_find(uint16_t width, uint16_t height, uint8_t depth);
 
 extern void vbe_init(void);
 

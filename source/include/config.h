@@ -107,6 +107,7 @@ extern bool command_list_exec(command_list_t *list, environ_t **envp);
 extern environ_t *environ_create(environ_t *parent);
 extern value_t *environ_lookup(environ_t *env, const char *name);
 extern value_t *environ_insert(environ_t *env, const char *name, value_t *value);
+extern void environ_remove(environ_t *env, const char *name);
 extern void environ_destroy(environ_t *env);
 
 extern void config_init(void);

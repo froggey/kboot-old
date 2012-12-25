@@ -645,6 +645,25 @@ value_t *environ_insert(environ_t *env, const char *name, value_t *value) {
 	return &entry->value;
 }
 
+/** Remove an entry from an environment.
+ * @param env		Environment to remove from.
+ * @param name		Name of entry to remove. */
+void environ_remove(environ_t *env, const char *name) {
+	environ_entry_t *entry;
+
+	/* Look for an existing entry with the same name. */
+	LIST_FOREACH(&env->entries, iter) {
+		entry = list_entry(iter, environ_entry_t, header);
+		if(strcmp(entry->name, name) == 0) {
+			list_remove(&entry->header);
+			value_destroy(&entry->value);
+			kfree(entry->name);
+			kfree(entry);
+			return;
+		}
+	}
+}
+
 /** Destroy an environment.
  * @param env		Environment to destroy. */
 void environ_destroy(environ_t *env) {

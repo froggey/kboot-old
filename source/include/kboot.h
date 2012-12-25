@@ -492,7 +492,7 @@ typedef struct kboot_itag_video {
 		"   .pushsection \".note.kboot.video\", \"a\"\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 3f - 2f\n" \
-		"   .long " XSTRINGIFY(KBOOT_ITAG_MAPPING) "\n" \
+		"   .long " XSTRINGIFY(KBOOT_ITAG_VIDEO) "\n" \
 		"0: .asciz \"KBoot\"\n" \
 		"1: .p2align " XSTRINGIFY(KBOOT_NOTE_ALIGN) "\n" \
 		"2: .long " STRINGIFY(types) "\n" \
