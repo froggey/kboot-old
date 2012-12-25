@@ -884,6 +884,7 @@ ui_entry_t *ui_entry_create(const char *label, value_t *value) {
 		return ui_textbox_create(label, value);
 	default:
 		assert(0 && "Unhandled value type");
+		return NULL;
 	}
 }
 
