@@ -38,9 +38,15 @@ typedef Elf32_Addr elf_addr_t;
 extern void kmain(uint32_t magic, kboot_tag_t *tags);
 
 KBOOT_IMAGE(0);
+KBOOT_VIDEO(KBOOT_VIDEO_LFB | KBOOT_VIDEO_VGA, 0, 0, 0);
 KBOOT_BOOLEAN_OPTION("bool_option", "Boolean Option", true);
 KBOOT_STRING_OPTION("string_option", "String Option", "Default Value");
-KBOOT_VIDEO(0, 0, 0, 0);
+
+#ifdef __LP64__
+KBOOT_LOAD(0, 0, 0, 0, 0xFFFFFFFF80000000, 0x80000000);
+#else
+KBOOT_LOAD(0, 0, 0, 0, 0xC0000000, 0x40000000);
+#endif
 
 /** Dump a core tag. */
 static void dump_core_tag(kboot_tag_core_t *tag) {

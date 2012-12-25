@@ -92,7 +92,7 @@ void kboot_arch_check(kboot_loader_t *loader) {
  * @param addr		Address to check.
  * @return		Result of check. */
 static inline bool is_canonical_addr(target_ptr_t addr) {
-	return ((addr >> 47) + 1) <= 1;
+	return ((uint64_t)((int64_t)addr >> 47) + 1) <= 1;
 }
 
 /** Check whether an address range is canonical.
