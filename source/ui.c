@@ -96,6 +96,7 @@ typedef struct ui_chooser {
 typedef struct ui_choice {
 	ui_entry_t header;		/**< Entry header. */
 	ui_chooser_t *chooser;		/**< Chooser that the entry is for. */
+	const char *label;		/**< Label for the choice. */
 	value_t value;			/**< Value of the choice. */
 } ui_choice_t;
 
@@ -909,8 +910,8 @@ static void ui_chooser_render(ui_entry_t *entry) {
 	assert(chooser->selected);
 
 	kprintf("%s", chooser->label);
-	main_console->move_cursor(0 - strlen(chooser->selected->value.string) - 2, 0);
-	kprintf("[%s]", chooser->selected->value.string);
+	main_console->move_cursor(0 - strlen(chooser->selected->label) - 2, 0);
+	kprintf("[%s]", chooser->selected->label);
 }
 
 /** Chooser entry type. */
@@ -969,7 +970,7 @@ static ui_action_t ui_choice_actions[] = {
  * @param entry		Entry to render. */
 static void ui_choice_render(ui_entry_t *entry) {
 	ui_choice_t *choice = (ui_choice_t *)entry;
-	kprintf("%s", choice->value.string);
+	kprintf("%s", choice->label);
 }
 
 /** Chooser entry type. */
@@ -981,14 +982,16 @@ static ui_entry_type_t ui_choice_entry_type = {
 
 /** Insert a choice into a choice entry.
  * @param entry		Entry to insert into.
+ * @param label		Label for the choice, or NULL to match value.
  * @param value		Value of the choice. */
-void ui_chooser_insert(ui_entry_t *entry, const value_t *value) {
+void ui_chooser_insert(ui_entry_t *entry, const char *label, const value_t *value) {
 	ui_choice_t *choice = kmalloc(sizeof(ui_choice_t));
 	ui_chooser_t *chooser = (ui_chooser_t *)entry;
 
 	ui_entry_init(&choice->header, &ui_choice_entry_type);
 	value_copy(value, &choice->value);
 	choice->chooser = chooser;
+	choice->label = (label) ? label : choice->value.string;
 
 	/* Check if this matches the current value and mark it as selected if
 	 * it is. */
