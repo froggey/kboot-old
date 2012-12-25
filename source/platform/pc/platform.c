@@ -31,6 +31,7 @@
 
 #include <config.h>
 #include <loader.h>
+#include <memory.h>
 #include <time.h>
 
 extern void platform_init(void);
@@ -56,6 +57,8 @@ void platform_init(void) {
 	}
 
 	/* Initialize hardware. */
+	memory_init();
+	disk_init();
 	vbe_init();
 
 	/* Call the main function. */

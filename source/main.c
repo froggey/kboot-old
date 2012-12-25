@@ -31,11 +31,6 @@
 
 /** Main function for the Kiwi bootloader. */
 void loader_main(void) {
-	/* Detect hardware details. */
-	memory_init();
-#if CONFIG_KBOOT_HAVE_DISK
-	disk_init();
-#endif
 	/* We must have a filesystem to boot from. */
 	if(!boot_device || !boot_device->fs)
 		boot_error("Could not find boot filesystem");

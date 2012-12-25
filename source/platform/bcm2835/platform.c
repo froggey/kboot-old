@@ -25,6 +25,7 @@
 #include <bcm2835/uart.h>
 
 #include <loader.h>
+#include <memory.h>
 #include <tar.h>
 
 extern void platform_init(atag_t *atags);
@@ -47,6 +48,9 @@ void platform_init(atag_t *atags) {
 		tar_mount((void *)tag->initrd.start, tag->initrd.size);
 		break;
 	}
+
+	/* Initialize hardware. */
+	memory_init();
 
 	/* Call the main function. */
 	loader_main();
