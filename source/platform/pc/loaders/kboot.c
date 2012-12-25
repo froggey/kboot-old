@@ -198,8 +198,8 @@ void kboot_platform_video_init(kboot_loader_t *loader) {
 /** Set the video mode.
  * @param loader	KBoot loader data structure. */
 static void set_video_mode(kboot_loader_t *loader) {
+	vbe_mode_t *mode = NULL;
 	kboot_tag_video_t *tag;
-	vbe_mode_t *mode;
 	value_t *entry;
 	uint32_t type;
 
@@ -259,11 +259,40 @@ static void set_video_mode(kboot_loader_t *loader) {
 	}
 }
 
+/** Add E820 memory map tags.
+ * @param loader	KBoot loader data structure. */
+static void add_e820_tags(kboot_loader_t *loader) {
+	kboot_tag_t *tag;
+	bios_regs_t regs;
+
+	bios_regs_init(&regs);
+
+	do {
+		regs.eax = 0xE820;
+		regs.edx = E820_SMAP;
+		regs.ecx = 64;
+		regs.edi = BIOS_MEM_BASE;
+		bios_interrupt(0x15, &regs);
+
+		/* If CF is set, the call was not successful. BIOSes are
+		 * allowed to return a non-zero continuation value in EBX and
+		 * return an error on next call to indicate that the end of the
+		 * list has been reached. */
+		if(regs.eflags & X86_FLAGS_CF)
+			break;
+
+		/* Create a tag for the entry. */
+		tag = kboot_allocate_tag(loader, KBOOT_TAG_E820, sizeof(*tag) + regs.ecx);
+		memcpy(&tag[1], (void *)BIOS_MEM_BASE, regs.ecx);
+	} while(regs.ebx != 0);
+}
+
 /** Perform platform-specific setup for a KBoot kernel.
  * @param loader	KBoot loader data structure. */
 void kboot_platform_setup(kboot_loader_t *loader) {
 	/* Set the video mode. */
 	set_video_mode(loader);
 
-	// TODO: E820.
+	/* Add a copy of the E820 memory map. */
+	add_e820_tags(loader);
 }
