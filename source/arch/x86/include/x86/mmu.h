@@ -37,7 +37,7 @@
 
 /** x86 MMU context structure. */
 struct mmu_context {
-	phys_ptr_t cr3;			/**< Value loaded into CR3. */
+	uint32_t cr3;			/**< Value loaded into CR3. */
 	bool is64;			/**< Whether this is a 64-bit context. */
 };
 

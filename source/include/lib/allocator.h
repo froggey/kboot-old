@@ -33,7 +33,8 @@ typedef struct allocator {
 	list_t regions;			/**< List of regions. */
 } allocator_t;
 
-extern bool allocator_alloc(allocator_t *alloc, target_size_t size, target_ptr_t *addrp);
+extern bool allocator_alloc(allocator_t *alloc, target_size_t size, target_size_t align,
+	target_ptr_t *addrp);
 extern bool allocator_insert(allocator_t *alloc, target_ptr_t addr, target_size_t size);
 extern void allocator_reserve(allocator_t *alloc, target_ptr_t addr, target_size_t size);
 

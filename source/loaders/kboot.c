@@ -137,7 +137,7 @@ kboot_vaddr_t kboot_allocate_virtual(kboot_loader_t *loader, kboot_paddr_t phys,
 {
 	kboot_vaddr_t addr;
 
-	if(!allocator_alloc(&loader->alloc, size, &addr))
+	if(!allocator_alloc(&loader->alloc, size, 0, &addr))
 		boot_error("Unable to allocate %zu bytes of virtual address space", size);
 
 	if(phys != ~(kboot_paddr_t)0)

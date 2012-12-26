@@ -49,7 +49,7 @@ static uint64_t *get_pdir64(mmu_context_t *ctx, uint64_t virt) {
 	phys_ptr_t addr;
 	int pml4e, pdpe;
 
-	pml4 = (uint64_t *)((ptr_t)ctx->cr3);
+	pml4 = (uint64_t *)ctx->cr3;
 
 	/* Get the page directory pointer number. A PDP covers 512GB. */
 	pml4e = (virt & 0x0000FFFFFFFFF000) / 0x8000000000;
@@ -164,7 +164,7 @@ static void map_large32(mmu_context_t *ctx, uint32_t virt, uint32_t phys) {
 	assert(!(virt % 0x400000));
 	assert(!(phys % 0x400000));
 
-	pdir = (uint32_t *)((ptr_t)ctx->cr3);
+	pdir = (uint32_t *)ctx->cr3;
 	pde = virt / 0x400000;
 	pdir[pde] = phys | X86_PTE_PRESENT | X86_PTE_WRITE | X86_PTE_LARGE;
 }
@@ -181,7 +181,7 @@ static void map_small32(mmu_context_t *ctx, uint32_t virt, uint32_t phys) {
 	assert(!(virt % PAGE_SIZE));
 	assert(!(phys % PAGE_SIZE));
 
-	pdir = (uint32_t *)((ptr_t)ctx->cr3);
+	pdir = (uint32_t *)ctx->cr3;
 
 	/* Get the page directory entry number. */
 	pde = virt / 0x400000;

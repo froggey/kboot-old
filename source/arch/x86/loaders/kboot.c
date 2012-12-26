@@ -137,7 +137,43 @@ void kboot_arch_load_params(kboot_loader_t *loader, kboot_itag_load_t *load) {
 /** Perform architecture-specific setup tasks.
  * @param loader	KBoot loader data structure. */
 void kboot_arch_setup(kboot_loader_t *loader) {
-	// TODO: Set up pagetables tag.
+	kboot_tag_pagetables_t *tag;
+	target_ptr_t addr, i;
+	uint64_t *pml4;
+	uint32_t *pdir;
+
+	/* Find a location to recursively map the pagetables at. */
+	if(loader->target == TARGET_TYPE_64BIT) {
+		/* Search backward from the end of the address space for a free
+		 * PML4 entry. */
+		pml4 = (uint64_t *)loader->mmu->cr3;
+		i = 512;
+		while(i-- > 1) {
+			if(!(pml4[i] & X86_PTE_PRESENT)) {
+				addr = i * 0x8000000000LL
+					| ((i >= 256) ? 0xFFFF000000000000 : 0);
+				allocator_reserve(&loader->alloc, addr, 0x8000000000LL);
+				pml4[i] = loader->mmu->cr3 | X86_PTE_PRESENT | X86_PTE_WRITE;
+				break;
+			}
+		}
+
+		if(i == 0)
+			boot_error("Unable to allocate page table mapping space");
+	} else {
+		/* Allocate a 4MB address region to recursively map the page
+		 * directory at. */
+		if(!allocator_alloc(&loader->alloc, 0x400000, 0x400000, &addr))
+			boot_error("Unable to allocate page table mapping space");
+
+		pdir = (uint32_t *)loader->mmu->cr3;
+		pdir[addr / 0x400000] = loader->mmu->cr3 | X86_PTE_PRESENT | X86_PTE_WRITE;
+	}
+
+	/* Add the pagetables tag. */
+	tag = kboot_allocate_tag(loader, KBOOT_TAG_PAGETABLES, sizeof(*tag));
+	tag->page_dir = loader->mmu->cr3;
+	tag->mapping = addr;
 }
 
 /** Enter a loaded KBoot kernel.

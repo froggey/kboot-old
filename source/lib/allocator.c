@@ -118,23 +118,35 @@ static void insert_region(allocator_t *alloc, allocator_region_t *region) {
 /** Allocate a region from an allocator.
  * @param alloc		Allocator to allocate from.
  * @param size		Size of the region to allocate.
+ * @param align		Alignment of the region.
  * @param addrp		Where to store address of allocated region.
  * @return		Whether successful in allocating region. */
-bool allocator_alloc(allocator_t *alloc, target_size_t size, target_ptr_t *addrp) {
+bool allocator_alloc(allocator_t *alloc, target_size_t size, target_size_t align,
+	target_ptr_t *addrp)
+{
 	allocator_region_t *region;
+	target_ptr_t start;
 
 	assert(!(size % PAGE_SIZE));
+	assert(!(align % PAGE_SIZE));
 	assert(size);
+
+	if(!align)
+		align = PAGE_SIZE;
 
 	LIST_FOREACH(&alloc->regions, iter) {
 		region = list_entry(iter, allocator_region_t, header);
-		if(region->allocated || (region->size != 0 && region->size < size))
+		if(region->allocated)
 			continue;
 
-		*addrp = region->start;
+		start = ROUND_UP(region->start, align);
+		if(start + size - 1 > region->start + region->size - 1)
+			continue;
+
+		*addrp = start;
 
 		/* Create a new allocated region and insert over this space. */
-		region = allocator_region_create(region->start, size, true);
+		region = allocator_region_create(start, size, true);
 		insert_region(alloc, region);
 		return true;
 	}
