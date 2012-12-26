@@ -547,6 +547,10 @@ static __noreturn void kboot_loader_load(void) {
 		load_module_dir(loader, loader->modules.string);
 	}
 
+	/* Load additional sections if requested. */
+	if(loader->image->flags & KBOOT_IMAGE_SECTIONS)
+		kboot_elf_load_sections(loader);
+
 	/* Add the boot device information. */
 	add_bootdev_tag(loader);
 

@@ -110,6 +110,7 @@ extern phys_ptr_t kboot_allocate_kernel(kboot_loader_t *loader, size_t size);
 
 extern bool kboot_elf_note_iterate(kboot_loader_t *loader, kboot_note_cb_t cb);
 extern void kboot_elf_load_kernel(kboot_loader_t *loader);
+extern void kboot_elf_load_sections(kboot_loader_t *loader);
 
 extern void kboot_arch_check(kboot_loader_t *loader);
 extern void kboot_arch_load_params(kboot_loader_t *loader, kboot_itag_load_t *load);

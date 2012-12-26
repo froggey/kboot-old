@@ -37,16 +37,23 @@ typedef Elf32_Addr elf_addr_t;
 
 extern void kmain(uint32_t magic, kboot_tag_t *tags);
 
-KBOOT_IMAGE(0);
+KBOOT_IMAGE(KBOOT_IMAGE_SECTIONS);
 KBOOT_VIDEO(KBOOT_VIDEO_LFB | KBOOT_VIDEO_VGA, 0, 0, 0);
 KBOOT_BOOLEAN_OPTION("bool_option", "Boolean Option", true);
 KBOOT_STRING_OPTION("string_option", "String Option", "Default Value");
 
 #ifdef __LP64__
+#define PHYS_MAP_BASE		0xFFFFFFFF00000000
 KBOOT_LOAD(0, 0, 0, 0, 0xFFFFFFFF80000000, 0x80000000);
 #else
+#define PHYS_MAP_BASE		0x40000000
 KBOOT_LOAD(0, 0, 0, 0, 0xC0000000, 0x40000000);
 #endif
+
+KBOOT_MAPPING(PHYS_MAP_BASE, 0, 0x80000000);
+
+/** Get a virtual address from a physical address. */
+#define P2V(phys)		((ptr_t)(phys) + PHYS_MAP_BASE)
 
 /** Dump a core tag. */
 static void dump_core_tag(kboot_tag_core_t *tag) {
@@ -250,23 +257,25 @@ static elf_shdr_t *find_elf_section(kboot_tag_sections_t *tag, uint32_t index) {
 /** Dump a sections tag. */
 static void dump_sections_tag(kboot_tag_sections_t *tag) {
 	const char *strtab;
+	elf_shdr_t *shdr;
 
 	kprintf("KBOOT_TAG_SECTIONS:\n");
 	kprintf("  num      = %" PRIu32 "\n", tag->num);
 	kprintf("  entsize  = %" PRIu32 "\n", tag->entsize);
 	kprintf("  shstrndx = %" PRIu32 "\n", tag->shstrndx);
 
-	strtab = (const char *)find_elf_section(tag, tag->shstrndx)->sh_addr;
-	kprintf("  shstrtab = %p\n", strtab);
+	shdr = find_elf_section(tag, tag->shstrndx);
+	strtab = (const char *)P2V(shdr->sh_addr);
+	kprintf("  shstrtab = 0x%lx (%p)\n", shdr->sh_addr, strtab);
 
 	for(uint32_t i = 0; i < tag->num; i++) {
-		elf_shdr_t *shdr = find_elf_section(tag, i);
+		shdr = find_elf_section(tag, i);
 
-		kprintf(" section %u (`%s'):\n", i, (shdr->sh_name) ? strtab + shdr->sh_name : "");
-		kprintf("   sh_type  = %" PRIu32 "\n", shdr->sh_type);
-		kprintf("   sh_flags = 0x%" PRIx32 "\n", shdr->sh_flags);
-		kprintf("   sh_addr  = %p\n", shdr->sh_addr);
-		kprintf("   sh_size  = %" PRIu32 "\n", shdr->sh_size);
+		kprintf("  section %u (`%s'):\n", i, (shdr->sh_name) ? strtab + shdr->sh_name : "");
+		kprintf("    sh_type  = %" PRIu32 "\n", shdr->sh_type);
+		kprintf("    sh_flags = 0x%" PRIx32 "\n", shdr->sh_flags);
+		kprintf("    sh_addr  = %p\n", shdr->sh_addr);
+		kprintf("    sh_size  = %" PRIu32 "\n", shdr->sh_size);
 	}
 }
 

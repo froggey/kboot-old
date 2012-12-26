@@ -765,12 +765,12 @@ buffer. An algorithm for writing to the buffer is shown below:
 ### `KBOOT_TAG_SECTIONS` (`10`)
 
 If the `KBOOT_IMAGE_SECTIONS` flag is specified in the `KBOOT_ITAG_IMAGE` image
-tag, all additional loadable sections not normally loaded (ones with a zero
-address in the headers, e.g. the symbol table and debug information) will be
-loaded, and this tag will be passed containing the section header table. The
-additional sections will be allocated in reclaimable physical memory, and mapped
-into the virtual address space. The section headers will be modified to contain
-the mapped address by the boot loader.
+tag, additional loadable sections not normally loaded (`SHT_PROGBITS`,
+`SHT_NOBITS`, `SHT_SYMTAB` and `SHT_STRTAB` sections without the `SHF_ALLOC`
+flag set, e.g. the symbol table and debug information) will be loaded, and this
+tag will be passed containing the section header table. The additional sections
+will be loaded in non-reclaimable physical memory, and each will have its header
+modified to contain the allocated physical address in the `sh_addr` field.
 
     typedef struct kboot_tag_sections {
     	kboot_tag_t header;

@@ -135,6 +135,58 @@ static void FUNC(load_kernel)(kboot_loader_t *loader) {
 	loader->entry = ehdr.e_entry;
 }
 
+/** Load additional sections from an ELF kernel image. */
+static void FUNC(load_sections)(kboot_loader_t *loader) {
+	kboot_tag_sections_t *tag;
+	elf_shdr_t *shdr;
+	elf_ehdr_t ehdr;
+	phys_ptr_t addr;
+	size_t size, i;
+	void *dest;
+
+	if(!file_read(loader->kernel, &ehdr, sizeof(ehdr), 0))
+		boot_error("Could not read kernel image");
+
+	size = ehdr.e_shnum * ehdr.e_shentsize;
+
+	tag = kboot_allocate_tag(loader, KBOOT_TAG_SECTIONS, sizeof(*tag) + size);
+	tag->num = ehdr.e_shnum;
+	tag->entsize = ehdr.e_shentsize;
+	tag->shstrndx = ehdr.e_shstrndx;
+
+	if(!file_read(loader->kernel, tag->sections, size, ehdr.e_shoff))
+		boot_error("Could not read kernel image");
+
+	/* Iterate through the headers and load in additional loadable sections. */
+	for(i = 0; i < ehdr.e_shnum; i++) {
+		shdr = (elf_shdr_t *)&tag->sections[i * ehdr.e_shentsize];
+
+		if(shdr->sh_flags & ELF_SHF_ALLOC || shdr->sh_addr || !shdr->sh_size
+			|| (shdr->sh_type != ELF_SHT_PROGBITS
+				&& shdr->sh_type != ELF_SHT_NOBITS
+				&& shdr->sh_type != ELF_SHT_SYMTAB
+				&& shdr->sh_type != ELF_SHT_STRTAB)) {
+			continue;
+		}
+
+		/* FIXME: Need to make sure this is under 4GB for 32-bit. */
+		phys_memory_alloc(ROUND_UP(shdr->sh_size, PAGE_SIZE), 0, 0, 0, 0, &addr);
+		shdr->sh_addr = addr;
+
+		/* Load in the section data. */
+		dest = (void *)((ptr_t)addr);
+		if(shdr->sh_type == ELF_SHT_NOBITS) {
+			memset(dest, 0, shdr->sh_size);
+		} else {
+			if(!file_read(loader->kernel, dest, shdr->sh_size, shdr->sh_offset))
+				boot_error("Could not read kernel image");
+		}
+
+		dprintf("kboot: loaded ELF section %zu to 0x%" PRIxPHYS " (size: %zu)\n",
+			i, addr, (size_t)shdr->sh_size);
+	}
+}
+
 #undef elf_ehdr_t
 #undef elf_phdr_t
 #undef elf_shdr_t

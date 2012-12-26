@@ -68,3 +68,16 @@ void kboot_elf_load_kernel(kboot_loader_t *loader) {
 		kboot_elf64_load_kernel(loader);
 	#endif
 }
+
+/** Load additional sections for an ELF kernel image.
+ * @param loader	KBoot loader data structure. */
+void kboot_elf_load_sections(kboot_loader_t *loader) {
+	#if CONFIG_KBOOT_HAVE_LOADER_KBOOT32
+	if(loader->target == TARGET_TYPE_32BIT)
+		kboot_elf32_load_sections(loader);
+	#endif
+	#if CONFIG_KBOOT_HAVE_LOADER_KBOOT64
+	if(loader->target == TARGET_TYPE_64BIT)
+		kboot_elf64_load_sections(loader);
+	#endif
+}
