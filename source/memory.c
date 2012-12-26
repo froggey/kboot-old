@@ -36,8 +36,6 @@ typedef struct heap_chunk {
 /** Size of the heap (128KB). */
 #define HEAP_SIZE		131072
 
-extern char loader_stack[];
-
 /** Statically allocated heap. */
 static uint8_t heap[HEAP_SIZE] __aligned(PAGE_SIZE);
 static LIST_DECLARE(heap_chunks);
@@ -433,14 +431,9 @@ void memory_init(void) {
 	platform_memory_detect();
 
 	/* Mark the bootloader itself as internal so that it gets reclaimed
-	 * before entering the kernel, and mark the heap as reclaimable so the
-	 * kernel can get rid of it once it has finished with the arguments. */
+	 * before entering the kernel. */
 	phys_memory_add(ROUND_DOWN((phys_ptr_t)((ptr_t)__start), PAGE_SIZE),
 		(phys_ptr_t)((ptr_t)__end), PHYS_MEMORY_INTERNAL);
-	phys_memory_add((ptr_t)heap, (ptr_t)heap + HEAP_SIZE, PHYS_MEMORY_RECLAIMABLE);
-
-	/* Mark the stack as reclaimable. */
-	phys_memory_add((ptr_t)loader_stack, (ptr_t)loader_stack + PAGE_SIZE, PHYS_MEMORY_RECLAIMABLE);
 
 	dprintf("memory: initial memory map:\n");
 	phys_memory_dump();

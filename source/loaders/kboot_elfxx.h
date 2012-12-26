@@ -138,6 +138,7 @@ static void FUNC(load_kernel)(kboot_loader_t *loader) {
 /** Load additional sections from an ELF kernel image. */
 static void FUNC(load_sections)(kboot_loader_t *loader) {
 	kboot_tag_sections_t *tag;
+	kboot_tag_core_t *core;
 	elf_shdr_t *shdr;
 	elf_ehdr_t ehdr;
 	phys_ptr_t addr;
@@ -157,6 +158,8 @@ static void FUNC(load_sections)(kboot_loader_t *loader) {
 	if(!file_read(loader->kernel, tag->sections, size, ehdr.e_shoff))
 		boot_error("Could not read kernel image");
 
+	core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
+
 	/* Iterate through the headers and load in additional loadable sections. */
 	for(i = 0; i < ehdr.e_shnum; i++) {
 		shdr = (elf_shdr_t *)&tag->sections[i * ehdr.e_shentsize];
@@ -169,8 +172,11 @@ static void FUNC(load_sections)(kboot_loader_t *loader) {
 			continue;
 		}
 
-		/* FIXME: Need to make sure this is under 4GB for 32-bit. */
-		phys_memory_alloc(ROUND_UP(shdr->sh_size, PAGE_SIZE), 0, 0, 0, 0, &addr);
+		/* Allocate memory to load the section data to. Try to make it
+		 * contiguous with the kernel image. FIXME: Need to make sure
+		 * this is under 4GB for 32-bit. */
+		phys_memory_alloc(ROUND_UP(shdr->sh_size, PAGE_SIZE), 0,
+			core->kernel_phys, 0, 0, &addr);
 		shdr->sh_addr = addr;
 
 		/* Load in the section data. */
