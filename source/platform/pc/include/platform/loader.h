@@ -35,6 +35,10 @@
 #define SEGMENT_CS64		0x28		/**< 64-bit code segment. */
 #define SEGMENT_DS64		0x30		/**< 64-bit data segment. */
 
+/** KBoot log buffer address. */
+#define KBOOT_LOG_BUFFER	0x1F00000
+#define KBOOT_LOG_SIZE		0x100000
+
 #ifndef __ASM__
 
 extern void platform_reboot(void);

@@ -171,7 +171,8 @@ void __noreturn boot_error(const char *fmt, ...) {
 
 	#if CONFIG_KBOOT_UI
 	/* Create the debug log window. */
-	debug_log_window = ui_textview_create("Debug Log", debug_log);
+	debug_log_window = ui_textview_create("Debug Log", debug_log, DEBUG_LOG_SIZE,
+		debug_log_start, debug_log_length);
 
 	/* Create the error window and display it. */
 	boot_error_window = kmalloc(sizeof(ui_window_t));

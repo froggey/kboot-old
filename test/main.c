@@ -35,9 +35,10 @@ typedef Elf32_Sym  elf_sym_t;
 typedef Elf32_Addr elf_addr_t;
 #endif
 
+extern void log_init(kboot_tag_t *tags);
 extern void kmain(uint32_t magic, kboot_tag_t *tags);
 
-KBOOT_IMAGE(KBOOT_IMAGE_SECTIONS);
+KBOOT_IMAGE(KBOOT_IMAGE_SECTIONS | KBOOT_IMAGE_LOG);
 KBOOT_VIDEO(KBOOT_VIDEO_LFB | KBOOT_VIDEO_VGA, 0, 0, 0);
 KBOOT_BOOLEAN_OPTION("bool_option", "Boolean Option", true);
 KBOOT_STRING_OPTION("string_option", "String Option", "Default Value");
@@ -239,12 +240,17 @@ static void dump_bootdev_tag(kboot_tag_bootdev_t *tag) {
 
 /** Dump a log tag. */
 static void dump_log_tag(kboot_tag_log_t *tag) {
+	kboot_log_t *log;
+
 	kprintf("KBOOT_TAG_LOG:\n");
 	kprintf("  log_virt  = 0x%" PRIx64 "\n", tag->log_virt);
 	kprintf("  log_phys  = 0x%" PRIx64 "\n", tag->log_phys);
 	kprintf("  log_size  = %" PRIu32 "\n", tag->log_size);
 	kprintf("  prev_phys = 0x%" PRIx64 "\n", tag->prev_phys);
 	kprintf("  prev_size = %" PRIu32 "\n", tag->prev_size);
+
+	log = (kboot_log_t *)((ptr_t)tag->log_virt);
+	kprintf("  magic     = 0x%" PRIx32 "\n", log->magic);
 }
 
 /** Get a section by index.
@@ -291,7 +297,9 @@ static void dump_e820_tag(kboot_tag_e820_t *tag) {
  * @param magic		KBoot magic number.
  * @param tags		Tag list pointer. */
 void kmain(uint32_t magic, kboot_tag_t *tags) {
-	kprintf("Test kernel loaded: magic: %x, tags: %p\n", magic, tags);
+	log_init(tags);
+
+	kprintf("Test kernel loaded: magic: 0x%x, tags: %p\n", magic, tags);
 
 	while(tags->type != KBOOT_TAG_NONE) {
 		switch(tags->type) {
@@ -332,6 +340,10 @@ void kmain(uint32_t magic, kboot_tag_t *tags) {
 
 		tags = (kboot_tag_t *)ROUND_UP((ptr_t)tags + tags->size, 8);
 	}
+
+	#if defined(__i386__) || defined(__x86_64__)
+	__asm__ volatile("wbinvd");
+	#endif
 
 	while(true);
 }

@@ -24,12 +24,10 @@
 #include <console.h>
 #include <loader.h>
 
-/** Debug log size. */
-#define DEBUG_LOG_SIZE		8192
-
 /** Debug output log. */
 char debug_log[DEBUG_LOG_SIZE];
-static size_t debug_log_offset = 0;
+size_t debug_log_start = 0;
+size_t debug_log_length = 0;
 
 /** Main console. */
 console_t *main_console = NULL;
@@ -79,9 +77,12 @@ static void dvprintf_helper(char ch, void *data, int *total) {
 	if(debug_console)
 		debug_console->putch(ch);
 
-	if(debug_log_offset < (DEBUG_LOG_SIZE - 1)) {
-		debug_log[debug_log_offset++] = ch;
-		debug_log[debug_log_offset] = 0;
+	/* Store in the log buffer. */
+	debug_log[(debug_log_start + debug_log_length) % DEBUG_LOG_SIZE] = ch;
+	if(debug_log_length < DEBUG_LOG_SIZE) {
+		debug_log_length++;
+	} else {
+		debug_log_start = (debug_log_start + 1) % DEBUG_LOG_SIZE;
 	}
 
 	*total = *total + 1;

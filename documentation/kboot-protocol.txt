@@ -724,6 +724,10 @@ Fields:
  * `prev_size`: Total size of previous session log buffer. If 0, no previous
    log buffer was available.
 
+The main log buffer will be contained in non-reclaimable physical memory, while
+the previous log buffer, if any, will be contained in reclaimable physical
+memory.
+
 The log buffer is a circular buffer. It includes a header at the start, any
 remaining space contains the log itself. The header has the following format:
 
@@ -761,6 +765,11 @@ buffer. An algorithm for writing to the buffer is shown below:
     } else {
     	log->start = (log->start + 1) % log_size;
     }
+
+A point to bear in mind is that when the CPU is reset, the CPU cache may not be
+written back to memory. Therefore, should you wish to ensure that a set of data
+written to the log can be seen by the boot loader, invalidate the CPU cache
+after writing.
 
 ### `KBOOT_TAG_SECTIONS` (`10`)
 

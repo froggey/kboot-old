@@ -159,7 +159,8 @@ static input_result_t menu_entry_debug(ui_entry_t *_entry) {
 	ui_window_t *window;
 
 	/* Create the debug log window. */
-	window = ui_textview_create("Debug Log", debug_log);
+	window = ui_textview_create("Debug Log", debug_log, DEBUG_LOG_SIZE,
+		debug_log_start, debug_log_length);
 	ui_window_display(window, 0);
 	return INPUT_RENDER;
 }

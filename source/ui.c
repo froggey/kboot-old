@@ -43,9 +43,12 @@ typedef struct ui_textview_line {
 typedef struct ui_textview {
 	ui_window_t header;		/**< Window header. */
 
+	const char *buf;		/**< Buffer containing text. */
+	size_t size;			/**< Size of the buffer. */
+
 	/** Array containing details of each line. */
 	struct {
-		const char *ptr;	/**< Pointer to the line. */
+		size_t start;		/**< Start of the line. */
 		size_t len;		/**< Length of the line. */
 	} *lines;
 
@@ -285,6 +288,16 @@ void ui_window_display(ui_window_t *window, int timeout) {
 	main_console->reset();
 }
 
+
+	const char *buf;		/**< Buffer containing text. */
+	size_t size;			/**< Size of the buffer. */
+
+	/** Array containing details of each line. */
+	struct {
+		size_t start;		/**< Start of the line. */
+		size_t len;		/**< Length of the line. */
+	} *lines;
+
 /** Print a line from a text view.
  * @param view		View to render.
  * @param line		Index of line to print. */
@@ -292,7 +305,7 @@ static void ui_textview_render_line(ui_textview_t *view, size_t line) {
 	size_t i;
 
 	for(i = 0; i < view->lines[line].len; i++)
-		main_console->putch(view->lines[line].ptr[i]);
+		main_console->putch(view->buf[(view->lines[line].start + i) % view->size]);
 
 	if(view->lines[line].len < UI_CONTENT_WIDTH)
 		main_console->putch('\n');
@@ -361,43 +374,57 @@ static ui_window_type_t ui_textview_window_type = {
 
 /** Add a line to a text view.
  * @param view		View to add to.
- * @param line		Line to add.
+ * @param start		Start offset of the line.
  * @param len		Length of line. */
-static void ui_textview_add_line(ui_textview_t *view, const char *line, size_t len) {
+static void ui_textview_add_line(ui_textview_t *view, size_t start, size_t len) {
 	/* If the line is larger than the content width, split it. */
 	if(len > UI_CONTENT_WIDTH) {
-		ui_textview_add_line(view, line, UI_CONTENT_WIDTH);
-		ui_textview_add_line(view, line + UI_CONTENT_WIDTH, len - UI_CONTENT_WIDTH);
+		ui_textview_add_line(view, start, UI_CONTENT_WIDTH);
+		ui_textview_add_line(view, (start + UI_CONTENT_WIDTH) % view->size,
+			len - UI_CONTENT_WIDTH);
 	} else {
 		view->lines = krealloc(view->lines, sizeof(*view->lines) * (view->count + 1));
-		view->lines[view->count].ptr = line;
+		view->lines[view->count].start = start;
 		view->lines[view->count++].len = len;
 	}
 }
 
 /** Create a text view window.
  * @param title		Title for the window.
- * @param text		Buffer containing text to display.
+ * @param buf		Circular buffer containing text to display.
+ * @param size		Total size of the buffer.
+ * @param start		Start character of the buffer.
+ * @param length	Length of the data from the start (will wrap around).
  * @return		Pointer to created window. */
-ui_window_t *ui_textview_create(const char *title, const char *text) {
+ui_window_t *ui_textview_create(const char *title, const char *buf, size_t size,
+	size_t start, size_t length)
+{
 	ui_textview_t *view = kmalloc(sizeof(ui_textview_t));
-	const char *tok;
-	size_t len;
+	size_t i, line_start, line_len;
 
 	ui_window_init(&view->header, &ui_textview_window_type, title);
+	view->buf = buf;
+	view->size = size;
 	view->lines = NULL;
 	view->offset = 0;
 	view->count = 0;
 
 	/* Store details of all the lines in the buffer. */
-	while((tok = strchr(text, '\n'))) {
-		ui_textview_add_line(view, text, tok - text);
-		text = tok + 1;
+	line_start = start;
+	line_len = 0;
+	for(i = 0; i < length; i++) {
+		if(view->buf[(start + i) % view->size] == '\n') {
+			ui_textview_add_line(view, line_start, line_len);
+			line_start = (start + i + 1) % view->size;
+			line_len = 0;
+		} else {
+			line_len++;
+		}
 	}
 
 	/* If there is still data at the end (no newline before end), add it. */
-	if((len = strlen(text)) > 0)
-		ui_textview_add_line(view, text, len);
+	if(line_len)
+		ui_textview_add_line(view, line_start, line_len);
 	
 	return &view->header;
 }

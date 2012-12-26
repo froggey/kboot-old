@@ -40,6 +40,7 @@ typedef struct kboot_loader {
 	target_type_t target;		/**< Target operation mode of the kernel. */
 	list_t itags;			/**< Image tag list. */
 	kboot_itag_image_t *image;	/**< Image definition tag. */
+	uint32_t log_magic;		/**< Magic number for the log buffer. */
 
 	/** Environment for the kernel. */
 	target_ptr_t entry;		/**< Kernel entry point. */

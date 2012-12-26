@@ -73,6 +73,7 @@ static uint32_t parse_video_mode(const char *string, vbe_mode_t **modep) {
 }
 
 #if CONFIG_KBOOT_UI
+
 /** Create the UI chooser.
  * @param loader	KBoot loader data structure.
  * @param types		Supported video mode types.
@@ -108,6 +109,7 @@ static void create_mode_chooser(kboot_loader_t *loader, uint32_t types, value_t 
 
 	ui_list_insert(loader->config, chooser, false);
 }
+
 #endif
 
 /** Determine the default video mode.

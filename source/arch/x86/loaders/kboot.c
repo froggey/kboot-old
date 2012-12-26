@@ -184,6 +184,11 @@ __noreturn void kboot_arch_enter(kboot_loader_t *loader) {
 	/* Enter with interrupts disabled. */
 	__asm__ volatile("cli");
 
+	/* Flush cached data to memory. This is needed to ensure, for example,
+	 * that the log buffer set up is written to memory and can be detected
+	 * again after a reset. */
+	__asm__ volatile("wbinvd");
+
 	/* Store information for the entry code. */
 	args = (void *)((ptr_t)loader->trampoline_phys);
 	args->transition_cr3 = loader->transition->cr3;

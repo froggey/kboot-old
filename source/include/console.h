@@ -118,7 +118,12 @@ typedef struct console {
 #define CONSOLE_KEY_F9		0x10F
 #define CONSOLE_KEY_F10		0x110
 
-extern char debug_log[];
+/** Debug log size. */
+#define DEBUG_LOG_SIZE		8192
+
+extern char debug_log[DEBUG_LOG_SIZE];
+extern size_t debug_log_start;
+extern size_t debug_log_length;
 
 extern console_t *main_console;
 extern console_t *debug_console;

@@ -22,10 +22,17 @@
 #include <lib/ctype.h>
 #include <lib/printf.h>
 #include <lib/string.h>
+#include <lib/utility.h>
 
+#include <kboot.h>
 #include <loader.h>
 
 extern void console_putc(char ch);
+extern void log_init(kboot_tag_t *tags);
+
+/** KBoot log buffer. */
+static kboot_log_t *kboot_log = NULL;
+static size_t kboot_log_size = 0;
 
 /** Get the length of a string.
  * @param str		Pointer to the string.
@@ -153,6 +160,16 @@ long long strtoll(const char *cp, char **endp, unsigned int base) {
  * @param total		Pointer to total character count. */
 static void kvprintf_helper(char ch, void *data, int *total) {
 	console_putc(ch);
+
+	if(kboot_log) {
+		kboot_log->buffer[(kboot_log->start + kboot_log->length) % kboot_log_size] = ch;
+		if(kboot_log->length < kboot_log_size) {
+			kboot_log->length++;
+		} else {
+			kboot_log->start = (kboot_log->start + 1) % kboot_log_size;
+		}
+	}
+
 	*total = *total + 1;
 }
 
@@ -177,4 +194,21 @@ int kprintf(const char *fmt, ...) {
 	va_end(args);
 
 	return ret;
+}
+
+/** Initialize the log.
+ * @param tags		Tag list. */
+void log_init(kboot_tag_t *tags) {
+	kboot_tag_log_t *log;
+
+	while(tags->type != KBOOT_TAG_NONE) {
+		if(tags->type == KBOOT_TAG_LOG) {
+			log = (kboot_tag_log_t *)tags;
+			kboot_log = (kboot_log_t *)((ptr_t)log->log_virt);
+			kboot_log_size = log->log_size - sizeof(kboot_log_t);
+			break;
+		}
+
+		tags = (kboot_tag_t *)ROUND_UP((ptr_t)tags + tags->size, 8);
+	}
 }

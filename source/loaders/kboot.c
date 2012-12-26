@@ -59,6 +59,11 @@ typedef struct virt_mapping {
 	kboot_paddr_t phys;		/**< Physical address that this range maps to. */
 } virt_mapping_t;
 
+#ifdef KBOOT_LOG_BUFFER
+/** Whether the log buffer has been allocated. */
+static bool log_buffer_allocated = false;
+#endif
+
 /** Add an image tag to the image tag list.
  * @param loader	Loader to add to.
  * @param type		Type of the tag.
@@ -380,6 +385,45 @@ static void add_bootdev_tag(kboot_loader_t *loader) {
 	}
 }
 
+#ifdef KBOOT_LOG_BUFFER
+
+/** Add kernel log information to the tag list.
+ * @param loader	KBoot loader data structure. */
+static void add_log_tag(kboot_loader_t *loader) {
+	kboot_log_t *log = (kboot_log_t *)KBOOT_LOG_BUFFER;
+	kboot_tag_log_t *tag;
+
+	/* If the log buffer could not be allocated, do not pass log
+	 * information to the kernel. */
+	if(!log_buffer_allocated)
+		return;
+
+	tag = kboot_allocate_tag(loader, KBOOT_TAG_LOG, sizeof(*tag));
+	tag->log_phys = KBOOT_LOG_BUFFER;
+	tag->log_size = KBOOT_LOG_SIZE;
+	tag->log_virt = kboot_allocate_virtual(loader, tag->log_phys, tag->log_size);
+	tag->prev_phys = 0;
+	tag->prev_size = 0;
+
+	if(log->magic == loader->log_magic) {
+		/* There is an existing log, copy it for the kernel. */
+		if(phys_memory_alloc(KBOOT_LOG_SIZE, 0, 0, 0, PHYS_ALLOC_RECLAIM, &tag->prev_phys)) {
+			tag->prev_size = KBOOT_LOG_SIZE;
+			memcpy((void *)((ptr_t)tag->prev_phys), (void *)KBOOT_LOG_BUFFER,
+				KBOOT_LOG_SIZE);
+		}
+	}
+
+	/* Initialize the log buffer. */
+	log->magic = loader->log_magic;
+	log->start = 0;
+	log->length = 0;
+	log->info[0] = log->info[1] = log->info[2] = 0;
+	dprintf("magic %p set to 0x%x\n", &log->magic, log->magic);
+}
+
+#endif
+
 /** Add virtual memory tags to the tag list.
  * @param loader	KBoot loader data structure. */
 static void add_vmem_tags(kboot_loader_t *loader) {
@@ -554,6 +598,11 @@ static __noreturn void kboot_loader_load(void) {
 	/* Add the boot device information. */
 	add_bootdev_tag(loader);
 
+	#ifdef KBOOT_LOG_BUFFER
+	/* Set up the kernel log. */
+	add_log_tag(loader);
+	#endif
+
 	/* Do platform-specific setup, including setting the video mode. */
 	kboot_platform_setup(loader);
 
@@ -611,12 +660,14 @@ static __noreturn void kboot_loader_load(void) {
 }
 
 #if CONFIG_KBOOT_UI
+
 /** Return a window for configuring the OS.
  * @return		Pointer to configuration window. */
 static ui_window_t *kboot_loader_configure(void) {
 	kboot_loader_t *loader = current_environ->data;
 	return (!ui_list_empty(loader->config)) ? loader->config : NULL;
 }
+
 #endif
 
 /** KBoot loader type. */
@@ -680,6 +731,79 @@ static bool add_image_tags(elf_note_t *note, void *desc, kboot_loader_t *loader)
 
 	return true;
 }
+
+#ifdef KBOOT_LOG_BUFFER
+
+/** Calculate the magic number for the log buffer.
+ * @return		Magic number for the log buffer. */
+static uint32_t calculate_log_magic(void) {
+	uint32_t magic;
+
+	/* Determine the magic number of the log buffer. This is a rather crude
+	 * method to deal with having multiple KBoot OSes on one machine: we
+	 * base the magic number on the device identification information. This
+	 * means that an existing log will only be shown for the OS it came
+	 * from. */
+	magic = KBOOT_MAGIC + current_device->type;
+	#if CONFIG_KBOOT_HAVE_DISK
+	if(current_device->type == DEVICE_TYPE_DISK) {
+		disk_t *disk = (disk_t *)current_device;
+		while(disk) {
+			magic += disk->id;
+			disk = disk->parent;
+		}
+	}
+	#endif
+
+	return magic;
+}
+
+#if CONFIG_KBOOT_UI
+
+/** Add a viewer for the kernel log.
+ * @param loader	KBoot loader data structure. */
+static void init_log_viewer(kboot_loader_t *loader) {
+	kboot_log_t *log = (kboot_log_t *)KBOOT_LOG_BUFFER;
+	ui_window_t *window;
+
+	if(log->magic != loader->log_magic)
+		return;
+
+	/* This matches our kernel log, add a viewer. */
+	window = ui_textview_create("Kernel Log", (char *)log->buffer,
+		KBOOT_LOG_SIZE - sizeof(kboot_log_t), log->start,
+		log->length);
+	ui_list_insert(loader->config, ui_link_create(window), false);
+}
+
+#endif
+
+/** Initialize the kernel log.
+ * @param loader	KBoot loader data structure. */
+static void init_kernel_log(kboot_loader_t *loader) {
+	phys_ptr_t addr;
+
+	/* Determine the magic number of the log buffer. */
+	loader->log_magic = calculate_log_magic();
+
+	/* Attempt to allocate the kernel log. */
+	if(!log_buffer_allocated) {
+		if(!phys_memory_alloc(KBOOT_LOG_SIZE, 0, KBOOT_LOG_BUFFER,
+			KBOOT_LOG_BUFFER + KBOOT_LOG_SIZE, 0, &addr))
+		{
+			return;
+		}
+
+		log_buffer_allocated = true;
+	}
+
+	#if CONFIG_KBOOT_UI
+	/* Add a UI viewer to view the previous log. */
+	init_log_viewer(loader);
+	#endif
+}
+
+#endif
 
 /** Load a KBoot kernel and modules.
  * @param args		Command arguments.
@@ -772,6 +896,11 @@ static bool config_cmd_kboot(value_list_t *args) {
 	/* Call the platform to deal with the video tag and add a video mode
 	 * chooser to the UI. */
 	kboot_platform_video_init(loader);
+	#endif
+
+	#ifdef KBOOT_LOG_BUFFER
+	if(loader->image->flags & KBOOT_IMAGE_LOG)
+		init_kernel_log(loader);
 	#endif
 
 	return true;

@@ -57,7 +57,7 @@ void vbe_mode_set(vbe_mode_t *mode) {
 
 	dprintf("vbe: set VBE mode 0x%x: %dx%dx%d (framebuffer: 0x%" PRIxPHYS ")\n",
 		mode->id, mode->info.x_resolution, mode->info.y_resolution,
-		mode->info.bits_per_pixel);
+		mode->info.bits_per_pixel, mode->info.phys_base_ptr);
 }
 
 /** Find a video mode.

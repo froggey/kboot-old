@@ -261,7 +261,7 @@ typedef struct kboot_log {
 	uint32_t magic;				/**< Magic value used by loader (should not be overwritten). */
 
 	uint32_t start;				/**< Offset in the buffer of the start of the log. */
-	uint32_t length;			/**< Number of charcters in the log buffer. */
+	uint32_t length;			/**< Number of characters in the log buffer. */
 
 	uint32_t info[3];			/**< Fields for use by the kernel. */
 	uint8_t buffer[0];			/**< Log data. */
