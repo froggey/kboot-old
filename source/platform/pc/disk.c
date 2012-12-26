@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Alex Smith
+ * Copyright (C) 2010-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,11 +32,6 @@
 #include <loader.h>
 #include <memory.h>
 
-/** Structure used to store details of a BIOS disk. */
-typedef struct bios_disk {
-	uint8_t id;			/**< BIOS device ID. */
-} bios_disk_t;
-
 /** Maximum number of blocks per transfer. */
 #define BLOCKS_PER_TRANSFER(disk)	((BIOS_MEM_SIZE / disk->block_size) - 1)
 
@@ -67,7 +62,6 @@ static bool bios_disk_is_boot_partition(disk_t *disk, uint8_t id, uint64_t lba) 
 static bool bios_disk_read(disk_t *disk, void *buf, uint64_t lba, size_t count) {
 	disk_address_packet_t *dap = (disk_address_packet_t *)BIOS_MEM_BASE;
 	void *dest = (void *)(BIOS_MEM_BASE + disk->block_size);
-	bios_disk_t *data = disk->data;
 	size_t i, num, transfers;
 	bios_regs_t regs;
 
@@ -88,7 +82,7 @@ static bool bios_disk_read(disk_t *disk, void *buf, uint64_t lba, size_t count) 
 		/* Perform the transfer. */
 		bios_regs_init(&regs);
 		regs.eax = INT13_EXT_READ;
-		regs.edx = data->id;
+		regs.edx = disk->id;
 		regs.esi = BIOS_MEM_BASE;
 		bios_interrupt(0x13, &regs);
 		if(regs.eflags & X86_FLAGS_CF)
@@ -139,13 +133,12 @@ static bool booted_from_cd(void) {
  * @param id		ID of the device. */
 static void add_disk(uint8_t id) {
 	drive_parameters_t *params = (drive_parameters_t *)BIOS_MEM_BASE;
-	bios_disk_t *data;
 	bios_regs_t regs;
+	disk_t *disk;
 	char name[6];
 
 	/* Create a data structure for the device. */
-	data = kmalloc(sizeof(bios_disk_t));
-	data->id = id;
+	disk = kmalloc(sizeof(disk_t));
 
 	/* Probe for information on the device. A big "F*CK YOU" to Intel and
 	 * AMI is required here. When booted from a CD, the INT 13 Extensions
@@ -153,7 +146,7 @@ static void add_disk(uint8_t id) {
 	 * on Intel/AMI BIOSes, yet the Extended Read function still works.
 	 * Work around this by forcing use of extensions when booted from CD. */
 	if(id == boot_device_id && booted_from_cd()) {
-		disk_add("cd0", 2048, ~0LL, &bios_disk_ops, data, true);
+		disk_add(disk, "cd0", id, 2048, ~0LL, &bios_disk_ops, true);
 		dprintf("disk: added boot CD cd0 (id: 0x%x)\n", id);
 	} else {
 		bios_regs_init(&regs);
@@ -163,7 +156,6 @@ static void add_disk(uint8_t id) {
 		bios_interrupt(0x13, &regs);
 		if(regs.eflags & X86_FLAGS_CF || (regs.ebx & 0xFFFF) != 0xAA55 || !(regs.ecx & (1<<0))) {
 			dprintf("disk: device 0x%x does not support extensions, ignoring\n", id);
-			kfree(data);
 			return;
 		}
 
@@ -184,8 +176,8 @@ static void add_disk(uint8_t id) {
 
 		/* Register the disk with the disk manager. */
 		sprintf(name, "hd%u", id - 0x80);
-		disk_add(name, params->sector_size, params->sector_count, &bios_disk_ops,
-			data, id == boot_device_id);
+		disk_add(disk, name, id, params->sector_size, params->sector_count,
+			&bios_disk_ops, id == boot_device_id);
 		dprintf("disk: added device %s (id: 0x%x, sector_size: %u, sector_count: %zu)\n",
 			name, id, params->sector_size, params->sector_count);
 	}
@@ -221,15 +213,4 @@ void platform_disk_detect(void) {
 	/* If not booted from PXE, add the boot device. */
 	if(!pxe_detect())
 		add_disk(boot_device_id);
-}
-
-/** Get the ID of a disk.
- * @param disk		Disk to get ID of (can be a partition). */
-uint8_t bios_disk_id(disk_t *disk) {
-	bios_disk_t *data;
-
-	disk = disk_parent(disk);
-	assert(disk->ops == &bios_disk_ops);
-	data = disk->data;
-	return data->id;
 }

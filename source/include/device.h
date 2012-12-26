@@ -29,7 +29,8 @@ struct mount;
 /** Type of a device. */
 typedef enum device_type {
 	DEVICE_TYPE_DISK,		/**< Disk device. */
-	DEVICE_TYPE_OTHER,		/**< Other device. */
+	DEVICE_TYPE_NET,		/**< Network boot server. */
+	DEVICE_TYPE_IMAGE,		/**< Boot image. */
 } device_type_t;
 
 /** Structure containing details of a device. */

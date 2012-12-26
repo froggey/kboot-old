@@ -42,13 +42,13 @@ static __noreturn void chain_loader_load(void) {
 	disk_t *disk, *parent;
 	ptr_t part_addr = 0;
 	file_handle_t *file;
-	uint8_t id;
 	char *path;
 
 	if(current_device->type != DEVICE_TYPE_DISK)
 		boot_error("Cannot chainload from non-disk device");
 
 	disk = (disk_t *)current_device;
+	parent = disk_parent(disk);
 
 	path = current_environ->data;
 	if(path) {
@@ -72,12 +72,11 @@ static __noreturn void chain_loader_load(void) {
 	if(*(uint16_t *)(CHAINLOAD_ADDR + 510) != 0xAA55)
 		boot_error("Boot sector is missing signature");
 
-	/* Get the ID of the disk we're booting from. */
-	id = bios_disk_id(disk);
-	dprintf("loader: chainloading from device %s (id: 0x%x)\n", current_device->name, id);
+	dprintf("loader: chainloading from device %s (BIOS drive: 0x%x)\n",
+		current_device->name, parent->id);
 
 	/* If booting a partition, we must give partition information to it. */
-	if((parent = disk_parent(disk)) != disk) {
+	if(parent != disk) {
 		if(!disk_read(parent, (void *)PARTITION_TABLE_ADDR, PARTITION_TABLE_SIZE,
 			PARTITION_TABLE_OFFSET))
 		{
@@ -88,7 +87,7 @@ static __noreturn void chain_loader_load(void) {
 	}
 
 	/* Drop to real mode and jump to the boot sector. */
-	chain_loader_enter(id, part_addr);
+	chain_loader_enter(parent->id, part_addr);
 }
 
 /** Chainload loader type. */

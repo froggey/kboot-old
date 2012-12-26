@@ -32,6 +32,7 @@
 #include <fs.h>
 #include <loader.h>
 #include <memory.h>
+#include <net.h>
 
 /** Structure containing details of a PXE handle. */
 typedef struct pxe_handle {
@@ -248,11 +249,11 @@ static fs_type_t tftp_fs_type = {
 bool pxe_detect(void) {
 	pxenv_get_cached_info_t ci;
 	pxenv_boot_player_t *bp;
+	net_device_t *device;
 	mount_t *mount;
 	bios_regs_t regs;
 	pxenv_t *pxenv;
 	pxe_t *pxe;
-	device_t *device;
 
 	/* Use the PXE installation check function. */
 	bios_regs_init(&regs);
@@ -298,19 +299,26 @@ bool pxe_detect(void) {
 	dprintf(" gateway IP: %d.%d.%d.%d\n", bp->gateway_ip.a[0], bp->gateway_ip.a[1],
 		bp->gateway_ip.a[2], bp->gateway_ip.a[3]);
 
-	/* Mount a TFTP filesystem and add a device with it on. */
+	/* Mount a TFTP filesystem. */
 	mount = kmalloc(sizeof(mount_t));
 	memset(mount, 0, sizeof(mount_t));
 	mount->type = &tftp_fs_type;
 	mount->label = kstrdup("PXE");
-	mount->uuid = kstrdup("PXE");
+	mount->uuid = NULL;
 
-	device = kmalloc(sizeof(device_t));
-	device_add(device, "pxe", DEVICE_TYPE_OTHER);
-	device->fs = mount;
+	/* Add a network device. */
+	device = kmalloc(sizeof(net_device_t));
+	memcpy(&device->server_ip, &bp->server_ip, sizeof(device->server_ip));
+	memcpy(&device->gateway_ip, &bp->gateway_ip, sizeof(device->gateway_ip));
+	memcpy(&device->client_ip, &bp->your_ip, sizeof(device->client_ip));
+	memcpy(&device->client_mac, &bp->client_addr, sizeof(device->client_mac));
+	device->flags = 0;
+	device->server_port = PXENV_TFTP_PORT;
+	device_add(&device->device, "pxe", DEVICE_TYPE_NET);
+	device->device.fs = mount;
 
 	/* This is the boot device. */
-	boot_device = device;
+	boot_device = &device->device;
 
 	return true;
 }

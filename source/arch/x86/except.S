@@ -39,7 +39,8 @@
 	andl	$0xFFFF, (%esp)
 .endm
 
-/** Macro to define an ISR.
+/**
+ * Macro to define an ISR.
  *
  * Defines an ISR handler which pushes the interrupt number and a fake error
  * code to the stack. Aligned to 16 bytes because the IDT initialisation
@@ -54,7 +55,8 @@
 	jmp	isr_common
 .endm
 
-/** Macro to define an ISR (with error code).
+/**
+ * Macro to define an ISR (with error code).
  *
  * Defines an ISR handler which pushes the interrupt numberto the stack. For
  * interrupts defined using this macro, the CPU should have pushed an error

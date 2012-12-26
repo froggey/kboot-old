@@ -27,6 +27,12 @@
 #include <loader.h>
 #include <memory.h>
 
+/** Type of a partition disk device. */
+typedef struct partition {
+	disk_t disk;			/**< Disk structure header. */
+	offset_t offset;		/**< Offset of the partition on the disk. */
+} partition_t;
+
 static void probe_disk(disk_t *disk);
 
 /** Read from a disk.
@@ -108,7 +114,8 @@ bool disk_read(disk_t *disk, void *buf, size_t count, offset_t offset) {
  * @param count		Number of blocks to read.
  * @return		Whether reading succeeded. */
 static bool partition_disk_read(disk_t *disk, void *buf, uint64_t lba, size_t count) {
-	return disk->parent->ops->read(disk->parent, buf, lba + disk->offset, count);
+	partition_t *partition = (partition_t *)disk;
+	return disk->parent->ops->read(disk->parent, buf, lba + partition->offset, count);
 }
 
 /** Operations for a partition disk. */
@@ -116,41 +123,48 @@ static disk_ops_t partition_disk_ops = {
 	.read = partition_disk_read,
 };
 
+/** Determine whether a disk is a partition.
+ * @param disk		Disk to check.
+ * @return		Whether the disk is a partition. */
+static bool is_partition(disk_t *disk) {
+	return (disk->ops == &partition_disk_ops);
+}
+
 /** Add a partition to a disk device.
  * @param parent	Parent of the partition.
  * @param id		ID of the partition.
  * @param lba		Start LBA.
  * @param blocks	Size in blocks. */
 static void add_partition(disk_t *parent, uint8_t id, uint64_t lba, uint64_t blocks) {
-	disk_t *disk = kmalloc(sizeof(disk_t));
+	partition_t *partition = kmalloc(sizeof(partition_t));
 	char name[32];
 
 	sprintf(name, "%s,%u", parent->device.name, id);
 
-	disk->block_size = parent->block_size;
-	disk->blocks = blocks;
-	disk->ops = &partition_disk_ops;
-	disk->parent = parent;
-	disk->id = id;
-	disk->offset = lba;
+	partition->disk.id = id;
+	partition->disk.block_size = parent->block_size;
+	partition->disk.blocks = blocks;
+	partition->disk.ops = &partition_disk_ops;
+	partition->disk.parent = parent;
+	partition->offset = lba;
 
 	/* Add the device. */
-	device_add(&disk->device, name, DEVICE_TYPE_DISK);
+	device_add(&partition->disk.device, name, DEVICE_TYPE_DISK);
+
+	/* Set as the boot device if it is the boot partition. */
+	if(boot_device == &parent->device && parent->ops->is_boot_partition) {
+		if(parent->ops->is_boot_partition(parent, id, lba))
+			boot_device = &partition->disk.device;
+	}
 
 	/* Probe for filesystems/partitions. */
-	probe_disk(disk);
-
-	/* Set the device as the boot device if it is the boot partition. */
-	if(disk->device.fs && parent->boot && parent->ops->is_boot_partition) {
-		if(parent->ops->is_boot_partition(parent, id, lba))
-			boot_device = &disk->device;
-	}
+	probe_disk(&partition->disk);
 }
 
 /** Probe a disk for filesystems/partitions.
  * @param disk		Disk to probe. */
 static void probe_disk(disk_t *disk) {
-	if(!(disk->device.fs = fs_probe(disk)) && !disk_is_partition(disk)) {
+	if(!(disk->device.fs = fs_probe(disk)) && !is_partition(disk)) {
 		/* Check for a partition table on the device if it is not
 		 * itself a partition. */
 		BUILTIN_ITERATE(BUILTIN_TYPE_PARTITION_MAP, partition_map_ops_t, type) {
@@ -161,49 +175,41 @@ static void probe_disk(disk_t *disk) {
 }
 
 /** Register a disk device.
+ * @param disk		Disk device structure.
  * @param name		Name of the disk (will be duplicated).
- * @param block_size	Size of 1 block on the device.
+ * @param id		ID of the device (this is not used anywhere by the
+ *			disk code, but it is what gets passed to the OS
+ *			kernel).
+ * @param block_size	Size of a block on the device.
  * @param blocks	Number of blocks on the device.
  * @param ops		Operations structure. Can be NULL.
- * @param data		Implementation-specific data pointer.
- * @param fs		Pre-detected filesystem (used when device contains a
- *			filesystem that cannot be autodetected, such as TFTP).
  * @param boot		Whether the disk is the boot disk. */
-void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *ops,
-	void *data, bool boot)
+void disk_add(disk_t *disk, const char *name, uint8_t id, size_t block_size,
+	uint64_t blocks, disk_ops_t *ops, bool boot)
 {
-	disk_t *disk = kmalloc(sizeof(disk_t));
-
+	disk->id = id;
 	disk->block_size = block_size;
 	disk->blocks = blocks;
 	disk->ops = ops;
-	disk->data = data;
-	disk->boot = boot;
+	disk->parent = NULL;
 
 	/* Add the device. */
 	device_add(&disk->device, name, DEVICE_TYPE_DISK);
 
+	/* Set as the boot device if it is the boot disk. */
+	if(boot)
+		boot_device = &disk->device;
+
 	/* Probe for filesystems/partitions. */
 	probe_disk(disk);
-
-	/* Set the device as the boot device if it is the boot disk. */
-	if(disk->device.fs && boot)
-		boot_device = &disk->device;
 }
 
-/** Determine whether a disk is a partition.
- * @param disk		Disk to check.
- * @return		Whether the disk is a partition. */
-bool disk_is_partition(disk_t *disk) {
-	return (disk->ops == &partition_disk_ops);
-}
-
-/** Get the parent disk of a partition.
+/** Get the top level parent disk of a partition.
  * @param disk		Disk to get parent of.
  * @return		Parent disk (if disk is already the top level, it will
  *			be returned). */
 disk_t *disk_parent(disk_t *disk) {
-	while(disk_is_partition(disk))
+	while(is_partition(disk))
 		disk = disk->parent;
 
 	return disk;

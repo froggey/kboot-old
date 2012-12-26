@@ -75,34 +75,16 @@ typedef struct disk_ops {
 typedef struct disk {
 	device_t device;		/**< Device header. */
 
+	uint8_t id;			/**< Identifier of the disk. */
 	size_t block_size;		/**< Size of one block on the disk. */
 	uint64_t blocks;		/**< Number of blocks on the disk. */
 	disk_ops_t *ops;		/**< Pointer to operations structure. */
-	union {
-		struct {
-			/** Implementation-specific data pointer. */
-			void *data;
-
-			/** Whether the disk is the boot disk. */
-			bool boot;
-		};
-		struct {
-			/** Parent of the partition. */
-			struct disk *parent;
-
-			/** Partition ID. */
-			uint8_t id;
-
-			/** Offset of the partition on the disk. */
-			offset_t offset;
-		};
-	};
+	struct disk *parent;		/**< Parent device. */
 } disk_t;
 
 extern bool disk_read(disk_t *disk, void *buf, size_t count, offset_t offset);
-extern void disk_add(const char *name, size_t block_size, uint64_t blocks, disk_ops_t *ops,
-	void *data, bool boot);
-extern bool disk_is_partition(disk_t *disk);
+extern void disk_add(disk_t *disk, const char *name, uint8_t id, size_t block_size,
+	uint64_t blocks, disk_ops_t *ops, bool boot);
 extern disk_t *disk_parent(disk_t *disk);
 
 extern void platform_disk_detect(void);

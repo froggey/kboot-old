@@ -66,7 +66,5 @@ typedef struct specification_packet {
 	uint16_t device_spec;
 } __packed specification_packet_t;
 
-extern uint8_t bios_disk_id(struct disk *disk);
-
 #endif /* __ASM__ */
 #endif /* __PC_DISK_H */

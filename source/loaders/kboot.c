@@ -31,6 +31,10 @@
  *			kernel doesn't need to support PAE. In practice this
  *			will happen anyway at the moment because the allocator
  *			return lowest available address first.
+ * @todo		Add a root_device configuration variable to specify
+ *			a different device to pass as boot device to kernel,
+ *			which would allow a separate boot partition and root
+ *			FS.
  */
 
 #include <lib/string.h>
@@ -43,6 +47,7 @@
 #include <fs.h>
 #include <loader.h>
 #include <memory.h>
+#include <net.h>
 #include <ui.h>
 
 /** Structure describing a virtual memory mapping. */
@@ -315,6 +320,66 @@ static void set_option(kboot_loader_t *loader, const char *name, uint32_t type) 
 		value, value_size);
 }
 
+/** Add boot device information to the tag list.
+ * @param loader	KBoot loader data structure. */
+static void add_bootdev_tag(kboot_loader_t *loader) {
+	kboot_tag_bootdev_t *tag;
+	net_device_t *netdev;
+	disk_t *disk;
+
+	tag = kboot_allocate_tag(loader, KBOOT_TAG_BOOTDEV, sizeof(*tag));
+
+	switch(current_device->type) {
+	case DEVICE_TYPE_DISK:
+		disk = (disk_t *)current_device;
+
+		tag->method = KBOOT_METHOD_DISK;
+		tag->disk.flags = 0;
+
+		if(current_device->fs->uuid) {
+			strncpy((char *)tag->disk.uuid, current_device->fs->uuid,
+				sizeof(tag->disk.uuid));
+		} else {
+			tag->disk.uuid[0] = 0;
+		}
+
+		/* Copy disk device identification information. The ID field in
+		 * the disk structure is either a platform-specific ID or a
+		 * partition ID. */
+		if(disk->parent) {
+			if(disk->parent->parent) {
+				tag->disk.sub_partition = disk->id;
+				tag->disk.partition = disk->parent->id;
+				tag->disk.device = disk->parent->parent->id;
+			} else {
+				tag->disk.sub_partition = 0;
+				tag->disk.partition = disk->id;
+				tag->disk.device = disk->parent->id;
+			}
+		} else {
+			tag->disk.sub_partition = 0;
+			tag->disk.partition = 0;
+			tag->disk.device = disk->id;
+		}
+
+		break;
+	case DEVICE_TYPE_NET:
+		netdev = (net_device_t *)current_device;
+
+		tag->method = KBOOT_METHOD_NET;
+		tag->net.flags = (netdev->flags & NET_DEVICE_IPV6) ? KBOOT_NET_IPV6 : 0;
+		tag->net.server_port = netdev->server_port;
+		memcpy(&tag->net.server_ip, &netdev->server_ip, sizeof(tag->net.server_ip));
+		memcpy(&tag->net.gateway_ip, &netdev->gateway_ip, sizeof(tag->net.gateway_ip));
+		memcpy(&tag->net.client_ip, &netdev->client_ip, sizeof(tag->net.client_ip));
+		memcpy(&tag->net.client_mac, &netdev->client_mac, sizeof(tag->net.client_mac));
+		break;
+	case DEVICE_TYPE_IMAGE:
+		tag->method = KBOOT_METHOD_NONE;
+		break;
+	}
+}
+
 /** Add virtual memory tags to the tag list.
  * @param loader	KBoot loader data structure. */
 static void add_vmem_tags(kboot_loader_t *loader) {
@@ -482,7 +547,8 @@ static __noreturn void kboot_loader_load(void) {
 		load_module_dir(loader, loader->modules.string);
 	}
 
-	// TODO: boot device
+	/* Add the boot device information. */
+	add_bootdev_tag(loader);
 
 	/* Do platform-specific setup, including setting the video mode. */
 	kboot_platform_setup(loader);
