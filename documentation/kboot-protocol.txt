@@ -572,8 +572,10 @@ and the _Platform Specifics_ section.
 
 Fields:
 
- * `type`: Video mode type that has been set up (see `KBOOT_ITAG_VIDEO`). The
-   remainder of the structure content is dependent on the video mode type.
+ * `type`: One of the available video mode type bits defined in the
+   `KBOOT_ITAG_VIDEO` section will be set in this field to indicate the type
+   of the video mode that has been set. The remainder of the structure
+   content is dependent on the video mode type.
 
 Fields (`KBOOT_VIDEO_VGA`):
 
