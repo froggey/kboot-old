@@ -39,15 +39,17 @@ env['ASCOM'] = '$CC $_CCCOMCOM $ASFLAGS -c -o $TARGET $SOURCES'
 # Make the output nice.
 verbose = ARGUMENTS.get('V') == '1'
 if not verbose:
-	env['ARCOMSTR']     = ' AR     $TARGET'
-	env['ASCOMSTR']     = ' ASM    $SOURCE'
-	env['ASPPCOMSTR']   = ' ASM    $SOURCE'
-	env['CCCOMSTR']     = ' CC     $SOURCE'
-	env['CXXCOMSTR']    = ' CXX    $SOURCE'
-	env['LINKCOMSTR']   = ' LINK   $TARGET'
-	env['RANLIBCOMSTR'] = ' RANLIB $TARGET'
-	env['GENCOMSTR']    = ' GEN    $TARGET'
-	env['STRIPCOMSTR']  = ' STRIP  $TARGET'
+	def compile_str(msg, name):
+		return ' \033[0;32m%-6s\033[0m %s' % (msg, name)
+	env['ARCOMSTR']     = compile_str('AR', '$TARGET')
+	env['ASCOMSTR']     = compile_str('ASM', '$SOURCE')
+	env['ASPPCOMSTR']   = compile_str('ASM', '$SOURCE')
+	env['CCCOMSTR']     = compile_str('CC', '$SOURCE')
+	env['CXXCOMSTR']    = compile_str('CXX', '$SOURCE')
+	env['LINKCOMSTR']   = compile_str('LINK', '$TARGET')
+	env['RANLIBCOMSTR'] = compile_str('RANLIB', '$TARGET')
+	env['GENCOMSTR']    = compile_str('GEN', '$TARGET')
+	env['STRIPCOMSTR']  = compile_str('STRIP', '$TARGET')
 
 # Add a builder to preprocess linker scripts.
 env['BUILDERS']['LDScript'] = Builder(action = Action(
