@@ -40,9 +40,9 @@ void loader_main(void) {
 
 	/* Display the menu interface if enabled. If not, the root environment
 	 * should have the OS loaded. */
-#if CONFIG_KBOOT_UI
+	#if CONFIG_KBOOT_UI
 	current_environ = menu_display();
-#endif
+	#endif
 
 	/* Load the operating system. */
 	if(!current_environ->device) {

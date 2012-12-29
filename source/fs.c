@@ -43,6 +43,7 @@ file_handle_t *file_handle_create(mount_t *mount, bool directory, void *data) {
 }
 
 #if CONFIG_KBOOT_HAVE_DISK
+
 /** Probe a disk for filesystems.
  * @param disk		Disk to probe.
  * @return		Pointer to mount if detected, NULL if not. */
@@ -62,6 +63,7 @@ mount_t *fs_probe(disk_t *disk) {
 	kfree(mount);
 	return NULL;
 }
+
 #endif
 
 /** Structure containing data for file_open(). */

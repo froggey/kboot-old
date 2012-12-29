@@ -26,11 +26,13 @@
 #include <ui.h>
 
 #if CONFIG_KBOOT_UI
+
 /** Boot error window state. */
 static const char *boot_error_format;
 static va_list boot_error_args;
 static ui_window_t *boot_error_window;
 static ui_window_t *debug_log_window;
+
 #endif
 
 /** Helper for internal_error_printf().
@@ -117,6 +119,7 @@ static void boot_error_display(console_t *console, const char *fmt, va_list args
 }
 
 #if CONFIG_KBOOT_UI
+
 /** Render the boot error window.
  * @param window	Window to render. */
 static void boot_error_window_render(ui_window_t *window) {
@@ -151,6 +154,7 @@ static ui_window_type_t boot_error_window_type = {
 	.help = boot_error_window_help,
 	.input = boot_error_window_input,
 };
+
 #endif
 
 /** Display details of a boot error.

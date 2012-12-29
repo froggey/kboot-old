@@ -45,9 +45,9 @@
 typedef struct linux_loader {
 	const char *kernel;		/**< Kernel image path. */
 	const char *initrd;		/**< Initrd path. */
-#if CONFIG_KBOOT_UI
+	#if CONFIG_KBOOT_UI
 	ui_window_t *config;		/**< Configuration window. */
-#endif
+	#endif
 } linux_loader_t;
 
 /** Load the operating system. */
@@ -73,20 +73,22 @@ static __noreturn void linux_loader_load(void) {
 }
 
 #if CONFIG_KBOOT_UI
+
 /** Return a window for configuring the OS.
  * @return		Pointer to configuration window. */
 static ui_window_t *linux_loader_configure(void) {
 	linux_loader_t *data = current_environ->data;
 	return data->config;
 }
+
 #endif
 
 /** Linux loader type. */
 static loader_type_t linux_loader_type = {
 	.load = linux_loader_load,
-#if CONFIG_KBOOT_UI
+	#if CONFIG_KBOOT_UI
 	.configure = linux_loader_configure,
-#endif
+	#endif
 };
 
 /** Load a Linux kernel and initrd.
@@ -115,13 +117,13 @@ static bool config_cmd_linux(value_list_t *args) {
 		environ_insert(current_environ, "cmdline", &value);
 	}
 
-#if CONFIG_KBOOT_UI
+	#if CONFIG_KBOOT_UI
 	/* Create the configuration UI. */
 	data->config = ui_list_create("Kernel Options", true);
 	ui_list_insert(data->config,
 		ui_entry_create("Command Line", entry),
 		false);
-#endif
+	#endif
 
 	current_environ->loader = &linux_loader_type;
 	current_environ->data = data;
