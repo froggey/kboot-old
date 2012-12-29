@@ -667,10 +667,10 @@ Fields:
 Fields (`KBOOT_METHOD_DISK`):
 
  * `flags`: Behaviour flags. No flags are currently defined.
- * `uuid`: If not zero-length, the UUID of the boot filesystem. It is
-   recommended that this is used if present to identify the boot FS, as it is
-   the most reliable method. See the section _Filesystem UUIDs_ for more
-   information about this field.
+ * `uuid`: If not zero-length, the UUID of the boot filesystem. The UUID is
+   given as a string. It is recommended that this is used if present to identify
+   the boot FS, as it is the most reliable method. See the section
+   _Filesystem UUIDs_ for more information about this field.
  * `device`: Boot device number. This field is platform-specific. On the PC
    platform it contains the BIOS device number. It is currently undefined for
    other platforms.
@@ -842,10 +842,12 @@ size before accessing them.
 Filesystem UUIDs
 ----------------
 
-Some filesystems, such as ext2/3/4, have their own UUID. There are others that
-do not, however for some it is possible to give a reasonably unique identifier
-based on other information. This section describes what a boot loader should
-give as a UUID for certain filesystems.
+Some filesystems, such as ext2/3/4, have their own UUID. For these, the UUID
+field of the `KBOOT_TAG_BOOTDEV` tag contains a string representation of the
+filesystem's UUID. There are others that do not, however for some it is
+possible to give a reasonably unique identifier based on other information.
+This section describes what a boot loader should give as a UUID for certain
+filesystems.
 
 ### ISO9660
 
