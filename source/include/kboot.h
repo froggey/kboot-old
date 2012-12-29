@@ -201,7 +201,7 @@ typedef union kboot_ip_addr {
 typedef struct kboot_tag_bootdev {
 	kboot_tag_t header;			/**< Tag header. */
 
-	uint32_t method;			/**< Method used to boot. */
+	uint32_t type;				/**< Boot device type. */
 
 	union {
 		/** Disk device information. */
@@ -235,10 +235,10 @@ typedef struct kboot_tag_bootdev {
 	};
 } kboot_tag_bootdev_t;
 
-/** Boot method types. */
-#define KBOOT_METHOD_NONE		0	/**< No boot device (e.g. boot image). */
-#define KBOOT_METHOD_DISK		1	/**< Booted from a disk device. */
-#define KBOOT_METHOD_NET		2	/**< Booted from the network. */
+/** Boot device types. */
+#define KBOOT_BOOTDEV_NONE		0	/**< No boot device (e.g. boot image). */
+#define KBOOT_BOOTDEV_DISK		1	/**< Booted from a disk device. */
+#define KBOOT_BOOTDEV_NET		2	/**< Booted from the network. */
 
 /** Network boot behaviour flags. */
 #define KBOOT_NET_IPV6			(1<<0)	/**< Given addresses are IPv6 addresses. */

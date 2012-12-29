@@ -338,7 +338,7 @@ static void add_bootdev_tag(kboot_loader_t *loader) {
 	case DEVICE_TYPE_DISK:
 		disk = (disk_t *)current_device;
 
-		tag->method = KBOOT_METHOD_DISK;
+		tag->type = KBOOT_BOOTDEV_DISK;
 		tag->disk.flags = 0;
 
 		if(current_device->fs->uuid) {
@@ -371,7 +371,7 @@ static void add_bootdev_tag(kboot_loader_t *loader) {
 	case DEVICE_TYPE_NET:
 		netdev = (net_device_t *)current_device;
 
-		tag->method = KBOOT_METHOD_NET;
+		tag->type = KBOOT_BOOTDEV_NET;
 		tag->net.flags = (netdev->flags & NET_DEVICE_IPV6) ? KBOOT_NET_IPV6 : 0;
 		tag->net.server_port = netdev->server_port;
 		memcpy(&tag->net.server_ip, &netdev->server_ip, sizeof(tag->net.server_ip));
@@ -380,7 +380,7 @@ static void add_bootdev_tag(kboot_loader_t *loader) {
 		memcpy(&tag->net.client_mac, &netdev->client_mac, sizeof(tag->net.client_mac));
 		break;
 	case DEVICE_TYPE_IMAGE:
-		tag->method = KBOOT_METHOD_NONE;
+		tag->type = KBOOT_BOOTDEV_NONE;
 		break;
 	}
 }

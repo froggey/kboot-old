@@ -206,20 +206,20 @@ static void print_ip_addr(kboot_ip_addr_t *addr, uint32_t flags) {
 static void dump_bootdev_tag(kboot_tag_bootdev_t *tag) {
 	kprintf("KBOOT_TAG_BOOTDEV:\n");
 
-	switch(tag->method) {
-	case KBOOT_METHOD_NONE:
-		kprintf("  method = %" PRIu32 " (KBOOT_METHOD_NONE)\n", tag->method);
+	switch(tag->type) {
+	case KBOOT_BOOTDEV_NONE:
+		kprintf("  type = %" PRIu32 " (KBOOT_BOOTDEV_NONE)\n", tag->type);
 		break;
-	case KBOOT_METHOD_DISK:
-		kprintf("  method        = %" PRIu32 " (KBOOT_METHOD_DISK)\n", tag->method);
+	case KBOOT_BOOTDEV_DISK:
+		kprintf("  type          = %" PRIu32 " (KBOOT_BOOTDEV_DISK)\n", tag->type);
 		kprintf("  flags         = 0x%" PRIx32 "\n", tag->disk.flags);
 		kprintf("  uuid          = `%s'\n", tag->disk.uuid);
 		kprintf("  device        = 0x%x\n", tag->disk.device);
 		kprintf("  partition     = 0x%x\n", tag->disk.partition);
 		kprintf("  sub_partition = 0x%x\n", tag->disk.sub_partition);
 		break;
-	case KBOOT_METHOD_NET:
-		kprintf("  method      = %" PRIu32 " (KBOOT_METHOD_NET)\n", tag->method);
+	case KBOOT_BOOTDEV_NET:
+		kprintf("  type        = %" PRIu32 " (KBOOT_BOOTDEV_NET)\n", tag->type);
 		kprintf("  flags       = 0x%" PRIx32 "\n", tag->net.flags);
 		if(tag->net.flags & KBOOT_NET_IPV6)
 			kprintf("    KBOOT_NET_IPV6\n");
@@ -233,7 +233,7 @@ static void dump_bootdev_tag(kboot_tag_bootdev_t *tag) {
 			tag->net.client_mac[4], tag->net.client_mac[5]);
 		break;
 	default:
-		kprintf("  method = %" PRIu32 " (unknown)\n", tag->method);
+		kprintf("  type = %" PRIu32 " (unknown)\n", tag->type);
 		break;
 	}
 }

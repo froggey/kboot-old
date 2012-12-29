@@ -631,7 +631,7 @@ This tag describes the device that the system was booted from.
     typedef struct kboot_tag_bootdev {
     	kboot_tag_t header;
     
-    	uint32_t method;
+    	uint32_t type;
     
     	union {
     		struct {
@@ -655,16 +655,16 @@ This tag describes the device that the system was booted from.
 
 Fields:
 
- * `method`: Specifies the method used to boot. The following boot methods are
+ * `type`: Specifies the type of the boot device. The following device types are
    currently defined:
-    - `KBOOT_METHOD_NONE` (0): No boot device. This is the case when booted from
-      a boot image.
-    - `KBOOT_METHOD_DISK` (1): Booted from a disk device.
-    - `KBOOT_METHOD_NET` (2): Booted from the network.
+    - `KBOOT_BOOTDEV_NONE` (0): No boot device. This is the case when booted
+      from a boot image.
+    - `KBOOT_BOOTDEV_DISK` (1): Booted from a disk device.
+    - `KBOOT_BOOTDEV_NET` (2): Booted from the network.
    
-   The remainder of the structure is dependent on the method.
+   The remainder of the structure is dependent on the device type.
 
-Fields (`KBOOT_METHOD_DISK`):
+Fields (`KBOOT_BOOTDEV_DISK`):
 
  * `flags`: Behaviour flags. No flags are currently defined.
  * `uuid`: If not zero-length, the UUID of the boot filesystem. The UUID is
@@ -680,7 +680,7 @@ Fields (`KBOOT_METHOD_DISK`):
  * `sub_partition`: Sub-partition number within the partition, e.g. for BSD
    disklabels. If not booted from a sub-partition, will be set to `0xFF`.
 
-Fields (`KBOOT_METHOD_NET`):
+Fields (`KBOOT_BOOTDEV_NET`):
 
  * `flags`: Behaviour flags. The following flags are currently defined:
     - `KBOOT_NET_IPV6` (bit 0): The given IP addresses are IPv6 addresses,
