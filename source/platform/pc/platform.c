@@ -39,35 +39,19 @@ extern void platform_init(void);
 
 /** Main function of the PC loader. */
 void platform_init(void) {
-	char *tok, *cmdline;
-
 	/* Set up console output. */
 	console_init();
 
 	/* Initialize the architecture. */
 	arch_init();
 
-	/* Parse information from Multiboot if we were loaded with it. */
-	if(multiboot_magic == MB_LOADER_MAGIC) {
-		cmdline = multiboot_cmdline;
-		while((tok = strsep(&cmdline, " "))) {
-			if(strncmp(tok, "config-file=", 12) == 0) {
-				config_file_override = tok + 12;
-			}
-		}
-
-		/* If a module was loaded, try to use that as a boot image. */
-		if(multiboot_module_size) {
-			dprintf("loader: using Multiboot boot image at %p (size: %zu)\n",
-				multiboot_module_addr, multiboot_module_size);
-			tar_mount(multiboot_module_addr, multiboot_module_size);
-		}
-	}
-
 	/* Initialize hardware. */
 	memory_init();
 	disk_init();
 	vbe_init();
+
+	/* Parse information from Multiboot. */
+	multiboot_init();
 
 	/* Call the main function. */
 	loader_main();

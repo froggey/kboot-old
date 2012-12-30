@@ -217,7 +217,7 @@ void tar_mount(void *addr, size_t size) {
 	mount->uuid = NULL;
 
 	device = kmalloc(sizeof(device_t));
-	device_add(device, "bimg", DEVICE_TYPE_IMAGE);
+	device_add(device, "bootimg", DEVICE_TYPE_IMAGE);
 	device->fs = mount;
 
 	/* This is the boot device. */

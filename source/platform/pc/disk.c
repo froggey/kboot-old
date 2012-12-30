@@ -44,13 +44,15 @@ extern uint64_t boot_part_offset;
  * @param lba		Block that the partition starts at.
  * @return		Whether partition is a boot partition. */
 static bool bios_disk_is_boot_partition(disk_t *disk, uint8_t id, uint64_t lba) {
-	if(multiboot_magic == MB_LOADER_MAGIC && (uint64_t)id == boot_part_offset) {
-		return true;
-	} else if(lba == boot_part_offset) {
-		return true;
+	if(multiboot_magic == MB_LOADER_MAGIC) {
+		if(id == (multiboot_info.boot_device & 0x00FF0000) >> 16)
+			return true;
 	} else {
-		return false;
+		if(lba == boot_part_offset)
+			return true;
 	}
+
+	return false;
 }
 
 /** Read blocks from a BIOS disk device.
@@ -187,11 +189,11 @@ static void add_disk(uint8_t id) {
 void platform_disk_detect(void) {
 	uint8_t count, id;
 
-	/* If booted from Multiboot, boot_part_offset stores the ID of the
-	 * boot partition rather than its offset. */
+	/* If booted from Multiboot, retrieve boot device ID from there. */
 	if(multiboot_magic == MB_LOADER_MAGIC) {
-		dprintf("disk: boot device ID is 0x%x, partition ID is %" PRIu64 "\n",
-			boot_device_id, boot_part_offset);
+		boot_device_id = (multiboot_info.boot_device & 0xFF000000) >> 24;
+		dprintf("disk: boot device ID is 0x%x, partition ID is 0x%x\n",
+			boot_device_id, (multiboot_info.boot_device & 0x00FF0000) >> 16);
 	} else {
 		dprintf("disk: boot device ID is 0x%x, partition offset is 0x%" PRIx64 "\n",
 			boot_device_id, boot_part_offset);

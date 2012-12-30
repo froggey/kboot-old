@@ -191,34 +191,59 @@ PRIVATE_FUNCTION_START(__multiboot_entry)
 	/* Duplicate the Multiboot information that we want. It is possible
 	 * that the Multiboot loader has placed the information in the same
 	 * place that we are going to relocate to, so it must be duplicated
-	 * to ensure that it won't be overwritten. */
-	mov	%eax, (multiboot_magic + MULTIBOOT_LOAD_OFFSET)
-	mov	MB_INFO_OFFSET_BOOT_DEVICE(%ebx), %eax
-	andl	$0xFF000000, %eax
-	shrl	$24, %eax
-	movb	%al, (boot_device_id + MULTIBOOT_LOAD_OFFSET)
-	mov	MB_INFO_OFFSET_BOOT_DEVICE(%ebx), %eax
-	andl	$0x00FF0000, %eax
-	shrl	$16, %eax
-	movb	%al, (boot_part_offset + MULTIBOOT_LOAD_OFFSET)
+	 * to ensure that it won't be overwritten. Everything gets copied
+	 * into space allocated within the loader image so we can guarantee
+	 * we're not overwriting anything. */
+	movl	%eax, (multiboot_magic + MULTIBOOT_LOAD_OFFSET)
 	cld
-	mov	MB_INFO_OFFSET_CMDLINE(%ebx), %esi
-	mov	$(multiboot_cmdline + MULTIBOOT_LOAD_OFFSET), %edi
+	movl	$MB_INFO_SIZE, %ecx
+	movl	$(multiboot_info + MULTIBOOT_LOAD_OFFSET), %edi
+	movl	%ebx, %esi
+	movl	%edi, %ebx
+	rep movsb
+
+	/* Copy everything else into the preallocated chunk of space and update
+	 * the addresses in the information structures. */
+	movl	$(multiboot_storage + MULTIBOOT_LOAD_OFFSET), %edi
+
+	/* Copy the command line string. */
+	movl	MB_INFO_OFFSET_CMDLINE(%ebx), %esi
+	leal	-MULTIBOOT_LOAD_OFFSET(%edi), %eax
+	movl	%eax, MB_INFO_OFFSET_CMDLINE(%ebx)
 1:	lodsb
 	stosb
 	test	%al, %al
 	jnz	1b
 
-	/* If there is a Multiboot module loaded, save its location. */
-	cmp	$0, MB_INFO_OFFSET_MODS_COUNT(%ebx)
-	je	2f
-	movl	MB_INFO_OFFSET_MODS_ADDR(%ebx), %eax
-	movl	MB_MODULE_OFFSET_MOD_START(%eax), %edx
-	movl	MB_MODULE_OFFSET_MOD_END(%eax), %eax
-	sub	%edx, %eax
-	movl	%edx, (multiboot_module_addr + MULTIBOOT_LOAD_OFFSET)
-	movl	%eax, (multiboot_module_size + MULTIBOOT_LOAD_OFFSET)
-2:
+	/* Copy the module information. */
+	movl	MB_INFO_OFFSET_MODS_COUNT(%ebx), %ecx
+	test	%ecx, %ecx
+	jz	.Lrelocate
+	shll	$4, %ecx
+	movl	MB_INFO_OFFSET_MODS_ADDR(%ebx), %esi
+	leal	-MULTIBOOT_LOAD_OFFSET(%edi), %eax
+	movl	%eax, MB_INFO_OFFSET_MODS_ADDR(%ebx)
+	movl	%edi, %edx
+	rep movsb
+
+	/* Iterate through the modules and copy the command lines. Assuming for
+	 * now that the modules are loaded in a sane location, i.e. above
+	 * 1MB somewhere, so we won't overwrite them. */
+	movl	MB_INFO_OFFSET_MODS_COUNT(%ebx), %ecx
+.Lloop:
+	movl	MB_MODULE_OFFSET_CMDLINE(%edx), %esi
+	test	%esi, %esi
+	jz	2f
+	leal	-MULTIBOOT_LOAD_OFFSET(%edi), %eax
+	movl	%eax, MB_MODULE_OFFSET_CMDLINE(%edx)
+1:	lodsb
+	stosb
+	test	%al, %al
+	jnz	1b
+2:	addl	$MB_MODULE_SIZE, %edx
+	loop	.Lloop
+
+.Lrelocate:
 	/* Relocate the loader image. */
 	cld
 	mov	$(__end - LOADER_LOAD_ADDR), %ecx
@@ -228,8 +253,8 @@ PRIVATE_FUNCTION_START(__multiboot_entry)
 
 	/* Load the GDT. */
 	lgdt	(loader_gdtp)
-	ljmp	$SEGMENT_CS, $3f
-3:
+	ljmp	$SEGMENT_CS, $1f
+1:
 	mov	$SEGMENT_DS, %ax
 	mov	%ax, %ds
 	mov	%ax, %es
@@ -251,13 +276,11 @@ PRIVATE_FUNCTION_START(__loader_entry)
 	popf
 
 	/* Zero the BSS section. */
-	movl	$__bss_start, %eax
-	movl	$__bss_end, %edx
-	subl	%eax, %edx
-	push	%edx
-	push	$0
-	push	%eax
-	call	memset
+	movl	$__bss_start, %edi
+	movl	$__bss_end, %ecx
+	subl	%edi, %ecx
+	xorb	%al, %al
+	rep stosb
 
 	/* Call the main function. */
 	jmp	platform_init
@@ -270,19 +293,6 @@ SYMBOL(loader_gdtp)
         .word .L__gdt_end-__gdt-1
         .long __gdt
 
-/** Boot drive. */
-SYMBOL(boot_device_id)
-	.byte 0
-
-/** Boot partition offset LBA. */
-SYMBOL(boot_part_offset)
-	.quad 0
-
-/** Stack. */
-.align PAGE_SIZE
-SYMBOL(loader_stack)
-	.fill	PAGE_SIZE
-
 /** Global descriptor table. */
 __gdt:
 	.quad 0x0000000000000000                /**< NULL descriptor (0x00). */
@@ -294,16 +304,29 @@ __gdt:
 	.quad 0x008F92000000FFFF		/**< 64-bit data     (0x30). */
 .L__gdt_end:
 
+/** Boot drive. */
+SYMBOL(boot_device_id)
+	.byte	0
+
+/** Boot partition offset LBA. */
+SYMBOL(boot_part_offset)
+	.quad	0
+
 /** Multiboot magic number. */
 SYMBOL(multiboot_magic)
 	.long	0
 
-/** Multiboot boot image information. */
-SYMBOL(multiboot_module_addr)
-	.long	0
-SYMBOL(multiboot_module_size)
-	.long	0
+/** Multiboot information structure. */
+SYMBOL(multiboot_info)
+	.fill	MB_INFO_SIZE
 
-/** Multiboot command line. */
-SYMBOL(multiboot_cmdline)
-	.fill	MB_CMDLINE_MAX
+/** Multiboot information storage. */
+multiboot_storage:
+	.fill	PAGE_SIZE
+
+.section .bss, "aw", @nobits
+
+/** Stack. */
+.align PAGE_SIZE
+SYMBOL(loader_stack)
+	.fill	PAGE_SIZE

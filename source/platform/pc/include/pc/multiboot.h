@@ -47,11 +47,9 @@
 #define MB_INFO_APMTABLE		(1<<10)	/**< Bootloader provided APM table. */
 #define MB_INFO_VBEINFO			(1<<11)	/**< Bootloader provided VBE info. */
 
-/** Size of the Multiboot information structure. */
+/** Size of the Multiboot structures. */
 #define MB_INFO_SIZE			88
-
-/** Maximum length of the Multiboot command line. */
-#define MB_CMDLINE_MAX			256
+#define MB_MODULE_SIZE			16
 
 /** Offsets into the info structure required in assembly code. */
 #define MB_INFO_OFFSET_BOOT_DEVICE	12	/**< Offset of the boot device field. */
@@ -62,6 +60,7 @@
 /** Offsets into the module structure required in assembly code. */
 #define MB_MODULE_OFFSET_MOD_START	0	/**< Offset of the module start field. */
 #define MB_MODULE_OFFSET_MOD_END	4	/**< Offset of the module end field. */
+#define MB_MODULE_OFFSET_CMDLINE	8	/**< Offset of the command line field. */
 
 #ifndef __ASM__
 
@@ -100,10 +99,10 @@ typedef struct multiboot_module {
 	uint32_t pad;
 } __packed multiboot_module_t;
 
-extern unsigned long multiboot_magic;
-extern void *multiboot_module_addr;
-extern size_t multiboot_module_size;
-extern char multiboot_cmdline[];
+extern uint32_t multiboot_magic;
+extern multiboot_info_t multiboot_info;
+
+extern void multiboot_init(void);
 
 #endif /* __ASM__ */
 #endif /* __PLATFORM_MULTIBOOT_H */
