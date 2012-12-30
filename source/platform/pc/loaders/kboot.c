@@ -251,7 +251,7 @@ static void set_video_mode(kboot_loader_t *loader) {
 
 		/* Map the framebuffer. */
 		tag->lfb.fb_phys = mode->info.phys_base_ptr;
-		tag->lfb.fb_size = ROUND_UP(tag->lfb.height * tag->lfb.pitch, 8);
+		tag->lfb.fb_size = ROUND_UP(tag->lfb.height * tag->lfb.pitch, PAGE_SIZE);
 		tag->lfb.fb_virt = kboot_allocate_virtual(loader, tag->lfb.fb_phys,
 			tag->lfb.fb_size);
 
