@@ -98,17 +98,6 @@ static void fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, u
 	}
 }
 
-/** Copy part of the framebuffer to another location.
- * @param dest_y	Y position of destination.
- * @param src_y		Y position of source area.
- * @param height	Height of area to copy. */
-static void copy_lines(uint16_t dest_y, uint16_t src_y, uint16_t height) {
-	void *mapping = (void *)((ptr_t)video_info->lfb.fb_virt);
-
-	memmove(mapping + OFFSET(0, dest_y), mapping + OFFSET(0, src_y),
-		video_info->lfb.pitch * height);
-}
-
 /** Draw the glyph at the specified position the console.
  * @param ch		Character to draw.
  * @param x		X position (characters).
@@ -173,19 +162,10 @@ static void fb_console_putch(char ch) {
 	/* If we have reached the edge of the screen insert a new line. */
 	if(fb_console_x >= fb_console_cols) {
 		fb_console_x = 0;
-		fb_console_y++;
-	}
-
-	/* If we have reached the bottom of the screen, scroll. */
-	if(fb_console_y >= fb_console_lines) {
-		/* Move everything up and fill the last row with blanks. */
-		copy_lines(0, FONT_HEIGHT, (fb_console_lines - 1) * FONT_HEIGHT);
-		fill_rect(0, FONT_HEIGHT * (fb_console_lines - 1),
-			video_info->lfb.width, FONT_HEIGHT,
-			FONT_BG);
-
-		/* Update the cursor position. */
-		fb_console_y = fb_console_lines - 1;
+		if(++fb_console_y >= fb_console_lines)
+			fb_console_y = 0;
+		fill_rect(0, FONT_HEIGHT * fb_console_y, video_info->lfb.width,
+			FONT_HEIGHT, FONT_BG);
 	}
 }
 
