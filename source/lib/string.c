@@ -42,6 +42,15 @@
  * @return		Destination location.
  */
 void *memcpy(void *__restrict dest, const void *__restrict src, size_t count) {
+#ifdef __i386__
+	register unsigned long out;
+
+	asm volatile("rep movsb"
+		: "=&D"(out), "=&S"(src), "=&c"(count)
+		: "0"(dest), "1"(src), "2"(count)
+		: "memory");
+	return dest;
+#else
 	const unsigned char *s = src;
 	unsigned char *d = dest;
 
@@ -49,6 +58,7 @@ void *memcpy(void *__restrict dest, const void *__restrict src, size_t count) {
 		*d++ = *s++;
 
 	return dest;
+#endif
 }
 
 /** Fill a memory area.
@@ -57,12 +67,22 @@ void *memcpy(void *__restrict dest, const void *__restrict src, size_t count) {
  * @param count		The number of bytes to fill.
  * @return		Destination location. */
 void *memset(void *dest, int val, size_t count) {
+#ifdef __i386__
+	register unsigned long out;
+
+	asm volatile("rep stosb"
+		: "=&D"(out), "=&c"(count)
+		: "a"(val), "0"(dest), "1"(count)
+		: "memory");
+	return dest;
+#else
 	unsigned char *d = dest;
 
 	for(; count != 0; count--)
 		*d++ = (unsigned char)val;
 
 	return dest;
+#endif
 }
 
 /**
