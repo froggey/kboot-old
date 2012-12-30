@@ -288,16 +288,6 @@ void ui_window_display(ui_window_t *window, int timeout) {
 	main_console->reset();
 }
 
-
-	const char *buf;		/**< Buffer containing text. */
-	size_t size;			/**< Size of the buffer. */
-
-	/** Array containing details of each line. */
-	struct {
-		size_t start;		/**< Start of the line. */
-		size_t len;		/**< Length of the line. */
-	} *lines;
-
 /** Print a line from a text view.
  * @param view		View to render.
  * @param line		Index of line to print. */

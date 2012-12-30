@@ -261,6 +261,15 @@ static uint16_t pc_console_get_key(void) {
 	bios_regs_t regs;
 
 	bios_regs_init(&regs);
+
+	/* INT16 AH=00h on Apple's BIOS emulation will hang forever if there
+	 * is no key available, so loop trying to poll for one first. */
+	do {
+		regs.eax = 0x0100;
+		bios_interrupt(0x16, &regs);
+	} while(regs.eflags & X86_FLAGS_ZF);
+
+	/* Get the key code. */
 	regs.eax = 0x0000;
 	bios_interrupt(0x16, &regs);
 
