@@ -21,40 +21,14 @@
 
 #include <lib/utility.h>
 
-#include <elf.h>
-#include <kboot.h>
-#include <loader.h>
-
-#ifdef __LP64__
-typedef Elf64_Shdr elf_shdr_t;
-typedef Elf64_Sym  elf_sym_t;
-typedef Elf64_Addr elf_addr_t;
-#else
-typedef Elf32_Shdr elf_shdr_t;
-typedef Elf32_Sym  elf_sym_t;
-typedef Elf32_Addr elf_addr_t;
-#endif
-
-extern void log_init(kboot_tag_t *tags);
-extern void kmain(uint32_t magic, kboot_tag_t *tags);
+#include "test.h"
 
 KBOOT_IMAGE(KBOOT_IMAGE_SECTIONS | KBOOT_IMAGE_LOG);
 KBOOT_VIDEO(KBOOT_VIDEO_LFB | KBOOT_VIDEO_VGA, 0, 0, 0);
 KBOOT_BOOLEAN_OPTION("bool_option", "Boolean Option", true);
 KBOOT_STRING_OPTION("string_option", "String Option", "Default Value");
-
-#ifdef __LP64__
-#define PHYS_MAP_BASE		0xFFFFFFFF00000000
-KBOOT_LOAD(0, 0, 0, 0, 0xFFFFFFFF80000000, 0x80000000);
-#else
-#define PHYS_MAP_BASE		0x40000000
-KBOOT_LOAD(0, 0, 0, 0, 0xC0000000, 0x40000000);
-#endif
-
-KBOOT_MAPPING(PHYS_MAP_BASE, 0, 0x80000000);
-
-/** Get a virtual address from a physical address. */
-#define P2V(phys)		((ptr_t)(phys) + PHYS_MAP_BASE)
+KBOOT_LOAD(0, 0, 0, 0, VIRT_MAP_BASE, VIRT_MAP_SIZE);
+KBOOT_MAPPING(PHYS_MAP_BASE, 0, PHYS_MAP_SIZE);
 
 /** Dump a core tag. */
 static void dump_core_tag(kboot_tag_core_t *tag) {
@@ -297,6 +271,10 @@ static void dump_e820_tag(kboot_tag_e820_t *tag) {
  * @param magic		KBoot magic number.
  * @param tags		Tag list pointer. */
 void kmain(uint32_t magic, kboot_tag_t *tags) {
+	if(magic != KBOOT_MAGIC)
+		while(true);
+
+	console_init(tags);
 	log_init(tags);
 
 	kprintf("Test kernel loaded: magic: 0x%x, tags: %p\n", magic, tags);
@@ -340,6 +318,8 @@ void kmain(uint32_t magic, kboot_tag_t *tags) {
 
 		tags = (kboot_tag_t *)ROUND_UP((ptr_t)tags + tags->size, 8);
 	}
+
+	kprintf("Tag list dump complete\n");
 
 	#if defined(__i386__) || defined(__x86_64__)
 	__asm__ volatile("wbinvd");

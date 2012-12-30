@@ -25,7 +25,10 @@ sources = map(File, [
 	'%s/console.c' % (config['PLATFORM']),
 	'main.c',
 	'support.c',
+	'fb.c',
+	'font.c',
 	'../source/lib/printf.c',
+	'../source/lib/string.c',
 ])
 
 # Build test kernel for each supported configuration.

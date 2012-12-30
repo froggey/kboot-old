@@ -24,142 +24,29 @@
 #include <lib/string.h>
 #include <lib/utility.h>
 
-#include <kboot.h>
-#include <loader.h>
+#include <memory.h>
 
-extern void console_putc(char ch);
-extern void log_init(kboot_tag_t *tags);
+#include "test.h"
 
 /** KBoot log buffer. */
 static kboot_log_t *kboot_log = NULL;
 static size_t kboot_log_size = 0;
 
-/** Get the length of a string.
- * @param str		Pointer to the string.
- * @return		Length of the string. */
-size_t strlen(const char *str) {
-	size_t ret;
+/** Main console. */
+console_t *main_console = NULL;
 
-	for(ret = 0; *str; str++, ret++) {}
-	return ret;
-}
-
-/** Get length of a string with limit.
- * @param str		Pointer to the string.
- * @param count		Maximum length of the string.
- * @return		Length of the string. */
-size_t strnlen(const char *str, size_t count) {
-	size_t ret;
-
-	for(ret = 0; *str && ret < count; str++, ret++) {}
-	return ret;
-}
-
-/** Macro to implement strtoul() and strtoull(). */
-#define __strtoux(type, cp, endp, base)		\
-	__extension__ \
-	({ \
-		type result = 0, value; \
-		if(!base) { \
-			if(*cp == '0') { \
-				if((tolower(*(++cp)) == 'x') && isxdigit(cp[1])) { \
-					cp++; \
-					base = 16; \
-				} else { \
-					base = 8; \
-				} \
-			} else { \
-				base = 10; \
-			} \
-		} else if(base == 16) { \
-			if(cp[0] == '0' && tolower(cp[1]) == 'x') \
-				cp += 2; \
-		} \
-		\
-		while(isxdigit(*cp) && (value = isdigit(*cp) \
-			? *cp - '0' : tolower(*cp) - 'a' + 10) < base) \
-		{ \
-			result = result * base + value; \
-			cp++; \
-		} \
-		\
-		if(endp) \
-			*endp = (char *)cp; \
-		result; \
-	})
-
-/**
- * Convert a string to an unsigned long.
- *
- * Converts a string to an unsigned long using the specified number base.
- *
- * @param cp		The start of the string.
- * @param endp		Pointer to the end of the parsed string placed here.
- * @param base		The number base to use (if zero will guess).
- *
- * @return		Converted value.
- */
-unsigned long strtoul(const char *cp, char **endp, unsigned int base) {
-	return __strtoux(unsigned long, cp, endp, base);
-}
-
-/**
- * Convert a string to a signed long.
- *
- * Converts a string to an signed long using the specified number base.
- *
- * @param cp		The start of the string.
- * @param endp		Pointer to the end of the parsed string placed here.
- * @param base		The number base to use.
- *
- * @return		Converted value.
- */
-long strtol(const char *cp, char **endp, unsigned int base) {
-	if(*cp == '-')
-		return -strtoul(cp + 1, endp, base);
-
-	return strtoul(cp, endp, base);
-}
-
-/**
- * Convert a string to an unsigned long long.
- *
- * Converts a string to an unsigned long long using the specified number base.
- *
- * @param cp		The start of the string.
- * @param endp		Pointer to the end of the parsed string placed here.
- * @param base		The number base to use.
- *
- * @return		Converted value.
- */
-unsigned long long strtoull(const char *cp, char **endp, unsigned int base) {
-	return __strtoux(unsigned long long, cp, endp, base);
-}
-
-/**
- * Convert a string to an signed long long.
- *
- * Converts a string to an signed long long using the specified number base.
- *
- * @param cp		The start of the string.
- * @param endp		Pointer to the end of the parsed string placed here.
- * @param base		The number base to use.
- *
- * @return		Converted value.
- */
-long long strtoll(const char *cp, char **endp, unsigned int base) {
-	if(*cp == '-')
-		return -strtoull(cp + 1, endp, base);
-
-	return strtoull(cp, endp, base);
-}
+/** Debug console. */
+console_t *debug_console = NULL;
 
 /** Helper for kvprintf().
  * @param ch		Character to display.
  * @param data		Console to use.
  * @param total		Pointer to total character count. */
 static void kvprintf_helper(char ch, void *data, int *total) {
-	console_putc(ch);
+	if(debug_console)
+		debug_console->putch(ch);
+	if(main_console)
+		main_console->putch(ch);
 
 	if(kboot_log) {
 		kboot_log->buffer[(kboot_log->start + kboot_log->length) % kboot_log_size] = ch;
@@ -212,3 +99,9 @@ void log_init(kboot_tag_t *tags) {
 		tags = (kboot_tag_t *)ROUND_UP((ptr_t)tags + tags->size, 8);
 	}
 }
+
+/** Dummy kmalloc() function. */
+void *kmalloc(size_t size) {
+	return NULL;
+}
+
