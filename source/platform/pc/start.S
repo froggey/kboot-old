@@ -175,8 +175,8 @@ FUNCTION_END(enable_a20)
 .align 4
 multiboot_header:
 	.long MB_HEADER_MAGIC
-	.long (MB_HFLAG_KLUDGE | MB_HFLAG_MODALIGN)
-	.long -(MB_HEADER_MAGIC + (MB_HFLAG_KLUDGE | MB_HFLAG_MODALIGN))
+	.long (MB_HEADER_KLUDGE | MB_HEADER_MODALIGN)
+	.long -(MB_HEADER_MAGIC + (MB_HEADER_KLUDGE | MB_HEADER_MODALIGN))
 	.long multiboot_header + MULTIBOOT_LOAD_OFFSET
 	.long __text_start + MULTIBOOT_LOAD_OFFSET
 	.long __data_end + MULTIBOOT_LOAD_OFFSET
@@ -193,11 +193,11 @@ PRIVATE_FUNCTION_START(__multiboot_entry)
 	 * place that we are going to relocate to, so it must be duplicated
 	 * to ensure that it won't be overwritten. */
 	mov	%eax, (multiboot_magic + MULTIBOOT_LOAD_OFFSET)
-	mov	MB_INFO_OFFSET_BOOTDEV(%ebx), %eax
+	mov	MB_INFO_OFFSET_BOOT_DEVICE(%ebx), %eax
 	andl	$0xFF000000, %eax
 	shrl	$24, %eax
 	movb	%al, (boot_device_id + MULTIBOOT_LOAD_OFFSET)
-	mov	MB_INFO_OFFSET_BOOTDEV(%ebx), %eax
+	mov	MB_INFO_OFFSET_BOOT_DEVICE(%ebx), %eax
 	andl	$0x00FF0000, %eax
 	shrl	$16, %eax
 	movb	%al, (boot_part_offset + MULTIBOOT_LOAD_OFFSET)
@@ -209,6 +209,16 @@ PRIVATE_FUNCTION_START(__multiboot_entry)
 	test	%al, %al
 	jnz	1b
 
+	/* If there is a Multiboot module loaded, save its location. */
+	cmp	$0, MB_INFO_OFFSET_MODS_COUNT(%ebx)
+	je	2f
+	movl	MB_INFO_OFFSET_MODS_ADDR(%ebx), %eax
+	movl	MB_MODULE_OFFSET_MOD_START(%eax), %edx
+	movl	MB_MODULE_OFFSET_MOD_END(%eax), %eax
+	sub	%edx, %eax
+	movl	%edx, (multiboot_module_addr + MULTIBOOT_LOAD_OFFSET)
+	movl	%eax, (multiboot_module_size + MULTIBOOT_LOAD_OFFSET)
+2:
 	/* Relocate the loader image. */
 	cld
 	mov	$(__end - LOADER_LOAD_ADDR), %ecx
@@ -218,8 +228,8 @@ PRIVATE_FUNCTION_START(__multiboot_entry)
 
 	/* Load the GDT. */
 	lgdt	(loader_gdtp)
-	ljmp	$SEGMENT_CS, $2f
-2:
+	ljmp	$SEGMENT_CS, $3f
+3:
 	mov	$SEGMENT_DS, %ax
 	mov	%ax, %ds
 	mov	%ax, %es
@@ -288,9 +298,11 @@ __gdt:
 SYMBOL(multiboot_magic)
 	.long	0
 
-/** Multiboot information structure. */
-SYMBOL(multiboot_info)
-	.fill	MB_INFO_SIZE
+/** Multiboot boot image information. */
+SYMBOL(multiboot_module_addr)
+	.long	0
+SYMBOL(multiboot_module_size)
+	.long	0
 
 /** Multiboot command line. */
 SYMBOL(multiboot_cmdline)

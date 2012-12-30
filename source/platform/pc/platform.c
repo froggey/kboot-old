@@ -32,6 +32,7 @@
 #include <config.h>
 #include <loader.h>
 #include <memory.h>
+#include <tar.h>
 #include <time.h>
 
 extern void platform_init(void);
@@ -46,13 +47,20 @@ void platform_init(void) {
 	/* Initialize the architecture. */
 	arch_init();
 
-	/* If booted with Multiboot, parse the command line. */
+	/* Parse information from Multiboot if we were loaded with it. */
 	if(multiboot_magic == MB_LOADER_MAGIC) {
 		cmdline = multiboot_cmdline;
 		while((tok = strsep(&cmdline, " "))) {
 			if(strncmp(tok, "config-file=", 12) == 0) {
 				config_file_override = tok + 12;
 			}
+		}
+
+		/* If a module was loaded, try to use that as a boot image. */
+		if(multiboot_module_size) {
+			dprintf("loader: using Multiboot boot image at %p (size: %zu)\n",
+				multiboot_module_addr, multiboot_module_size);
+			tar_mount(multiboot_module_addr, multiboot_module_size);
 		}
 	}
 

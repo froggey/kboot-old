@@ -25,6 +25,7 @@
 #include <lib/string.h>
 #include <lib/utility.h>
 
+#include <assert.h>
 #include <fs.h>
 #include <loader.h>
 #include <memory.h>

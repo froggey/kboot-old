@@ -197,7 +197,7 @@ void disk_add(disk_t *disk, const char *name, uint8_t id, size_t block_size,
 	device_add(&disk->device, name, DEVICE_TYPE_DISK);
 
 	/* Set as the boot device if it is the boot disk. */
-	if(boot)
+	if(boot && !boot_device)
 		boot_device = &disk->device;
 
 	/* Probe for filesystems/partitions. */

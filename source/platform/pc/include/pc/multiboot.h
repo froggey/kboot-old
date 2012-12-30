@@ -22,38 +22,46 @@
 #ifndef __PLATFORM_MULTIBOOT_H
 #define __PLATFORM_MULTIBOOT_H
 
-/** Flags for the multiboot header. */
-#define MB_HFLAG_MODALIGN	(1<<0)		/**< Align loaded modules on page boundaries. */
-#define MB_HFLAG_MEMINFO	(1<<1)		/**< Kernel wants a memory map. */
-#define MB_HFLAG_KLUDGE		(1<<16)		/**< Use a.out kludge. */
+/** Magic value passed by the bootloader. */
+#define MB_LOADER_MAGIC			0x2BADB002
 
-/** Multiboot magic values. */
-#define MB_LOADER_MAGIC		0x2BADB002	/**< Magic value passed by the bootloader. */
-#define MB_HEADER_MAGIC		0x1BADB002	/**< Magic value in the multiboot header. */
+/** Magic value in the Multiboot header. */
+#define MB_HEADER_MAGIC			0x1BADB002
+
+/** Flags for the Multiboot header. */
+#define MB_HEADER_MODALIGN		(1<<0)	/**< Align loaded modules on page boundaries. */
+#define MB_HEADER_MEMINFO		(1<<1)	/**< Kernel wants a memory map. */
+#define MB_HEADER_KLUDGE		(1<<16)	/**< Use a.out kludge. */
 
 /** Flags passed by the bootloader. */
-#define	MB_FLAG_MEMINFO		(1<<0)		/**< Bootloader provided memory info. */
-#define MB_FLAG_BOOTDEV		(1<<1)		/**< Bootloader provided boot device. */
-#define MB_FLAG_CMDLINE		(1<<2)		/**< Bootloader provided command line. */
-#define MB_FLAG_MODULES		(1<<3)		/**< Bootloader provided module info. */
-#define MB_FLAG_AOUTSYMS	(1<<4)		/**< Bootloader provided a.out symbols. */
-#define MB_FLAG_ELFSYMS		(1<<5)		/**< Bootloader provided ELF symbols. */
-#define MB_FLAG_MMAP		(1<<6)		/**< Bootloader provided memory map. */
-#define MB_FLAG_DRIVES		(1<<7)		/**< Bootloader provided drive information. */
-#define MB_FLAG_CONFTABLE	(1<<8)		/**< Bootloader provided config table. */
-#define MB_FLAG_LDRNAME		(1<<9)		/**< Bootloader provided its name. */
-#define MB_FLAG_APMTABLE	(1<<10)		/**< Bootloader provided APM table. */
-#define MB_FLAG_VBEINFO		(1<<11)		/**< Bootloader provided VBE info. */
+#define	MB_INFO_MEMINFO			(1<<0)	/**< Bootloader provided memory info. */
+#define MB_INFO_BOOTDEV			(1<<1)	/**< Bootloader provided boot device. */
+#define MB_INFO_CMDLINE			(1<<2)	/**< Bootloader provided command line. */
+#define MB_INFO_MODULES			(1<<3)	/**< Bootloader provided module info. */
+#define MB_INFO_AOUTSYMS		(1<<4)	/**< Bootloader provided a.out symbols. */
+#define MB_INFO_ELFSYMS			(1<<5)	/**< Bootloader provided ELF symbols. */
+#define MB_INFO_MMAP			(1<<6)	/**< Bootloader provided memory map. */
+#define MB_INFO_DRIVES			(1<<7)	/**< Bootloader provided drive information. */
+#define MB_INFO_CONFTABLE		(1<<8)	/**< Bootloader provided config table. */
+#define MB_INFO_LDRNAME			(1<<9)	/**< Bootloader provided its name. */
+#define MB_INFO_APMTABLE		(1<<10)	/**< Bootloader provided APM table. */
+#define MB_INFO_VBEINFO			(1<<11)	/**< Bootloader provided VBE info. */
 
 /** Size of the Multiboot information structure. */
-#define MB_INFO_SIZE		88
+#define MB_INFO_SIZE			88
 
 /** Maximum length of the Multiboot command line. */
-#define MB_CMDLINE_MAX		256
+#define MB_CMDLINE_MAX			256
 
-/** Offsets into the structure required in assembly code. */
-#define MB_INFO_OFFSET_BOOTDEV	12		/**< Offset of the boot device field. */
-#define MB_INFO_OFFSET_CMDLINE	16		/**< Offset of the command line field. */
+/** Offsets into the info structure required in assembly code. */
+#define MB_INFO_OFFSET_BOOT_DEVICE	12	/**< Offset of the boot device field. */
+#define MB_INFO_OFFSET_CMDLINE		16	/**< Offset of the command line field. */
+#define MB_INFO_OFFSET_MODS_COUNT	20	/**< Offset of the module count field. */
+#define MB_INFO_OFFSET_MODS_ADDR	24	/**< Offset of the module address field. */
+
+/** Offsets into the module structure required in assembly code. */
+#define MB_MODULE_OFFSET_MOD_START	0	/**< Offset of the module start field. */
+#define MB_MODULE_OFFSET_MOD_END	4	/**< Offset of the module end field. */
 
 #ifndef __ASM__
 
@@ -84,7 +92,17 @@ typedef struct multiboot_info {
 	uint16_t vbe_interface_len;		/**< VBE interface length. */
 } __packed multiboot_info_t;
 
+/** Multiboot module information structure. */
+typedef struct multiboot_module {
+	uint32_t mod_start;			/**< Module start address. */
+	uint32_t mod_end;			/**< Module end address. */
+	uint32_t cmdline;			/**< Module command line. */
+	uint32_t pad;
+} __packed multiboot_module_t;
+
 extern unsigned long multiboot_magic;
+extern void *multiboot_module_addr;
+extern size_t multiboot_module_size;
 extern char multiboot_cmdline[];
 
 #endif /* __ASM__ */
