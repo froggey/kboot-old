@@ -102,8 +102,11 @@ typedef struct kboot_tag_memory {
 
 /** Possible memory range types. */
 #define KBOOT_MEMORY_FREE		0	/**< Free, usable memory. */
-#define KBOOT_MEMORY_ALLOCATED		1	/**< Allocated memory. */
+#define KBOOT_MEMORY_ALLOCATED		1	/**< Kernel image and other non-reclaimable data. */
 #define KBOOT_MEMORY_RECLAIMABLE	2	/**< Memory reclaimable when boot information is no longer needed. */
+#define KBOOT_MEMORY_PAGETABLES		3	/**< Temporary page tables for the kernel. */
+#define KBOOT_MEMORY_STACK		4	/**< Stack set up for the kernel. */
+#define KBOOT_MEMORY_MODULES		5	/**< Module data. */
 
 /** Tag describing a virtual memory range. */
 typedef struct kboot_tag_vmem {

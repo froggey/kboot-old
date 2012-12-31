@@ -37,11 +37,15 @@ typedef struct memory_range {
 
 extern list_t memory_ranges;
 
-/** Physical memory range types. */
+/** Physical memory range types.
+ * @note		These should be the same as the KBoot definitions. */
 #define PHYS_MEMORY_FREE	0
 #define PHYS_MEMORY_ALLOCATED	1
 #define PHYS_MEMORY_RECLAIMABLE 2
-#define PHYS_MEMORY_INTERNAL	3
+#define PHYS_MEMORY_PAGETABLES	3
+#define PHYS_MEMORY_STACK	4
+#define PHYS_MEMORY_MODULES	5
+#define PHYS_MEMORY_INTERNAL	6
 
 /** Flags for phys_memory_alloc(). */
 #define PHYS_ALLOC_CANFAIL	(1<<0)	/**< The allocation is allowed to fail. */

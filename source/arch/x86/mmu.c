@@ -36,7 +36,7 @@ static phys_ptr_t allocate_structure(void) {
 	phys_ptr_t addr;
 
 	phys_memory_alloc(PAGE_SIZE, PAGE_SIZE, 0, 0x100000000ULL,
-		PHYS_MEMORY_RECLAIMABLE, 0, &addr);
+		PHYS_MEMORY_PAGETABLES, 0, &addr);
 	memset((void *)((ptr_t)addr), 0, PAGE_SIZE);
 	return addr;
 }

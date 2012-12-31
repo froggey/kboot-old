@@ -71,13 +71,33 @@ static void dump_option_tag(kboot_tag_option_t *tag) {
 	}
 }
 
+/** Get a memory range tag type. */
+static const char *memory_tag_type(uint32_t type) {
+	switch(type) {
+	case KBOOT_MEMORY_FREE:
+		return "Free";
+	case KBOOT_MEMORY_ALLOCATED:
+		return "Allocated";
+	case KBOOT_MEMORY_RECLAIMABLE:
+		return "Reclaimable";
+	case KBOOT_MEMORY_PAGETABLES:
+		return "Pagetables";
+	case KBOOT_MEMORY_STACK:
+		return "Stack";
+	case KBOOT_MEMORY_MODULES:
+		return "Modules";
+	default:
+		return "???";
+	}
+}
+
 /** Dump a memory tag. */
 static void dump_memory_tag(kboot_tag_memory_t *tag) {
 	kprintf("KBOOT_TAG_MEMORY:\n");
 	kprintf("  start = 0x%" PRIx64 "\n", tag->start);
 	kprintf("  size  = 0x%" PRIx64 "\n", tag->size);
 	kprintf("  end   = 0x%" PRIx64 "\n", tag->start + tag->size);
-	kprintf("  type  = %u\n", tag->type);
+	kprintf("  type  = %u (%s)\n", tag->type, memory_tag_type(tag->type));
 }
 
 /** Dump a virtual memory tag. */
@@ -259,12 +279,25 @@ static void dump_sections_tag(kboot_tag_sections_t *tag) {
 	}
 }
 
+/** Get an E820 tag type. */
+static const char *e820_tag_type(uint32_t type) {
+	switch(type) {
+	case 1:		return "Free";
+	case 2:		return "Reserved";
+	case 3:		return "ACPI reclaimable";
+	case 4:		return "ACPI NVS";
+	case 5:		return "Bad";
+	case 6:		return "Disabled";
+	default:	return "???";
+	}
+}
+
 /** Dump an E820 tag. */
 static void dump_e820_tag(kboot_tag_e820_t *tag) {
 	kprintf("KBOOT_TAG_E820:\n");
 	kprintf("  start  = 0x%" PRIx64 "\n", tag->start);
 	kprintf("  length = 0x%" PRIx64 "\n", tag->length);
-	kprintf("  type   = %" PRIu32 "\n", tag->type);
+	kprintf("  type   = %" PRIu32 " (%s)\n", tag->type, e820_tag_type(tag->type));
 }
 
 /** Entry point of the test kernel.

@@ -226,7 +226,7 @@ static void load_module(kboot_loader_t *loader, file_handle_t *handle, const cha
 
 	/* Allocate a chunk of memory to load to. */
 	size = file_size(handle);
-	phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), 0, 0, 0, PHYS_MEMORY_RECLAIMABLE,
+	phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), 0, 0, 0, PHYS_MEMORY_MODULES,
 		0, &addr);
 	if(!file_read(handle, (void *)((ptr_t)addr), size, 0))
 		boot_error("Could not read module `%s'", name);
@@ -425,7 +425,6 @@ static void add_log_tag(kboot_loader_t *loader) {
 	log->start = 0;
 	log->length = 0;
 	log->info[0] = log->info[1] = log->info[2] = 0;
-	dprintf("magic %p set to 0x%x\n", &log->magic, log->magic);
 }
 
 #endif
@@ -467,18 +466,7 @@ static void add_memory_tags(kboot_loader_t *loader) {
 		tag = kboot_allocate_tag(loader, KBOOT_TAG_MEMORY, sizeof(*tag));
 		tag->start = range->start;
 		tag->size = range->size;
-
-		switch(range->type) {
-		case PHYS_MEMORY_FREE:
-			tag->type = KBOOT_MEMORY_FREE;
-			break;
-		case PHYS_MEMORY_ALLOCATED:
-			tag->type = KBOOT_MEMORY_ALLOCATED;
-			break;
-		case PHYS_MEMORY_RECLAIMABLE:
-			tag->type = KBOOT_MEMORY_RECLAIMABLE;
-			break;
-		}
+		tag->type = range->type;
 	}
 }
 
@@ -612,7 +600,7 @@ static __noreturn void kboot_loader_load(void) {
 	kboot_platform_setup(loader);
 
 	/* Create a stack for the kernel. */
-	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_MEMORY_ALLOCATED, 0, &core->stack_phys);
+	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_MEMORY_STACK, 0, &core->stack_phys);
 	core->stack_base = loader->stack_virt = kboot_allocate_virtual(loader,
 		core->stack_phys, PAGE_SIZE);
 	core->stack_size = loader->stack_size = PAGE_SIZE;

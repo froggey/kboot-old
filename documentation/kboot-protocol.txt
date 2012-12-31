@@ -249,14 +249,18 @@ space (see below). The following procedure is used to build the address space:
 A map of the virtual address space is provided in the tag list, see
 `KBOOT_TAG_VMEM`. Note that the address space set up by the boot loader is
 intended to only be temporary. The kernel should build its own address space
-using the information provided by KBoot as soon as possible.
+using the information provided by KBoot as soon as possible. The physical
+memory used by the page tables created by boot loader is marked as
+`KBOOT_MEMORY_PAGETABLES` in the memory map, allowing it to be identified so
+that it can be made free for use once the kernel has switched to its own page
+tables.
 
 On all architectures, the kernel will be entered with a valid stack set up,
 mapped in the virtual address space. Details of the stack mapping are contained
 in the `KBOOT_TAG_CORE` information tag. The physical memory used by the stack
-is marked in the memory map as allocated; if the kernel switches away from this
-stack as part of its initialization it should be sure to free the physical
-memory used by it.
+is marked in the memory map as `KBOOT_MEMORY_STACK`; if the kernel switches away
+from this stack as part of its initialization it should be sure to free the
+physical memory used by it.
 
 The following sections describe the environment upon entering the kernel for
 each supported architecture.
@@ -349,9 +353,9 @@ with an identical header identifying the type and size of that tag. The start
 of the tag list is aligned to the page size, and the start of each tag is
 aligned on an 8 byte boundary after the end of the previous tag. The tag list
 is terminated with an `KBOOT_TAG_NONE` tag. The tag list is mapped in a virtual
-memory range, and the physical memory containing it is marked as reclaimable.
-Multiple tags of the same type are guaranteed to be grouped together in the
-tag list.
+memory range, and the physical memory containing it is marked in the memory map
+as `KBOOT_MEMORY_RECLAIMABLE`. Multiple tags of the same type are guaranteed to
+be grouped together in the tag list.
 
 The header of each tag is in the following format:
 
@@ -458,11 +462,17 @@ Fields:
  * `size`: Size of the range. Multiple of the page size.
  * `type`: Type of the range. The following types are currently defined:
     - `KBOOT_MEMORY_FREE` (0): Free memory available for the kernel to use.
-    - `KBOOT_MEMORY_ALLOCATED` (1): Memory allocated by the boot loader to
-      contain the kernel image, stack, or other data.
-    - `KBOOT_MEMORY_RECLAIMABLE` (2): Memory that currently contains KBoot
-      data, but can be freed after kernel initialization is complete. The tag
-      list is contained in such a range.
+    - `KBOOT_MEMORY_ALLOCATED` (1): Allocated memory not available for use by
+      the kernel. Such ranges contain the kernel image and the log buffer (if
+      any).
+    - `KBOOT_MEMORY_RECLAIMABLE` (2): Memory that currently contains KBoot data
+      (e.g. the tag list) but can be freed after kernel initialization is
+      complete.
+    - `KBOOT_MEMORY_PAGETABLES` (3): Memory containing the page tables set up
+      by the boot loader.
+    - `KBOOT_MEMORY_STACK` (4): Memory containing the stack set up by the boot
+      loader.
+    - `KBOOT_MEMORY_MODULES` (5): Memory containing module data.
 
 ### `KBOOT_TAG_VMEM` (`4`)
 
@@ -496,8 +506,8 @@ information see the _Kernel Environment_ section.
 
 KBoot allows "modules" to be loaded and passed to the kernel. As far as KBoot
 and the boot loader is aware, a module is simply a regular file that is loaded
-into a memory and passed to the kernel. Interpretation of the loaded data is
-up to the kernel. Possible uses are loading drivers necessary for the kernel to
+into memory and passed to the kernel. Interpretation of the loaded data is up
+to the kernel. Possible uses are loading drivers necessary for the kernel to
 be able to access the boot filesystem, or loading a file system image to run
 the OS from. Each instance of this tag describes one of the modules that has
 been loaded.
@@ -512,10 +522,8 @@ been loaded.
 Fields:
 
  * `addr`: Physical address at which the module data is located, aligned to the
-   page size. The data is not mapped into the virtual address space. Note that
-   the memory containing module data is marked as reclaimable in the memory map.
-   If the data is still required after kernel initialization, ensure that it is
-   not freed.
+   page size. The data is not mapped into the virtual address space. The memory
+   containing module data is marked as `KBOOT_MEMORY_MODULES`.
  * `size`: Size of the module data, in bytes.
 
 ### `KBOOT_TAG_VIDEO` (`7`)
@@ -726,9 +734,9 @@ Fields:
  * `prev_size`: Total size of previous session log buffer. If 0, no previous
    log buffer was available.
 
-The main log buffer will be contained in non-reclaimable physical memory, while
-the previous log buffer, if any, will be contained in reclaimable physical
-memory.
+The main log buffer will be contained in physical memory marked as
+`KBOOT_MEMORY_ALLOCATED`, while the previous log buffer, if any, will be
+contained in physical memory marked as `KBOOT_MEMORY_RECLAIMABLE`.
 
 The log buffer is a circular buffer. It includes a header at the start, any
 remaining space contains the log itself. The header has the following format:
@@ -780,8 +788,9 @@ tag, additional loadable sections not normally loaded (`SHT_PROGBITS`,
 `SHT_NOBITS`, `SHT_SYMTAB` and `SHT_STRTAB` sections without the `SHF_ALLOC`
 flag set, e.g. the symbol table and debug information) will be loaded, and this
 tag will be passed containing the section header table. The additional sections
-will be loaded in non-reclaimable physical memory, and each will have its header
-modified to contain the allocated physical address in the `sh_addr` field.
+will be loaded in physical memory marked as `KBOOT_MEMORY_ALLOCATED`, and each
+will have its header modified to contain the allocated physical address in the
+`sh_addr` field.
 
     typedef struct kboot_tag_sections {
     	kboot_tag_t header;

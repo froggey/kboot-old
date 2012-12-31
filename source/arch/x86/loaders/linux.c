@@ -154,7 +154,7 @@ void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd, const char *c
 
 	/* Allocate memory for the parameters data (the "zero page"). */
 	phys_memory_alloc(sizeof(linux_params_t) + ROUND_UP(cmdline_size, PAGE_SIZE),
-		PAGE_SIZE, 0x10000, 0x90000, PHYS_MEMORY_ALLOCATED, 0, &load_addr);
+		PAGE_SIZE, 0x10000, 0x90000, PHYS_MEMORY_RECLAIMABLE, 0, &load_addr);
 	params = (linux_params_t *)(ptr_t)load_addr;
 
 	/* Ensure that the parameters page is cleared and copy in the setup
@@ -201,7 +201,7 @@ void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd, const char *c
 		/* It is recommended that the initrd be loaded as high as
 		 * possible, ask for highest available address. */
 		phys_memory_alloc(ROUND_UP(initrd_size, PAGE_SIZE), PAGE_SIZE, 0x100000,
-			initrd_max + 1, PHYS_MEMORY_ALLOCATED, PHYS_ALLOC_HIGH,
+			initrd_max + 1, PHYS_MEMORY_MODULES, PHYS_ALLOC_HIGH,
 			&load_addr);
 
 		dprintf("linux: loading initrd to 0x%" PRIxPHYS " (size: 0x%zx, "

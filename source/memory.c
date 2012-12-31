@@ -443,6 +443,15 @@ static void phys_memory_dump(void) {
 		case PHYS_MEMORY_RECLAIMABLE:
 			dprintf("Reclaimable\n");
 			break;
+		case PHYS_MEMORY_PAGETABLES:
+			dprintf("Pagetables\n");
+			break;
+		case PHYS_MEMORY_STACK:
+			dprintf("Stack\n");
+			break;
+		case PHYS_MEMORY_MODULES:
+			dprintf("Modules\n");
+			break;
 		case PHYS_MEMORY_INTERNAL:
 			dprintf("Internal\n");
 			break;
