@@ -360,7 +360,7 @@ static bool is_suitable_range(memory_range_t *range, phys_size_t size,
  *
  * Allocates a range of physical memory satisfying the specified constraints.
  * Unless PHYS_ALLOC_CANFAIL is specified, a boot error will be raised if the
- * allocation fails.
+ * allocation fails. This function will always allocate memory below 4GB.
  *
  * @param size		Size of the range (multiple of PAGE_SIZE).
  * @param align		Alignment of the range (power of 2, at least PAGE_SIZE).
@@ -383,6 +383,8 @@ bool phys_memory_alloc(phys_size_t size, phys_size_t align, phys_ptr_t min_addr,
 
 	if(!align)
 		align = PAGE_SIZE;
+	if(!max_addr || max_addr > 0x100000000LL)
+		max_addr = 0x100000000LL;
 
 	assert(!(size % PAGE_SIZE));
 	assert(!(min_addr % align));
