@@ -40,7 +40,7 @@ void platform_memory_detect(void) {
 			/* Cut the region short if it is not page-aligned. */
 			start = ROUND_UP(tag->mem.start, PAGE_SIZE);
 			end = ROUND_DOWN(tag->mem.start + tag->mem.size, PAGE_SIZE);
-			phys_memory_add(start, end, PHYS_MEMORY_FREE);
+			phys_memory_add(start, end - start, PHYS_MEMORY_FREE);
 		}
 	}
 
@@ -52,12 +52,12 @@ void platform_memory_detect(void) {
 			 * page-aligned. */
 			start = ROUND_DOWN(tag->initrd.start, PAGE_SIZE);
 			end = ROUND_UP(tag->initrd.start + tag->initrd.size, PAGE_SIZE);
-			phys_memory_add(start, end, PHYS_MEMORY_INTERNAL);
+			phys_memory_add(start, end - start, PHYS_MEMORY_INTERNAL);
 		}
 	}
 
 	/* Mark the region between the start of SDRAM and our load address as
 	 * internal, as the firmware puts things like the ATAG list here. */
-	phys_memory_add(BCM2835_SDRAM_BASE, ROUND_DOWN((ptr_t)__start, PAGE_SIZE),
-		PHYS_MEMORY_INTERNAL);
+	phys_memory_add(BCM2835_SDRAM_BASE, ROUND_DOWN((ptr_t)__start, PAGE_SIZE)
+		- BCM2835_SDRAM_BASE, PHYS_MEMORY_INTERNAL);
 }
