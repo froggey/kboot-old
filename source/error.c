@@ -25,11 +25,13 @@
 #include <memory.h>
 #include <ui.h>
 
+/** Boot error message. */
+static const char *boot_error_format;
+static va_list boot_error_args;
+
 #if CONFIG_KBOOT_UI
 
 /** Boot error window state. */
-static const char *boot_error_format;
-static va_list boot_error_args;
 static ui_window_t *boot_error_window;
 static ui_window_t *debug_log_window;
 
@@ -107,10 +109,10 @@ static int boot_error_printf(console_t *console, const char *fmt, ...) {
 }
 
 /** Print the boot error message. */
-static void boot_error_display(console_t *console, const char *fmt, va_list args) {
+static void boot_error_display(console_t *console) {
 	boot_error_printf(console, "An error has occurred during boot:\n\n");
 
-	do_printf(boot_error_printf_helper, console, fmt, args);
+	do_printf(boot_error_printf_helper, console, boot_error_format, boot_error_args);
 
 	boot_error_printf(console, "\n\n");
 	boot_error_printf(console, "Ensure that you have enough memory available, that you do not have any\n");
@@ -123,7 +125,7 @@ static void boot_error_display(console_t *console, const char *fmt, va_list args
 /** Render the boot error window.
  * @param window	Window to render. */
 static void boot_error_window_render(ui_window_t *window) {
-	boot_error_display(main_console, boot_error_format, boot_error_args);
+	boot_error_display(main_console);
 }
 
 /** Write the help text for the boot error window.
@@ -170,7 +172,7 @@ void __noreturn boot_error(const char *fmt, ...) {
 
 	boot_error_format = fmt;
 	va_start(boot_error_args, fmt);
-	boot_error_display(debug_console, fmt, boot_error_args);
+	boot_error_display(debug_console);
 	va_end(args);
 
 	#if CONFIG_KBOOT_UI
@@ -182,6 +184,8 @@ void __noreturn boot_error(const char *fmt, ...) {
 	boot_error_window = kmalloc(sizeof(ui_window_t));
 	ui_window_init(boot_error_window, &boot_error_window_type, "Boot Error");
 	ui_window_display(boot_error_window, 0);
+	#else
+	boot_error_display(main_console);
 	#endif
 
 	while(true);
