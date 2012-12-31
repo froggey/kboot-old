@@ -57,7 +57,8 @@ typedef signed long long int64_t;	/**< Signed 64-bit. */
 /** Integer type that can represent a pointer. */
 typedef unsigned long ptr_t;
 
-/** Integer type that can represent a physical address. */
+/** Integer types that can represent a physical address/size. */
 typedef uint64_t phys_ptr_t;
+typedef uint64_t phys_size_t;
 
 #endif /* __ARCH_TYPES_H */

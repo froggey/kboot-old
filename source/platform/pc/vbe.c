@@ -55,7 +55,7 @@ void vbe_mode_set(vbe_mode_t *mode) {
 	regs.ebx = mode->id | (1<<14);
 	bios_interrupt(0x10, &regs);
 
-	dprintf("vbe: set VBE mode 0x%x: %dx%dx%d (framebuffer: 0x%" PRIxPHYS ")\n",
+	dprintf("vbe: set VBE mode 0x%x: %dx%dx%d (framebuffer: 0x%" PRIx32 ")\n",
 		mode->id, mode->info.x_resolution, mode->info.y_resolution,
 		mode->info.bits_per_pixel, mode->info.phys_base_ptr);
 }

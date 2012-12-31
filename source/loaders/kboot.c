@@ -184,14 +184,17 @@ phys_ptr_t kboot_allocate_kernel(kboot_loader_t *loader, size_t size) {
 
 	if(load->flags & KBOOT_LOAD_FIXED) {
 		/* Just load at the specified address and fail if we can't. */
-		phys_memory_alloc(size, 0, load->phys_address, load->phys_address + size, 0, &ret);
+		phys_memory_alloc(size, 0, load->phys_address, load->phys_address + size,
+			PHYS_MEMORY_ALLOCATED, 0, &ret);
 		dprintf("kboot: loading kernel at fixed address 0x%" PRIxPHYS " (size: 0x%zx)\n",
 			ret, size);
 	} else {
 		/* Try to find some space to load to. Iterate down in powers of
 		 * 2 until we reach the minimum alignment. */
 		align = load->alignment;
-		while(!phys_memory_alloc(size, align, 0, 0, PHYS_ALLOC_CANFAIL, &ret)) {
+		while(!phys_memory_alloc(size, align, 0, 0, PHYS_MEMORY_ALLOCATED,
+			PHYS_ALLOC_CANFAIL, &ret))
+		{
 			align >>= 1;
 			if(align < load->min_alignment || align < PAGE_SIZE)
 				boot_error("You do not have enough memory available");
@@ -223,7 +226,8 @@ static void load_module(kboot_loader_t *loader, file_handle_t *handle, const cha
 
 	/* Allocate a chunk of memory to load to. */
 	size = file_size(handle);
-	phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), 0, 0, 0, PHYS_ALLOC_RECLAIM, &addr);
+	phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), 0, 0, 0, PHYS_MEMORY_RECLAIMABLE,
+		0, &addr);
 	if(!file_read(handle, (void *)((ptr_t)addr), size, 0))
 		boot_error("Could not read module `%s'", name);
 
@@ -407,7 +411,9 @@ static void add_log_tag(kboot_loader_t *loader) {
 
 	if(log->magic == loader->log_magic) {
 		/* There is an existing log, copy it for the kernel. */
-		if(phys_memory_alloc(KBOOT_LOG_SIZE, 0, 0, 0, PHYS_ALLOC_RECLAIM, &tag->prev_phys)) {
+		if(phys_memory_alloc(KBOOT_LOG_SIZE, 0, 0, 0, PHYS_MEMORY_RECLAIMABLE,
+			0, &tag->prev_phys))
+		{
 			tag->prev_size = KBOOT_LOG_SIZE;
 			memcpy((void *)((ptr_t)tag->prev_phys), (void *)KBOOT_LOG_BUFFER,
 				KBOOT_LOG_SIZE);
@@ -441,7 +447,7 @@ static void add_vmem_tags(kboot_loader_t *loader) {
 		tag->phys = mapping->phys;
 
 		dprintf(" 0x%" PRIx64 "-0x%" PRIx64 " -> 0x%" PRIx64 "\n", tag->start,
-			tag->start + tag->size - 1, tag->phys);
+			tag->start + tag->size, tag->phys);
 	}
 }
 
@@ -450,18 +456,17 @@ static void add_vmem_tags(kboot_loader_t *loader) {
 static void add_memory_tags(kboot_loader_t *loader) {
 	kboot_tag_memory_t *tag;
 	memory_range_t *range;
-	list_t *ranges;
 
-	/* Reclaim all memory used internally and get the range list. */
-	ranges = memory_finalize();
+	/* Reclaim all memory used internally. */
+	memory_finalize();
 
 	/* Add tags for each range. */
-	LIST_FOREACH(ranges, iter) {
+	LIST_FOREACH(&memory_ranges, iter) {
 		range = list_entry(iter, memory_range_t, header);
 
 		tag = kboot_allocate_tag(loader, KBOOT_TAG_MEMORY, sizeof(*tag));
 		tag->start = range->start;
-		tag->size = range->end - range->start;
+		tag->size = range->size;
 
 		switch(range->type) {
 		case PHYS_MEMORY_FREE:
@@ -495,7 +500,7 @@ static __noreturn void kboot_loader_load(void) {
 	/* Create the tag list. It will be mapped into virtual memory later,
 	 * as we cannot yet perform virtual allocations. For now, assume that
 	 * the tag list never exceeds a page, which is probably reasonable. */
-	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_ALLOC_RECLAIM, &loader->tags_phys);
+	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_MEMORY_RECLAIMABLE, 0, &loader->tags_phys);
 	core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
 	memset(core, 0, sizeof(kboot_tag_core_t));
 	core->header.type = KBOOT_TAG_CORE;
@@ -607,7 +612,7 @@ static __noreturn void kboot_loader_load(void) {
 	kboot_platform_setup(loader);
 
 	/* Create a stack for the kernel. */
-	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, 0, &core->stack_phys);
+	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_MEMORY_ALLOCATED, 0, &core->stack_phys);
 	core->stack_base = loader->stack_virt = kboot_allocate_virtual(loader,
 		core->stack_phys, PAGE_SIZE);
 	core->stack_size = loader->stack_size = PAGE_SIZE;
@@ -626,12 +631,12 @@ static __noreturn void kboot_loader_load(void) {
 	 *    mode using the temporary address space.
 	 *  - Jump to the trampoline code which switches to the real address
 	 *    space and then jumps to the kernel.
-	 * FIXME: Should mark this page and all allocated page tables as
-	 * internal so the kernel won't see them as in use at all. */
+	 * FIXME: Should mark all allocated page tables as internal so the
+	 * kernel won't see them as in use at all. */
 	loader_start = ROUND_DOWN((ptr_t)__start, PAGE_SIZE);
 	loader_size = ROUND_UP((ptr_t)__end - (ptr_t)__start, PAGE_SIZE);
 	allocator_reserve(&loader->alloc, loader_start, loader_size);
-	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_ALLOC_RECLAIM, &loader->trampoline_phys);
+	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_MEMORY_INTERNAL, 0, &loader->trampoline_phys);
 	loader->trampoline_virt = kboot_allocate_virtual(loader, loader->trampoline_phys,
 		PAGE_SIZE);
 	loader->transition = mmu_context_create(loader->target);
@@ -789,7 +794,8 @@ static void init_kernel_log(kboot_loader_t *loader) {
 	/* Attempt to allocate the kernel log. */
 	if(!log_buffer_allocated) {
 		if(!phys_memory_alloc(KBOOT_LOG_SIZE, 0, KBOOT_LOG_BUFFER,
-			KBOOT_LOG_BUFFER + KBOOT_LOG_SIZE, 0, &addr))
+			KBOOT_LOG_BUFFER + KBOOT_LOG_SIZE, PHYS_MEMORY_ALLOCATED,
+			0, &addr))
 		{
 			return;
 		}

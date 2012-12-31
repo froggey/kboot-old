@@ -140,13 +140,10 @@ void multiboot_init(void) {
 
 			/* We now need to re-allocate the module data as high
 			 * as possible so as to make it unlikely that we will
-			 * conflict with fixed load addresses for a kernel.
-			 * FIXME: mark as internal with phys_memory_alloc(). */
+			 * conflict with fixed load addresses for a kernel. */
 			phys_memory_alloc(ROUND_UP(file->size, PAGE_SIZE),
-				0, 0, 0x100000000LL, PHYS_ALLOC_HIGH,
-				&addr);
-			phys_memory_add(addr, addr + ROUND_UP(file->size, PAGE_SIZE),
-				PHYS_MEMORY_INTERNAL);
+				0, 0, 0x100000000LL, PHYS_MEMORY_INTERNAL,
+				PHYS_ALLOC_HIGH, &addr);
 			file->addr = (void *)((ptr_t)addr);
 			memcpy(file->addr, (void *)modules[i].mod_start, file->size);
 

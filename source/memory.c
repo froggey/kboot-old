@@ -30,7 +30,7 @@
 /** Structure representing an area on the heap. */
 typedef struct heap_chunk {
 	list_t header;			/**< Link to chunk list. */
-	unsigned long size;		/**< Size of chunk including struct (low bit == used). */
+	size_t size;			/**< Size of chunk including struct (low bit == used). */
 } heap_chunk_t;
 
 /** Size of the heap (128KB). */
@@ -41,7 +41,7 @@ static uint8_t heap[HEAP_SIZE] __aligned(PAGE_SIZE);
 static LIST_DECLARE(heap_chunks);
 
 /** List of physical memory ranges. */
-static LIST_DECLARE(memory_ranges);
+LIST_DECLARE(memory_ranges);
 
 /** Get the size of a heap chunk.
  * @param chunk		Chunk to get size of.
@@ -162,83 +162,59 @@ void kfree(void *addr) {
 	}
 }
 
-/** Allocate a memory range structure.
+/** Create a memory range structure.
  * @param start		Start address.
- * @param end		End address.
+ * @param size		Size of the range.
  * @param type		Type of range.
  * @return		Pointer to range structure. */
-static memory_range_t *memory_range_alloc(phys_ptr_t start, phys_ptr_t end, unsigned type) {
+static memory_range_t *memory_range_create(phys_ptr_t start, phys_size_t size, unsigned type) {
 	memory_range_t *range = kmalloc(sizeof(memory_range_t));
 	list_init(&range->header);
 	range->start = start;
-	range->end = end;
+	range->size = size;
 	range->type = type;
 	return range;
 }
 
 /** Merge adjacent ranges.
  * @param range		Range to merge. */
-static void memory_range_merge(memory_range_t *range) {
+static inline void memory_range_merge(memory_range_t *range) {
 	memory_range_t *other;
 
 	if(memory_ranges.next != &range->header) {
 		other = list_entry(range->header.prev, memory_range_t, header);
-		if(other->end == range->start && other->type == range->type) {
+		if(other->start + other->size == range->start && other->type == range->type) {
 			range->start = other->start;
+			range->size += other->size;
 			list_remove(&other->header);
 			kfree(other);
 		}
 	}
 	if(memory_ranges.prev != &range->header) {
 		other = list_entry(range->header.next, memory_range_t, header);
-		if(other->start == range->end && other->type == range->type) {
-			range->end = other->end;
+		if(other->start == range->start + range->size && other->type == range->type) {
+			range->size += other->size;
 			list_remove(&other->header);
 			kfree(other);
 		}
 	}
 }
 
-/** Dump a list of physical memory ranges. */
-static void phys_memory_dump(void) {
-	memory_range_t *range;
-
-	LIST_FOREACH(&memory_ranges, iter) {
-		range = list_entry(iter, memory_range_t, header);
-
-		dprintf(" 0x%016" PRIxPHYS "-0x%016" PRIxPHYS ": ", range->start, range->end);
-		switch(range->type) {
-		case PHYS_MEMORY_FREE:
-			dprintf("Free\n");
-			break;
-		case PHYS_MEMORY_ALLOCATED:
-			dprintf("Allocated\n");
-			break;
-		case PHYS_MEMORY_RECLAIMABLE:
-			dprintf("Reclaimable\n");
-			break;
-		case PHYS_MEMORY_INTERNAL:
-			dprintf("Internal\n");
-			break;
-		default:
-			dprintf("???\n");
-			break;
-		}
-	}
-}
-
 /** Add a range of physical memory.
  * @param start		Start of the range (must be page-aligned).
- * @param end		End of the range (must be page-aligned).
+ * @param size		Size of the range (must be page-aligned).
  * @param type		Type of the range. */
-static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, unsigned type) {
+static void memory_range_insert(phys_ptr_t start, phys_size_t size, unsigned type) {
 	memory_range_t *range, *other, *split;
+	phys_ptr_t range_end, other_end;
 
 	assert(!(start % PAGE_SIZE));
-	assert(!(end % PAGE_SIZE));
-	assert(end > start);
+	assert(!(size % PAGE_SIZE));
+	assert(size);
 
-	range = memory_range_alloc(start, end, type);
+	range_end = start + size - 1;
+
+	range = memory_range_create(start, size, type);
 
 	/* Try to find where to insert the region in the list. */
 	LIST_FOREACH(&memory_ranges, iter) {
@@ -256,13 +232,18 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, unsigned 
 	/* Check if the new range has overlapped part of the previous range. */
 	if(memory_ranges.next != &range->header) {
 		other = list_entry(range->header.prev, memory_range_t, header);
-		if(range->start < other->end) {
-			if(other->end > range->end) {
+		other_end = other->start + other->size - 1;
+
+		if(range->start <= other_end) {
+			if(other_end > range_end) {
 				/* Must split the range. */
-				split = memory_range_alloc(range->end, other->end, other->type);
+				split = memory_range_create(range_end + 1,
+					other_end - range_end,
+					other->type);
 				list_add_after(&range->header, &split->header);
 			}
-			other->end = range->start;
+
+			other->size = range->start - other->start;
 		}
 	}
 
@@ -272,15 +253,19 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, unsigned 
 			break;
 
 		other = list_entry(iter, memory_range_t, header);
-		if(other->start >= range->end) {
+		other_end = other->start + other->size - 1;
+
+		if(other->start > range_end) {
 			break;
-		} else if(other->end > range->end) {
+		} else if(other_end > range_end) {
 			/* Resize the range and finish. */
-			other->start = range->end;
+			other->start = range_end + 1;
+			other->size = other_end - range_end;
 			break;
 		} else {
 			/* Completely remove the range. */
 			list_remove(&other->header);
+			kfree(other);
 		}
 	}
 
@@ -290,33 +275,44 @@ static void phys_memory_add_internal(phys_ptr_t start, phys_ptr_t end, unsigned 
 
 /** Add a range of physical memory.
  * @param start		Start of the range (must be page-aligned).
- * @param end		End of the range (must be page-aligned).
+ * @param size		Size of the range (must be page-aligned).
  * @param type		Type of the range. */
-void phys_memory_add(phys_ptr_t start, phys_ptr_t end, unsigned type) {
-	phys_memory_add_internal(start, end, type);
+void phys_memory_add(phys_ptr_t start, phys_size_t size, unsigned type) {
+	memory_range_insert(start, size, type);
+
 	dprintf("memory: added range 0x%" PRIxPHYS "-0x%" PRIxPHYS " (type: %u)\n",
-		start, end, type);
+		start, start + size, type);
 }
 
-/** Prevent allocations from being made from a range of physical memory.
+/**
+ * Mark all free areas in a range as internal.
+ *
+ * Searches through the given range and marks all currently free areas as
+ * internal, so that they will not be allocated from by the boot loader. They
+ * will be returned to free when memory_finalize() is called.
+ *
  * @param start		Start of the range.
- * @param end		End of the range. */
-void phys_memory_protect(phys_ptr_t start, phys_ptr_t end) {
+ * @param size		Size of the range.
+ */
+void phys_memory_protect(phys_ptr_t start, phys_size_t size) {
+	phys_ptr_t match_start, match_end, end;
 	memory_range_t *range;
 
 	start = ROUND_DOWN(start, PAGE_SIZE);
-	end = ROUND_UP(end, PAGE_SIZE);
+	end = ROUND_UP(start + size, PAGE_SIZE) - 1;
 
 	LIST_FOREACH_SAFE(&memory_ranges, iter) {
 		range = list_entry(iter, memory_range_t, header);
-
-		if(range->type != PHYS_MEMORY_FREE) {
+		if(range->type != PHYS_MEMORY_FREE)
 			continue;
-		} else if(start >= range->start && start < range->end) {
-			phys_memory_add_internal(start, MIN(end, range->end), PHYS_MEMORY_INTERNAL);
-		} else if(end > range->start && end <= range->end) {
-			phys_memory_add_internal(MAX(start, range->start), end, PHYS_MEMORY_INTERNAL);
-		}
+
+		match_start = MAX(start, range->start);
+		match_end = MIN(end, range->start + range->size - 1);
+		if(match_end <= match_start)
+			continue;
+
+		memory_range_insert(match_start, match_end - match_start + 1,
+			PHYS_MEMORY_INTERNAL);
 	}
 }
 
@@ -329,9 +325,9 @@ void phys_memory_protect(phys_ptr_t start, phys_ptr_t end) {
  * @param flags		Behaviour flags.
  * @param physp		Where to store address for allocation.
  * @return		Whether the range can satisfy the allocation. */
-static bool is_suitable_range(memory_range_t *range, phys_ptr_t size, size_t align,
-	phys_ptr_t min_addr, phys_ptr_t max_addr, unsigned flags,
-	phys_ptr_t *physp)
+static bool is_suitable_range(memory_range_t *range, phys_size_t size,
+	phys_size_t align, phys_ptr_t min_addr, phys_ptr_t max_addr,
+	unsigned flags, phys_ptr_t *physp)
 {
 	phys_ptr_t start, match_start, match_end;
 
@@ -340,7 +336,7 @@ static bool is_suitable_range(memory_range_t *range, phys_ptr_t size, size_t ali
 
 	/* Check if this range contains addresses in the requested range. */
 	match_start = MAX(min_addr, range->start);
-	match_end = MIN(max_addr - 1, range->end - 1);
+	match_end = MIN(max_addr - 1, range->start + range->size - 1);
 	if(match_end <= match_start)
 		return false;
 
@@ -370,14 +366,17 @@ static bool is_suitable_range(memory_range_t *range, phys_ptr_t size, size_t ali
  * @param align		Alignment of the range (power of 2, at least PAGE_SIZE).
  * @param min_addr	Minimum address for the start of the allocated range.
  * @param max_addr	Maximum address of the end of the allocated range.
+ * @param type		Type to give the allocated range (must not be
+ *			PHYS_MEMORY_FREE).
  * @param flags		Behaviour flags.
  * @param physp		Where to store address of allocation.
  *
  * @return		Whether successfully allocated (always true unless
  *			PHYS_ALLOC_CANFAIL specified).
  */
-bool phys_memory_alloc(phys_ptr_t size, size_t align, phys_ptr_t min_addr, phys_ptr_t max_addr,
-	unsigned flags, phys_ptr_t *physp)
+bool phys_memory_alloc(phys_size_t size, phys_size_t align, phys_ptr_t min_addr,
+	phys_ptr_t max_addr, unsigned type, unsigned flags,
+	phys_ptr_t *physp)
 {
 	memory_range_t *range;
 	phys_ptr_t start;
@@ -388,6 +387,7 @@ bool phys_memory_alloc(phys_ptr_t size, size_t align, phys_ptr_t min_addr, phys_
 	assert(!(size % PAGE_SIZE));
 	assert(!(min_addr % align));
 	assert(((max_addr - 1) - min_addr) >= (size - 1));
+	assert(type >= PHYS_MEMORY_ALLOCATED);
 
 	/* Find a free range that is large enough to hold the new range. */
 	if(flags & PHYS_ALLOC_HIGH) {
@@ -416,32 +416,62 @@ bool phys_memory_alloc(phys_ptr_t size, size_t align, phys_ptr_t min_addr, phys_
 	}
 
 	/* Insert a new range over the top of the allocation. */
-	phys_memory_add_internal(start, start + size, (flags & PHYS_ALLOC_RECLAIM)
-		? PHYS_MEMORY_RECLAIMABLE : PHYS_MEMORY_ALLOCATED);
+	memory_range_insert(start, size, type);
 
-	dprintf("memory: allocated 0x%" PRIxPHYS "-0x%" PRIxPHYS " (align: 0x%zx, flags: 0x%x)\n",
-		start, start + size, align, flags);
+	dprintf("memory: allocated 0x%" PRIxPHYS "-0x%" PRIxPHYS " (align: 0x%" PRIxPHYS ", "
+		"type: %u, flags: 0x%x)\n", start, start + size, align, type, flags);
 	*physp = start;
 	return true;
 }
 
+/** Dump a list of physical memory ranges. */
+static void phys_memory_dump(void) {
+	memory_range_t *range;
+
+	LIST_FOREACH(&memory_ranges, iter) {
+		range = list_entry(iter, memory_range_t, header);
+
+		dprintf(" 0x%016" PRIxPHYS "-0x%016" PRIxPHYS ": ", range->start,
+			range->start + range->size);
+		switch(range->type) {
+		case PHYS_MEMORY_FREE:
+			dprintf("Free\n");
+			break;
+		case PHYS_MEMORY_ALLOCATED:
+			dprintf("Allocated\n");
+			break;
+		case PHYS_MEMORY_RECLAIMABLE:
+			dprintf("Reclaimable\n");
+			break;
+		case PHYS_MEMORY_INTERNAL:
+			dprintf("Internal\n");
+			break;
+		default:
+			dprintf("???\n");
+			break;
+		}
+	}
+}
+
 /** Initialise the memory manager. */
 void memory_init(void) {
+	phys_ptr_t start, end;
+
 	/* Detect memory ranges. */
 	platform_memory_detect();
 
-	/* Mark the bootloader itself as internal so that it gets reclaimed
+	/* Mark the boot loader itself as internal so that it gets reclaimed
 	 * before entering the kernel. */
-	phys_memory_add(ROUND_DOWN((phys_ptr_t)((ptr_t)__start), PAGE_SIZE),
-		(phys_ptr_t)((ptr_t)__end), PHYS_MEMORY_INTERNAL);
+	start = ROUND_DOWN((phys_ptr_t)((ptr_t)__start), PAGE_SIZE);
+	end = ROUND_UP((phys_ptr_t)((ptr_t)__end), PAGE_SIZE);
+	phys_memory_protect(start, end - start);
 
 	dprintf("memory: initial memory map:\n");
 	phys_memory_dump();
 }
 
-/** Finalize the memory map.
- * @return		Pointer to the memory range list. */
-list_t *memory_finalize(void) {
+/** Finalize the memory map. */
+void memory_finalize(void) {
 	memory_range_t *range;
 
 	/* Reclaim all internal memory ranges. */
@@ -456,6 +486,4 @@ list_t *memory_finalize(void) {
 	/* Dump the memory map to the debug console. */
 	dprintf("memory: final memory map:\n");
 	phys_memory_dump();
-
-	return &memory_ranges;
 }

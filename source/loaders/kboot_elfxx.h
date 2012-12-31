@@ -176,7 +176,8 @@ static void FUNC(load_sections)(kboot_loader_t *loader) {
 		 * contiguous with the kernel image. FIXME: Need to make sure
 		 * this is under 4GB for 32-bit. */
 		phys_memory_alloc(ROUND_UP(shdr->sh_size, PAGE_SIZE), 0,
-			core->kernel_phys, 0, 0, &addr);
+			core->kernel_phys, 0, PHYS_MEMORY_ALLOCATED, 0,
+			&addr);
 		shdr->sh_addr = addr;
 
 		/* Load in the section data. */

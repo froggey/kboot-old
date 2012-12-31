@@ -85,8 +85,9 @@ void platform_memory_detect(void) {
 		/* What we did above may have made the region too small, warn
 		 * and ignore it if this is the case. */
 		if(end <= start) {
-			dprintf("memory: broken memory map entry: [0x%" PRIx64 ",0x%" PRIx64 ") (%" PRIu32 ")\n",
-				mmap[i].start, mmap[i].start + mmap[i].length, mmap[i].type);
+			dprintf("memory: broken memory map entry: [0x%" PRIx64 ",0x%"
+				PRIx64 ") (%" PRIu32 ")\n", mmap[i].start,
+				mmap[i].start + mmap[i].length, mmap[i].type);
 			continue;
 		}
 
@@ -105,10 +106,10 @@ void platform_memory_detect(void) {
 		}
 
 		/* Add the range to the physical memory manager. */
-		phys_memory_add(start, end, PHYS_MEMORY_FREE);
+		phys_memory_add(start, end - start, PHYS_MEMORY_FREE);
 	}
 
-	/* Mark the memory area we use for BIOS calls as internal. */
-	phys_memory_add(BIOS_MEM_BASE, BIOS_MEM_BASE + BIOS_MEM_SIZE + PAGE_SIZE,
-		PHYS_MEMORY_INTERNAL);
+	/* Protect the first 1MB of memory. The boot loader itself is there,
+	 * and we use it during BIOS calls. */
+	phys_memory_protect(0, 0x100000);
 }

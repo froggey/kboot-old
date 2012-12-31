@@ -111,6 +111,7 @@ static void insert_region(allocator_t *alloc, allocator_region_t *region) {
 		} else {
 			/* Completely remove the range. */
 			list_remove(&other->header);
+			kfree(other);
 		}
 	}
 }

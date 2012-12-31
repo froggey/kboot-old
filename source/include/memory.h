@@ -31,9 +31,11 @@ typedef struct memory_range {
 	list_t header;			/**< Link to range list. */
 
 	phys_ptr_t start;		/**< Start of the range. */
-	phys_ptr_t end;			/**< End of the range. */
+	phys_size_t size;		/**< Size of the range. */
 	unsigned type;			/**< Type of the range. */
 } memory_range_t;
+
+extern list_t memory_ranges;
 
 /** Physical memory range types. */
 #define PHYS_MEMORY_FREE	0
@@ -42,21 +44,21 @@ typedef struct memory_range {
 #define PHYS_MEMORY_INTERNAL	3
 
 /** Flags for phys_memory_alloc(). */
-#define PHYS_ALLOC_RECLAIM	(1<<0)	/**< Mark the allocated range as reclaimable. */
-#define PHYS_ALLOC_CANFAIL	(1<<1)	/**< The allocation is allowed to fail. */
-#define PHYS_ALLOC_HIGH		(1<<2)	/**< Allocate the highest possible address. */
+#define PHYS_ALLOC_CANFAIL	(1<<0)	/**< The allocation is allowed to fail. */
+#define PHYS_ALLOC_HIGH		(1<<1)	/**< Allocate the highest possible address. */
 
 extern void *kmalloc(size_t size);
 extern void *krealloc(void *addr, size_t size);
 extern void kfree(void *addr);
 
-extern void phys_memory_add(phys_ptr_t start, phys_ptr_t end, unsigned type);
-extern void phys_memory_protect(phys_ptr_t start, phys_ptr_t end);
-extern bool phys_memory_alloc(phys_ptr_t size, size_t align, phys_ptr_t min_addr,
-	phys_ptr_t max_addr, unsigned flags, phys_ptr_t *physp);
+extern void phys_memory_add(phys_ptr_t start, phys_size_t size, unsigned type);
+extern void phys_memory_protect(phys_ptr_t start, phys_size_t size);
+extern bool phys_memory_alloc(phys_size_t size, phys_size_t align, phys_ptr_t min_addr,
+	phys_ptr_t max_addr, unsigned type, unsigned flags, phys_ptr_t *physp);
 
 extern void platform_memory_detect(void);
+
 extern void memory_init(void);
-extern list_t *memory_finalize(void);
+extern void memory_finalize(void);
 
 #endif /* __MEMORY_H */
