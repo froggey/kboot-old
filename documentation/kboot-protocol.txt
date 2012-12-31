@@ -102,7 +102,6 @@ tag in a kernel image.
     	uint32_t      _pad;
     	kboot_paddr_t alignment;
     	kboot_paddr_t min_alignment;
-    	kboot_paddr_t phys_address;
     	kboot_vaddr_t virt_map_base;
     	kboot_vaddr_t virt_map_size;
     } kboot_itag_load_t;
@@ -111,9 +110,11 @@ Fields:
 
  * `flags`: Flags controlling load behaviour. The following flags are currently
    defined:
-    - `KBOOT_LOAD_FIXED` (bit 0): Load at a fixed physical address, given by the
-      `phys_address` field. The `alignment` and `min_alignment` fields will be
-      ignored.
+    - `KBOOT_LOAD_FIXED` (bit 0): When this bit is set, the loader will load
+      each segment in the ELF image at the exact physical address specified by
+      the `p_paddr` field in the program headers. The `alignment` and
+      `min_alignment` fields will be ignored. When unset, the kernel image will
+      be loaded at a physical address allocated by the boot loader.
  * `alignment`: Requested alignment of the kernel image in physical memory. If
    this is set to 0, the alignment will be chosen automatically by the boot
    loader. Otherwise, it must be a power of 2 greater than or equal to the
@@ -123,8 +124,6 @@ Fields:
    will repeatedly try to allocate at decreasing powers of 2 down to this value
    until it is able to make an allocation. If 0, `alignment` will also be the
    minimum alignment.
- * `phys_address`: If `KBOOT_LOAD_FIXED` set, load at this exact physical
-   address (must be a multiple of the machine's page size).
  * `virt_map_base`/`virt_map_size`: The boot loader allocates regions of the
    virtual address space to map certain things into, such as the tag list for
    the kernel and the video framebuffer. These fields specify the region of
@@ -402,7 +401,9 @@ Fields:
  * `tags_phys`: Physical address of the tag list.
  * `tags_size`: Total size of the tag data in bytes, rounded up to an 8 byte
    boundary.
- * `kernel_phys`: The physical load address of the kernel image.
+ * `kernel_phys`: The physical load address of the kernel image. This field is
+   only valid when the `KBOOT_ITAG_LOAD` tag does not have `KBOOT_LOAD_FIXED`
+   set.
  * `stack_base`: The virtual address of the base of the boot stack.
  * `stack_phys`: The physical address of the base of the boot stack.
  * `stack_size`: The size of the boot stack in bytes.

@@ -26,11 +26,6 @@
  *  - kboot <kernel path>
  *    Loads the specified kernel and no modules.
  *
- * @todo		For 32-bit kernels we should ensure that we do all
- *			physical memory allocations under 4GB so that the
- *			kernel doesn't need to support PAE. In practice this
- *			will happen anyway at the moment because the allocator
- *			return lowest available address first.
  * @todo		Add a root_device configuration variable to specify
  *			a different device to pass as boot device to kernel,
  *			which would allow a separate boot partition and root
@@ -167,47 +162,6 @@ void kboot_map_virtual(kboot_loader_t *loader, kboot_vaddr_t addr, kboot_paddr_t
 		mmu_map(loader->mmu, addr, phys, size);
 
 	add_virt_mapping(loader, addr, size, phys);
-}
-
-/** Allocate memory for the kernel image.
- * @param loader	KBoot loader data structure.
- * @param size		Total size of kernel image.
- * @return		Physical address allocated for kernel. */
-phys_ptr_t kboot_allocate_kernel(kboot_loader_t *loader, size_t size) {
-	kboot_itag_load_t *load;
-	kboot_tag_core_t *core;
-	phys_ptr_t ret;
-	size_t align;
-
-	/* Get the load parameters. */
-	load = kboot_itag_find(loader, KBOOT_ITAG_LOAD);
-
-	if(load->flags & KBOOT_LOAD_FIXED) {
-		/* Just load at the specified address and fail if we can't. */
-		phys_memory_alloc(size, 0, load->phys_address, load->phys_address + size,
-			PHYS_MEMORY_ALLOCATED, 0, &ret);
-		dprintf("kboot: loading kernel at fixed address 0x%" PRIxPHYS " (size: 0x%zx)\n",
-			ret, size);
-	} else {
-		/* Try to find some space to load to. Iterate down in powers of
-		 * 2 until we reach the minimum alignment. */
-		align = load->alignment;
-		while(!phys_memory_alloc(size, align, 0, 0, PHYS_MEMORY_ALLOCATED,
-			PHYS_ALLOC_CANFAIL, &ret))
-		{
-			align >>= 1;
-			if(align < load->min_alignment || align < PAGE_SIZE)
-				boot_error("You do not have enough memory available");
-		}
-
-		dprintf("kboot: loading kernel to 0x%" PRIxPHYS " (alignment: 0x%" PRIxPHYS
-			", min_alignment: 0x%" PRIxPHYS ", size: 0x%zx)\n", ret,
-			load->alignment, load->min_alignment, size);
-	}
-
-	core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
-	core->kernel_phys = ret;
-	return ret;
 }
 
 /** Load a single module.
@@ -503,10 +457,7 @@ static __noreturn void kboot_loader_load(void) {
 	 * the image, add one and initialize everything to 0. */
 	load = kboot_itag_find(loader, KBOOT_ITAG_LOAD);
 	if(load) {
-		if(load->flags & KBOOT_LOAD_FIXED) {
-			if(load->phys_address % PAGE_SIZE)
-				boot_error("Kernel specifies invalid load address");
-		} else {
+		if(!(load->flags & KBOOT_LOAD_FIXED)) {
 			if((load->alignment && (load->alignment < PAGE_SIZE
 					|| !IS_POW2(load->alignment)))
 				|| (load->min_alignment && (load->min_alignment < PAGE_SIZE
@@ -547,7 +498,7 @@ static __noreturn void kboot_loader_load(void) {
 
 	/* Load the kernel image. */
 	kprintf("Loading kernel...\n");
-	kboot_elf_load_kernel(loader);
+	kboot_elf_load_kernel(loader, load);
 
 	/* Now we need to perform all mappings specified by the image tags. */
 	KBOOT_ITAG_ITERATE(loader, KBOOT_ITAG_MAPPING, kboot_itag_mapping_t, mapping) {
@@ -783,7 +734,7 @@ static void init_kernel_log(kboot_loader_t *loader) {
 	if(!log_buffer_allocated) {
 		if(!phys_memory_alloc(KBOOT_LOG_SIZE, 0, KBOOT_LOG_BUFFER,
 			KBOOT_LOG_BUFFER + KBOOT_LOG_SIZE, PHYS_MEMORY_ALLOCATED,
-			0, &addr))
+			PHYS_ALLOC_CANFAIL, &addr))
 		{
 			return;
 		}

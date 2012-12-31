@@ -351,7 +351,6 @@ typedef struct kboot_itag_load {
 	uint32_t _pad;
 	kboot_paddr_t alignment;		/**< Requested physical alignment of kernel image. */
 	kboot_paddr_t min_alignment;		/**< Minimum physical alignment of kernel image. */
-	kboot_paddr_t phys_address;		/**< If KBOOT_LOAD_FIXED is set, address to load at. */
 	kboot_vaddr_t virt_map_base;		/**< Base of virtual mapping range. */
 	kboot_vaddr_t virt_map_size;		/**< Size of virtual mapping range. */
 } kboot_itag_load_t;
@@ -360,7 +359,7 @@ typedef struct kboot_itag_load {
 #define KBOOT_LOAD_FIXED		(1<<0)	/**< Load at a fixed physical address. */
 
 /** Macro to declare a load itag. */
-#define KBOOT_LOAD(flags, alignment, min_alignment, phys_address, virt_map_base, virt_map_size) \
+#define KBOOT_LOAD(flags, alignment, min_alignment, virt_map_base, virt_map_size) \
 	__asm__( \
 		"   .pushsection \".note.kboot.load\", \"a\"\n" \
 		"   .long 1f - 0f\n" \
@@ -372,7 +371,6 @@ typedef struct kboot_itag_load {
 		"   .long 0\n" \
 		"   .quad " STRINGIFY(alignment) "\n" \
 		"   .quad " STRINGIFY(min_alignment) "\n" \
-		"   .quad " STRINGIFY(phys_address) "\n" \
 		"   .quad " STRINGIFY(virt_map_base) "\n" \
 		"   .quad " STRINGIFY(virt_map_size) "\n" \
 		"3: .p2align 2\n" \

@@ -84,12 +84,11 @@ static bool FUNC(note_iterate)(kboot_loader_t *loader, kboot_note_cb_t cb) {
 }
 
 /** Load an ELF kernel image. */
-static void FUNC(load_kernel)(kboot_loader_t *loader) {
+static void FUNC(load_kernel)(kboot_loader_t *loader, kboot_itag_load_t *load) {
 	elf_addr_t virt_base = 0, virt_end = 0;
+	phys_ptr_t phys = 0;
 	elf_phdr_t *phdrs;
-	size_t load_size;
 	elf_ehdr_t ehdr;
-	phys_ptr_t phys;
 	ptr_t dest;
 	size_t i;
 
@@ -100,37 +99,44 @@ static void FUNC(load_kernel)(kboot_loader_t *loader) {
 	if(!file_read(loader->kernel, phdrs, ehdr.e_phnum * ehdr.e_phentsize, ehdr.e_phoff))
 		boot_error("Could not read kernel image");
 
-	/* Calculate the total load size of the kernel. */
-	for(i = 0; i < ehdr.e_phnum; i++) {
-		if(phdrs[i].p_type != ELF_PT_LOAD)
-			continue;
+	/* If not loading at a fixed location, we allocate a single block of
+	 * physical memory to load at. */
+	if(!(load->flags & KBOOT_LOAD_FIXED)) {
+		/* Calculate the total load size of the kernel. */
+		for(i = 0; i < ehdr.e_phnum; i++) {
+			if(phdrs[i].p_type != ELF_PT_LOAD)
+				continue;
 
-		if(virt_base == 0 || virt_base > phdrs[i].p_vaddr)
-			virt_base = phdrs[i].p_vaddr;
-		if(virt_end < (phdrs[i].p_vaddr + phdrs[i].p_memsz))
-			virt_end = phdrs[i].p_vaddr + phdrs[i].p_memsz;
+			if(virt_base == 0 || virt_base > phdrs[i].p_vaddr)
+				virt_base = phdrs[i].p_vaddr;
+			if(virt_end < (phdrs[i].p_vaddr + phdrs[i].p_memsz))
+				virt_end = phdrs[i].p_vaddr + phdrs[i].p_memsz;
+		}
+
+		phys = allocate_kernel(loader, load, virt_base, virt_end);
 	}
-
-	load_size = ROUND_UP(virt_end - virt_base, PAGE_SIZE);
-
-	/* Allocate some memory for the kernel image. */
-	phys = kboot_allocate_kernel(loader, load_size);
 
 	/* Load in the image data. */
 	for(i = 0; i < ehdr.e_phnum; i++) {
 		if(phdrs[i].p_type != ELF_PT_LOAD)
 			continue;
 
-		dest = (ptr_t)(phys + (phdrs[i].p_vaddr - virt_base));
+		/* If loading at a fixed location, we have to allocate space. */
+		if(load->flags & KBOOT_LOAD_FIXED) {
+			allocate_segment(loader, load, phdrs[i].p_vaddr, phdrs[i].p_paddr,
+				phdrs[i].p_memsz, i);
+			dest = phdrs[i].p_paddr;
+		} else {
+			dest = phys + (phdrs[i].p_vaddr - virt_base);
+		}
+
 		if(!file_read(loader->kernel, (void *)dest, phdrs[i].p_filesz, phdrs[i].p_offset))
 			boot_error("Could not read kernel image");
 
+		/* Clear BSS sections. */
 		memset((void *)(dest + (ptr_t)phdrs[i].p_filesz), 0,
 			phdrs[i].p_memsz - phdrs[i].p_filesz);
 	}
-
-	/* Map in the kernel image. */
-	kboot_map_virtual(loader, virt_base, phys, load_size);
 
 	loader->entry = ehdr.e_entry;
 }
@@ -173,8 +179,7 @@ static void FUNC(load_sections)(kboot_loader_t *loader) {
 		}
 
 		/* Allocate memory to load the section data to. Try to make it
-		 * contiguous with the kernel image. FIXME: Need to make sure
-		 * this is under 4GB for 32-bit. */
+		 * contiguous with the kernel image. */
 		phys_memory_alloc(ROUND_UP(shdr->sh_size, PAGE_SIZE), 0,
 			core->kernel_phys, 0, PHYS_MEMORY_ALLOCATED, 0,
 			&addr);

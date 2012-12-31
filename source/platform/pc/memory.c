@@ -109,7 +109,6 @@ void platform_memory_detect(void) {
 		phys_memory_add(start, end - start, PHYS_MEMORY_FREE);
 	}
 
-	/* Protect the first 1MB of memory. The boot loader itself is there,
-	 * and we use it during BIOS calls. */
-	phys_memory_protect(0, 0x100000);
+	/* Mark the memory area we use for BIOS calls as internal. */
+	phys_memory_protect(BIOS_MEM_BASE, BIOS_MEM_SIZE + PAGE_SIZE);
 }

@@ -27,6 +27,68 @@
 #include <memory.h>
 #include <mmu.h>
 
+/** Allocate memory for the kernel image.
+ * @param loader	KBoot loader data structure.
+ * @param load		Image load parameters.
+ * @param virt_base	Virtual base address.
+ * @param virt_end	Virtual end address.
+ * @return		Physical address allocated for kernel. */
+static phys_ptr_t allocate_kernel(kboot_loader_t *loader, kboot_itag_load_t *load,
+	target_ptr_t virt_base, target_ptr_t virt_end)
+{
+	kboot_tag_core_t *core;
+	target_size_t size;
+	phys_ptr_t ret;
+	size_t align;
+
+	size = ROUND_UP(virt_end - virt_base, PAGE_SIZE);
+
+	/* Try to find some space to load to. Iterate down in powers of 2 unti
+	 * we reach the minimum alignment. */
+	align = load->alignment;
+	while(!phys_memory_alloc(size, align, 0, 0, PHYS_MEMORY_ALLOCATED, PHYS_ALLOC_CANFAIL, &ret)) {
+		align >>= 1;
+		if(align < load->min_alignment || align < PAGE_SIZE)
+			boot_error("You do not have enough memory available");
+	}
+
+	dprintf("kboot: loading kernel to 0x%" PRIxPHYS " (alignment: 0x%" PRIxPHYS
+		", min_alignment: 0x%" PRIxPHYS ", size: 0x%" PRIx64 ", virt_base: 0x%"
+		PRIx64 ")\n", ret, load->alignment, load->min_alignment, size,
+		virt_base);
+
+	/* Map in the kernel image. */
+	kboot_map_virtual(loader, virt_base, ret, size);
+
+	core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
+	core->kernel_phys = ret;
+	return ret;
+}
+
+/** Allocate memory for a single segment.
+ * @param loader	KBoot loader data structure.
+ * @param load		Image load parameters.
+ * @param virt		Virtual load address.
+ * @param phys		Physical load address.
+ * @param size		Total load size.
+ * @param idx		Segment index. */
+static void allocate_segment(kboot_loader_t *loader, kboot_itag_load_t *load,
+	target_ptr_t virt, phys_ptr_t phys, target_size_t size, size_t idx)
+{
+	phys_ptr_t ret;
+
+	size = ROUND_UP(size, PAGE_SIZE);
+
+	/* Allocate the exact physical address specified. */
+	phys_memory_alloc(size, 0, phys, phys + size, PHYS_MEMORY_ALLOCATED, 0, &ret);
+
+	dprintf("kboot: loading segment %zu to 0x%" PRIxPHYS " (size: 0x%" PRIx64
+		", virt: 0x%" PRIx64 ")\n", idx, phys, size, virt);
+
+	/* Map the address range. */
+	kboot_map_virtual(loader, virt, phys, size);
+}
+
 #if CONFIG_KBOOT_HAVE_LOADER_KBOOT32
 # define KBOOT_LOAD_ELF32
 # include "kboot_elfxx.h"
@@ -57,15 +119,16 @@ bool kboot_elf_note_iterate(kboot_loader_t *loader, kboot_note_cb_t cb) {
 }
 
 /** Load an ELF kernel image.
- * @param loader	KBoot loader data structure. */
-void kboot_elf_load_kernel(kboot_loader_t *loader) {
+ * @param loader	KBoot loader data structure.
+ * @param load		Image load parameters. */
+void kboot_elf_load_kernel(kboot_loader_t *loader, kboot_itag_load_t *load) {
 	#if CONFIG_KBOOT_HAVE_LOADER_KBOOT32
 	if(loader->target == TARGET_TYPE_32BIT)
-		kboot_elf32_load_kernel(loader);
+		kboot_elf32_load_kernel(loader, load);
 	#endif
 	#if CONFIG_KBOOT_HAVE_LOADER_KBOOT64
 	if(loader->target == TARGET_TYPE_64BIT)
-		kboot_elf64_load_kernel(loader);
+		kboot_elf64_load_kernel(loader, load);
 	#endif
 }
 
