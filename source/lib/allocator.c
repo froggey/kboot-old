@@ -203,7 +203,7 @@ bool allocator_insert(allocator_t *alloc, target_ptr_t addr, target_size_t size)
  * @param size		Size of region to reserve.
  */
 void allocator_reserve(allocator_t *alloc, target_ptr_t addr, target_size_t size) {
-	target_ptr_t region_end, alloc_end;
+	target_ptr_t region_end, alloc_end, end;
 	allocator_region_t *region;
 
 	assert(!(addr % PAGE_SIZE));
@@ -214,9 +214,10 @@ void allocator_reserve(allocator_t *alloc, target_ptr_t addr, target_size_t size
 	region_end = addr + size - 1;
 	alloc_end = alloc->start + alloc->size - 1;
 	addr = MAX(addr, alloc->start);
-	size = MIN(region_end, alloc_end) - addr + 1;
-	if(!size)
+	end = MIN(region_end, alloc_end);
+	if(end < addr)
 		return;
+	size = MIN(region_end, alloc_end) - addr + 1;
 
 	region = allocator_region_create(addr, size, true);
 	insert_region(alloc, region);
