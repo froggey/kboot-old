@@ -232,3 +232,13 @@ void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd, const char *c
 	dprintf("linux: kernel entry point at 0x%x, params at %p\n", params->hdr.code32_start, params);
 	linux_arch_enter(params->hdr.code32_start, (ptr_t)params, (ptr_t)params);
 }
+
+#if CONFIG_KBOOT_UI
+
+/** Add architecture-specific Linux configuration options.
+ * @param window	Configuration window. */
+void linux_arch_configure(ui_window_t *window) {
+	linux_platform_configure(window);
+}
+
+#endif

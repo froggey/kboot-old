@@ -22,6 +22,8 @@
 #ifndef __X86_LINUX_H
 #define __X86_LINUX_H
 
+#include <loaders/linux.h>
+
 #include <types.h>
 
 /** Where to load a bzImage kernel to. */
@@ -201,5 +203,9 @@ typedef struct linux_params {
 #define LINUX_VIDEO_TYPE_VESA		0x23
 
 extern void linux_platform_load(linux_params_t *params);
+
+#if CONFIG_KBOOT_UI
+extern void linux_platform_configure(ui_window_t *window);
+#endif
 
 #endif /* __X86_LINUX_H */

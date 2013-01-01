@@ -123,6 +123,8 @@ static bool config_cmd_linux(value_list_t *args) {
 	ui_list_insert(data->config,
 		ui_entry_create("Command Line", entry),
 		false);
+
+	linux_arch_configure(data->config);
 	#endif
 
 	current_environ->loader = &linux_loader_type;

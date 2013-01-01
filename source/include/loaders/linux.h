@@ -23,8 +23,13 @@
 #define __LOADERS_LINUX_H
 
 #include <fs.h>
+#include <ui.h>
 
 extern __noreturn void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd,
 	const char *cmdline);
+
+#if CONFIG_KBOOT_UI
+extern void linux_arch_configure(ui_window_t *window);
+#endif
 
 #endif /* __LOADERS_LINUX_H */

@@ -21,6 +21,7 @@
 
 #include <x86/linux.h>
 
+#include <lib/string.h>
 #include <lib/utility.h>
 
 #include <pc/bios.h>
@@ -29,6 +30,7 @@
 #include <pc/vbe.h>
 
 #include <loader.h>
+#include <memory.h>
 
 /** Get memory information.
  * @param params	Kernel boot paramters page.
@@ -151,27 +153,83 @@ static void get_ist_info(linux_params_t *params) {
 	params->ist_info.perf_level = regs.edx;
 }
 
+/** Parse video mode parameters.
+ * @param modep		Where to store VBE mode pointer.
+ * @return		Video mode type. */
+static uint8_t get_video_mode(vbe_mode_t **modep) {
+	uint16_t width = 0, height = 0;
+	char *dup, *orig, *tok;
+	uint8_t depth = 0;
+	value_t *entry;
+
+	// TODO: We should recognize vga= on the command line and convert it
+	// to our representation.
+
+	/* Check if we have a valid video mode set in the environment. */
+	entry = environ_lookup(current_environ, "video_mode");
+	if(!entry || entry->type != VALUE_TYPE_STRING)
+		return LINUX_VIDEO_TYPE_VGA;
+
+	if(strcmp(entry->string, "vga") == 0)
+		return LINUX_VIDEO_TYPE_VGA;
+
+	dup = orig = kstrdup(entry->string);
+
+	if((tok = strsep(&dup, "x")))
+		width = strtol(tok, NULL, 0);
+	if((tok = strsep(&dup, "x")))
+		height = strtol(tok, NULL, 0);
+	if((tok = strsep(&dup, "x")))
+		depth = strtol(tok, NULL, 0);
+
+	kfree(orig);
+
+	if(width && height) {
+		*modep = vbe_mode_find(width, height, depth);
+		if(*modep)
+			return LINUX_VIDEO_TYPE_VESA;
+	}
+
+	return LINUX_VIDEO_TYPE_VGA;
+}
+
 /** Set up the video mode for the kernel.
  * @param params	Kernel boot paramters page. */
 static void set_video_mode(linux_params_t *params) {
-	bios_regs_t regs;
+	vbe_mode_t *mode = NULL;
 
-	/* TODO: VESA mode set. */
+	params->screen_info.orig_video_isVGA = get_video_mode(&mode);
+	switch(params->screen_info.orig_video_isVGA) {
+	case LINUX_VIDEO_TYPE_VGA:
+		params->screen_info.orig_video_mode = 0x3;
+		params->screen_info.orig_video_cols = 80;
+		params->screen_info.orig_video_lines = 25;
+		vga_cursor_position(&params->screen_info.orig_x, &params->screen_info.orig_y);
+		break;
+	case LINUX_VIDEO_TYPE_VESA:
+		if(mode->info.memory_model == 4)
+			boot_error("TODO: Indexed video modes");
 
-	params->screen_info.orig_video_isVGA = LINUX_VIDEO_TYPE_VGA;
-	params->screen_info.orig_video_mode = 0x3;
-	params->screen_info.orig_video_cols = 80;
-	params->screen_info.orig_video_lines = 25;
-	vga_cursor_position(&params->screen_info.orig_x, &params->screen_info.orig_y);
+		params->screen_info.lfb_width = mode->info.x_resolution;
+		params->screen_info.lfb_height = mode->info.y_resolution;
+		params->screen_info.lfb_depth = mode->info.bits_per_pixel;
+		params->screen_info.lfb_linelength = (vbe_info.vbe_version_major >= 3)
+			? mode->info.lin_bytes_per_scan_line
+			: mode->info.bytes_per_scan_line;
+		params->screen_info.lfb_base = mode->info.phys_base_ptr;
+		params->screen_info.lfb_size = ROUND_UP(params->screen_info.lfb_linelength
+			* params->screen_info.lfb_height, 65536) >> 16;
+		params->screen_info.red_size = mode->info.red_mask_size;
+		params->screen_info.red_pos = mode->info.red_field_position;
+		params->screen_info.green_size = mode->info.green_mask_size;
+		params->screen_info.green_pos = mode->info.green_field_position;
+		params->screen_info.blue_size = mode->info.blue_mask_size;
+		params->screen_info.blue_pos = mode->info.blue_field_position;
 
-	/* Restore the console to a decent state. Set display page to the first
-	 * and move the cursor to (0, 0). */
-	bios_regs_init(&regs);
-	regs.eax = 0x0500;
-	bios_interrupt(0x10, &regs);
-	bios_regs_init(&regs);
-	regs.eax = 0x0200;
-	bios_interrupt(0x10, &regs);
+		/* Set the mode. */
+		vbe_mode_set(mode);
+		break;
+	}
 }
 
 /**
@@ -194,3 +252,56 @@ void linux_platform_load(linux_params_t *params) {
 
 	set_video_mode(params);
 }
+
+#if CONFIG_KBOOT_UI
+
+/** Add PC-specific Linux configuration options.
+ * @param window	Configuration window. */
+void linux_platform_configure(ui_window_t *window) {
+	value_t *entry, value;
+	ui_entry_t *chooser;
+	vbe_mode_t *mode;
+	uint8_t type;
+	char buf[16];
+
+	/* Don't need a mode chooser if there is no VBE support. */
+	if(list_empty(&vbe_modes))
+		return;
+
+	/* Check for any video mode set in the environment. */
+	type = get_video_mode(&mode);
+
+	/* Save the mode in a properly formatted string. */
+	switch(type) {
+	case LINUX_VIDEO_TYPE_VESA:
+		sprintf(buf, "%ux%ux%u", mode->info.x_resolution,
+			mode->info.y_resolution,
+			mode->info.bits_per_pixel);
+		break;
+	case LINUX_VIDEO_TYPE_VGA:
+		sprintf(buf, "vga");
+		break;
+	}
+
+	value.type = VALUE_TYPE_STRING;
+	value.string = buf;
+	entry = environ_insert(current_environ, "video_mode", &value);
+
+	/* Create a mode chooser. */
+	chooser = ui_chooser_create("Video Mode", entry);
+	sprintf(buf, "vga");
+	ui_chooser_insert(chooser, "VGA", &value);
+
+	LIST_FOREACH(&vbe_modes, iter) {
+		mode = list_entry(iter, vbe_mode_t, header);
+
+		sprintf(buf, "%ux%ux%u", mode->info.x_resolution,
+			mode->info.y_resolution,
+			mode->info.bits_per_pixel);
+		ui_chooser_insert(chooser, NULL, &value);
+	}
+
+	ui_list_insert(window, chooser, false);
+}
+
+#endif
