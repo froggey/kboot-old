@@ -225,6 +225,8 @@ static void dump_bootdev_tag(kboot_tag_bootdev_t *tag) {
 			tag->net.client_mac[0], tag->net.client_mac[1],
 			tag->net.client_mac[2], tag->net.client_mac[3],
 			tag->net.client_mac[4], tag->net.client_mac[5]);
+		kprintf("  hw_addr_len = %u\n", tag->net.hw_addr_len);
+		kprintf("  hw_type     = %u\n", tag->net.hw_type);
 		break;
 	default:
 		kprintf("  type = %" PRIu32 " (unknown)\n", tag->type);

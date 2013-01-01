@@ -629,14 +629,19 @@ Fields (`KBOOT_VIDEO_LFB`);
 
 This tag describes the device that the system was booted from.
 
-    typedef uint8_t kboot_mac_addr_t[8];
+    typedef uint8_t kboot_mac_addr_t[16];
     typedef uint8_t kboot_ipv4_addr_t[4];
     typedef uint8_t kboot_ipv6_addr_t[16];
     typedef union kboot_ip_addr {
     	kboot_ipv4_addr_t v4;
     	kboot_ipv6_addr_t v6;
     } kboot_ip_addr_t;
-    
+
+The above types are used to store network address information. A MAC address is
+stored in the `kboot_mac_addr_t` type, formatted according to the information
+provided in the tag. IP addresses are stored in the `kboot_ip_addr_t` union,
+in network byte order.
+
     typedef struct kboot_tag_bootdev {
     	kboot_tag_t header;
     
@@ -658,6 +663,8 @@ This tag describes the device that the system was booted from.
     			kboot_ip_addr_t  gateway_ip;
     			kboot_ip_addr_t  client_ip;
     			kboot_mac_addr_t client_mac;
+    			uint8_t          hw_type;
+    			uint8_t          hw_addr_len;
     		} net;
     	};
     } kboot_tag_bootdev_t;
@@ -700,6 +707,9 @@ Fields (`KBOOT_BOOTDEV_NET`):
  * `client_ip`: IP address that was used on this machine when communicating
    with the server.
  * `client_mac`: MAC address of the boot network interface.
+ * `hw_type`: Type of the network interface, as specified by the _Hardware Type_
+   section of RFC 1700.
+ * `hw_addr_len`: Length of the client MAC address.
 
 ### `KBOOT_TAG_LOG` (`9`)
 

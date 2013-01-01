@@ -332,6 +332,8 @@ static void add_bootdev_tag(kboot_loader_t *loader) {
 		tag->type = KBOOT_BOOTDEV_NET;
 		tag->net.flags = (netdev->flags & NET_DEVICE_IPV6) ? KBOOT_NET_IPV6 : 0;
 		tag->net.server_port = netdev->server_port;
+		tag->net.hw_type = netdev->hw_type;
+		tag->net.hw_addr_len = netdev->hw_addr_len;
 		memcpy(&tag->net.server_ip, &netdev->server_ip, sizeof(tag->net.server_ip));
 		memcpy(&tag->net.gateway_ip, &netdev->gateway_ip, sizeof(tag->net.gateway_ip));
 		memcpy(&tag->net.client_ip, &netdev->client_ip, sizeof(tag->net.client_ip));

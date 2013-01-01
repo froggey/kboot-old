@@ -25,7 +25,7 @@
 #include <device.h>
 
 /** Type used to store a MAC address. */
-typedef uint8_t mac_addr_t[8];
+typedef uint8_t mac_addr_t[16];
 
 /** Type used to store an IPv4 address. */
 typedef uint8_t ipv4_addr_t[4];
@@ -49,6 +49,8 @@ typedef struct net_device {
 	ip_addr_t gateway_ip;		/**< Gateway IP address. */
 	ip_addr_t client_ip;		/**< IP used on this machine when communicating with server. */
 	mac_addr_t client_mac;		/**< MAC address of the boot network interface. */
+	uint8_t hw_type;		/**< Hardware type (according to RFC 1700). */
+	uint8_t hw_addr_len;		/**< Hardware address length. */
 } net_device_t;
 
 /** Network device flags. */

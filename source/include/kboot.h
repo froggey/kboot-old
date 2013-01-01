@@ -186,7 +186,7 @@ typedef struct kboot_tag_video {
 #define KBOOT_LFB_INDEXED		(1<<1)	/**< Indexed colour format. */
 
 /** Type used to store a MAC address. */
-typedef uint8_t kboot_mac_addr_t[8];
+typedef uint8_t kboot_mac_addr_t[16];
 
 /** Type used to store an IPv4 address. */
 typedef uint8_t kboot_ipv4_addr_t[4];
@@ -234,6 +234,12 @@ typedef struct kboot_tag_bootdev {
 
 			/** MAC address of the boot network interface. */
 			kboot_mac_addr_t client_mac;
+
+			/** Network interface type. */
+			uint8_t hw_type;
+
+			/** Hardware address length. */
+			uint8_t hw_addr_len;
 		} net;
 	};
 } kboot_tag_bootdev_t;

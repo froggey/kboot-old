@@ -314,6 +314,8 @@ bool pxe_detect(void) {
 	memcpy(&device->client_mac, &bp->client_addr, sizeof(device->client_mac));
 	device->flags = 0;
 	device->server_port = PXENV_TFTP_PORT;
+	device->hw_type = bp->hardware;
+	device->hw_addr_len = bp->hardware_len;
 	device_add(&device->device, "pxe", DEVICE_TYPE_NET);
 	device->device.fs = mount;
 
