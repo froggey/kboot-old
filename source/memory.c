@@ -387,7 +387,6 @@ bool phys_memory_alloc(phys_size_t size, phys_size_t align, phys_ptr_t min_addr,
 		max_addr = 0x100000000LL;
 
 	assert(!(size % PAGE_SIZE));
-	assert(!(min_addr % align));
 	assert(((max_addr - 1) - min_addr) >= (size - 1));
 	assert(type >= PHYS_MEMORY_ALLOCATED);
 
