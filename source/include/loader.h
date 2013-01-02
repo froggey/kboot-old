@@ -56,6 +56,9 @@ typedef struct builtin {
 	void *object;
 } builtin_t;
 
+/** Type of a hook function to call before booting an OS. */
+typedef void (*preboot_hook_t)(void);
+
 extern char __start[], __end[];
 extern builtin_t __builtins_start[], __builtins_end[];
 
@@ -83,6 +86,9 @@ extern void backtrace(int (*printfn)(const char *fmt, ...));
 
 extern void internal_error(const char *fmt, ...) __printf(1, 2) __noreturn;
 extern void boot_error(const char *fmt, ...) __printf(1, 2) __noreturn;
+
+extern void loader_register_preboot_hook(preboot_hook_t hook);
+extern void loader_preboot(void);
 
 extern void loader_main(void) __noreturn;
 

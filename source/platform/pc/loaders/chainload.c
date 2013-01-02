@@ -86,6 +86,9 @@ static __noreturn void chain_loader_load(void) {
 		part_addr = PARTITION_TABLE_ADDR + (disk->id << 4);
 	}
 
+	/* Perform pre-boot tasks. */
+	loader_preboot();
+
 	/* Drop to real mode and jump to the boot sector. */
 	chain_loader_enter(parent->id, part_addr);
 }

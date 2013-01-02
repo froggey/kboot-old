@@ -29,6 +29,28 @@
 #include <memory.h>
 #include <menu.h>
 
+/** Maximum number of pre-boot hooks. */
+#define PREBOOT_HOOKS_MAX	8
+
+/** Array of pre-boot hooks. */
+static preboot_hook_t preboot_hooks[PREBOOT_HOOKS_MAX];
+static size_t preboot_hooks_count = 0;
+
+/** Add a pre-boot hook.
+ * @param hook		Hook to add. */
+void loader_register_preboot_hook(preboot_hook_t hook) {
+	assert(preboot_hooks_count < PREBOOT_HOOKS_MAX);
+	preboot_hooks[preboot_hooks_count++] = hook;
+}
+
+/** Perform pre-boot tasks. */
+void loader_preboot(void) {
+	size_t i;
+
+	for(i = 0; i < preboot_hooks_count; i++)
+		preboot_hooks[i]();
+}
+
 /** Main function for the Kiwi bootloader. */
 void loader_main(void) {
 	/* We must have a filesystem to boot from. */

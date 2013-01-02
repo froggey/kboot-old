@@ -245,6 +245,16 @@ static fs_type_t tftp_fs_type = {
 	.size = tftp_size,
 };
 
+/** Shut down PXE before booting an OS. */
+static void pxe_shutdown(void) {
+	if(pxe_call(PXENV_UNDI_SHUTDOWN, (void *)BIOS_MEM_BASE) != PXENV_EXIT_SUCCESS)
+		dprintf("pxe: warning: PXENV_UNDI_SHUTDOWN failed\n");
+	if(pxe_call(PXENV_UNLOAD_STACK, (void *)BIOS_MEM_BASE) != PXENV_EXIT_SUCCESS)
+		dprintf("pxe: warning: PXENV_UNLOAD_STACK failed\n");
+	if(pxe_call(PXENV_STOP_UNDI, (void *)BIOS_MEM_BASE) != PXENV_EXIT_SUCCESS)
+		dprintf("pxe: warning: PXENV_STOP_UNDI failed\n");
+}
+
 /** Detect whether booted from PXE. */
 bool pxe_detect(void) {
 	pxenv_get_cached_info_t ci;
@@ -321,6 +331,9 @@ bool pxe_detect(void) {
 
 	/* This is the boot device. */
 	boot_device = &device->device;
+
+	/* We need to shut down PXE before booting an OS. */
+	loader_register_preboot_hook(pxe_shutdown);
 
 	return true;
 }

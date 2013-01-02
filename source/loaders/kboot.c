@@ -549,6 +549,9 @@ static __noreturn void kboot_loader_load(void) {
 	add_log_tag(loader);
 	#endif
 
+	/* Perform pre-boot tasks. */
+	loader_preboot();
+
 	/* Do platform-specific setup, including setting the video mode. */
 	kboot_platform_setup(loader);
 

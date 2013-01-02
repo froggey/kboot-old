@@ -25,10 +25,13 @@
 #include <types.h>
 
 /** PXE function numbers. */
+#define PXENV_UNDI_SHUTDOWN		0x0005	/**< Reset the network adapter. */
+#define PXENV_STOP_UNDI			0x0015	/**< Shutdown the UNDI stack. */
 #define PXENV_TFTP_OPEN			0x0020	/**< Open TFTP connection. */
 #define PXENV_TFTP_CLOSE		0x0021	/**< Close TFTP connection. */
 #define PXENV_TFTP_READ			0x0022	/**< Read from TFTP connection. */
 #define PXENV_TFTP_GET_FSIZE		0x0025	/**< Get TFTP file size. */
+#define PXENV_UNLOAD_STACK		0x0070	/**< Unload PXE stack. */
 #define PXENV_GET_CACHED_INFO		0x0071	/**< Get cached information. */
 
 /** Packet types for PXENV_GET_CACHED_INFO. */

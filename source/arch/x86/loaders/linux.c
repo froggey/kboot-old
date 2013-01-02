@@ -220,6 +220,9 @@ void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd, const char *c
 		params->hdr.ramdisk_size = 0;
 	}
 
+	/* Perform pre-boot tasks. */
+	loader_preboot();
+
 	/* Call into platform code to do environment setup (usually done by the
 	 * real-mode bootstrap when using the 16-bit boot protocol). */
 	linux_platform_load(params);
