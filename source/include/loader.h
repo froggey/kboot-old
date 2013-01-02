@@ -36,11 +36,11 @@ typedef struct loader_type {
 	 * @note		Should not return. */
 	void (*load)(void) __noreturn;
 
-#if CONFIG_KBOOT_UI
+	#if CONFIG_KBOOT_UI
 	/** Return a window for configuring the OS.
 	 * @return		Pointer to configuration window. */
 	struct ui_window *(*configure)(void);
-#endif
+	#endif
 } loader_type_t;
 
 /** Builtin object definition structure. */
