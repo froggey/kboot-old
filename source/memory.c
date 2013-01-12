@@ -383,8 +383,13 @@ bool phys_memory_alloc(phys_size_t size, phys_size_t align, phys_ptr_t min_addr,
 
 	if(!align)
 		align = PAGE_SIZE;
+
+	#if ARCH_PHYSICAL_64BIT
+	/* Typically the boot loader runs in 32-bit mode, need to ensure that
+	 * all addresses allocated are accessible. */
 	if(!max_addr || max_addr > 0x100000000LL)
 		max_addr = 0x100000000LL;
+	#endif
 
 	assert(!(size % PAGE_SIZE));
 	assert(((max_addr - 1) - min_addr) >= (size - 1));

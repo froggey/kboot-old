@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011 Alex Smith
+# Copyright (C) 2011-2013 Alex Smith
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -14,14 +14,17 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env')
+Import('env', 'config')
+from util import FeatureSources
 
-sources = map(File, [
+sources = FeatureSources(config, [
+	('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
+
 	'memory.c',
 	'platform.c',
 	'start.S',
 	'uart.c',
-	'video.c',
+	#'video.c',
 ])
 
 # Set build flags.

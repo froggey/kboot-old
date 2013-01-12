@@ -299,19 +299,21 @@ typedef struct kboot_tag_e820 {
 	uint32_t attr;
 } kboot_tag_e820_t;
 
-#if defined(__x86_64__) || defined(__i386__)
 /** Tag containing page table information. */
 typedef struct kboot_tag_pagetables {
 	kboot_tag_t header;			/**< Tag header. */
 
-#if defined(__x86_64__)
-	kboot_paddr_t pml4;			/**< Physical address of the PML4. */
-#else
+#if defined(__i386__)
 	kboot_paddr_t page_dir;			/**< Physical address of the page directory. */
-#endif
 	kboot_vaddr_t mapping;			/**< Virtual address of recursive mapping. */
-} kboot_tag_pagetables_t;
+#elif defined(__x86_64__)
+	kboot_paddr_t pml4;			/**< Physical address of the PML4. */
+	kboot_vaddr_t mapping;			/**< Virtual address of recursive mapping. */
+#elif defined(__arm__)
+	kboot_paddr_t l1;			/**< Physical address of the first level page table. */
+	kboot_vaddr_t mapping;			/**< Virtual address of temporary mapping region. */
 #endif
+} kboot_tag_pagetables_t;
 
 /**
  * Image tags.
@@ -466,7 +468,7 @@ typedef struct kboot_itag_mapping {
 /** Macro to declare a virtual memory mapping itag. */
 #define KBOOT_MAPPING(virt, phys, size) \
 	__asm__( \
-		"   .pushsection \".note.kboot.mapping.b" STRINGIFY(virt) STRINGIFY(phys) "\", \"a\"\n" \
+		"   .pushsection \".note.kboot.mapping.b" # virt "\", \"a\"\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_MAPPING) "\n" \

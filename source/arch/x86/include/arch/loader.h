@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Alex Smith
+ * Copyright (C) 2010-2013 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -21,6 +21,12 @@
 
 #ifndef __ARCH_LOADER_H
 #define __ARCH_LOADER_H
+
+/** x86 is little-endian (LSB first). */
+#define ARCH_LITTLE_ENDIAN	1
+
+/** x86 uses 64-bit physical addresses. */
+#define ARCH_PHYSICAL_64BIT	1
 
 extern void cpu_init(void);
 extern void arch_init(void);

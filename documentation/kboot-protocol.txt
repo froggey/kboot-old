@@ -4,7 +4,7 @@ KBoot Boot Protocol
 License
 -------
 
-Copyright &copy; 2012 Alex Smith
+Copyright &copy; 2012-2013 Alex Smith
 
 This document is distributed under the terms of the [Creative Commons
 Attribution-ShareAlike 3.0 Unported](http://creativecommons.org/licenses/
@@ -284,12 +284,12 @@ state upon entry to the kernel is as follows:
 Other machine state is not defined. In particular, the state of GDTR and IDTR
 may not be valid, the kernel should set up its own GDT and IDT.
 
-The boot loader may make use of large (4MB) pages when constructing the virtual
-address space (if supported) within a single virtual mapping, however separate
-mappings should not be mapped together on a single large page. If large pages
-have been used then the kernel will be entered with CR4.PSE set to 1, however
-this is not guaranteed to be set and the kernel should explicitly enable it
-should it wish to use large pages.
+The boot loader may make use of large (4MB) pages within a single virtual
+mapping when constructing the virtual address space, however separate mappings
+should not be mapped together on a single large page. If large pages have been
+used then the kernel will be entered with CR4.PSE set to 1, however this is not
+guaranteed to be set and the kernel should explicitly enable it should it wish
+to use large pages.
 
 To allow the kernel to manipulate the virtual address space, the page directory
 is recursively mapped. A 4MB region of address space is allocated, and the page
@@ -297,7 +297,7 @@ directory entry for that range is set to point to itself. The format of the
 `KBOOT_TAG_PAGETABLES` tag for x86 is as follows:
 
     typedef struct kboot_tag_pagetables {
-    	kboot_tag_t header;
+    	kboot_tag_t   header;
     
     	kboot_paddr_t page_dir;
     	kboot_vaddr_t mapping;
@@ -324,9 +324,12 @@ machine state upon entry to the kernel is as follows:
  * RSP points to a valid stack mapped in the virtual address space set up by
    the boot loader.
 
-The boot loader may make use of large (2MB) pages when constructing the virtual
-address space within a single virtual mapping, however separate mappings should
-not be mapped together on a single large page.
+Other machine state is not defined. In particular, the state of GDTR and IDTR
+may not be valid, the kernel should set up its own GDT and IDT.
+
+The boot loader may make use of large (2MB) pages within a single virtual
+mapping when constructing the virtual address space, however separate mappings
+should not be mapped together on a single large page.
 
 To allow the kernel to manipulate the virtual address space, the PML4 is
 recursively mapped. A 512GB region of the virtual address space is allocated,
@@ -337,7 +340,7 @@ from the end of the virtual address space is chosen. The format of the
 `KBOOT_TAG_PAGETABLES` tag for x86_64 is as follows:
 
     typedef struct kboot_tag_pagetables {
-    	kboot_tag_t header;
+    	kboot_tag_t   header;
     
     	kboot_paddr_t pml4;
     	kboot_vaddr_t mapping;
@@ -350,7 +353,43 @@ Fields:
 
 ### ARM
 
-TODO
+The arguments to the kernel are passed as per the ARM Procedure Call Standard.
+The machine state upon entry to the kernel is as follows:
+
+ * R0 contains the KBoot magic value.
+ * R1 contains the tag list pointer.
+ * Both IRQs and FIQs are disabled.
+ * MMU is enabled (TTBR0 = address of first level table, TTBCR.N = 0).
+ * Instruction and data caches are enabled.
+ * R11 is 0.
+ * R13 (SP) points to a valid stack mapped in the virtual address space set up
+   by the boot loader.
+
+Other machine state is not defined.
+
+The boot loader may make use of sections (1MB page mappings) within a single
+virtual mapping when constructing the virtual address space, however separate
+mappings should not be mapped together on a single section.
+
+Unlike x86 and x86_64, on ARM it is not possible to recursively map the paging
+structures as the first and second level tables have different formats.
+Instead, a 1MB region of the virtual address space is allocated, and the last
+page within it is mapped to the second level table that covers that region.
+The kernel can then set up temporary mappings within this region by modifying
+the page table. The format of the `KBOOT_TAG_PAGETABLES` tag for ARM is as
+follows:
+
+    typedef struct kboot_tag_pagetables {
+    	kboot_tag_t   header;
+    
+    	kboot_paddr_t l1;
+    	kboot_vaddr_t mapping;
+    } kboot_tag_pagetables_t;
+
+Fields:
+
+ * `l1`: Physical address of the first level translation table.
+ * `mapping`: Virtual address of the 1MB temporary mapping region.
 
 Kernel Information
 ------------------

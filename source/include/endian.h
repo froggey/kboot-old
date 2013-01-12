@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Alex Smith
+ * Copyright (C) 2009-2012 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +22,7 @@
 #ifndef __ENDIAN_H
 #define __ENDIAN_H
 
-#include <arch/endian.h>
+#include <arch/loader.h>
 
 #include <types.h>
 
@@ -67,7 +67,7 @@ static inline uint64_t byte_order_swap64(uint64_t val) {
 	return out;
 }
 
-#if LITTLE_ENDIAN
+#if ARCH_LITTLE_ENDIAN
 # define be16_to_cpu(v)		byte_order_swap16((v))
 # define be32_to_cpu(v)		byte_order_swap32((v))
 # define be64_to_cpu(v)		byte_order_swap64((v))
@@ -80,7 +80,7 @@ static inline uint64_t byte_order_swap64(uint64_t val) {
 # define cpu_to_le16(v)		(v)
 # define cpu_to_le32(v)		(v)
 # define cpu_to_le64(v)		(v)
-#elif BIG_ENDIAN
+#elif ARCH_BIG_ENDIAN
 # define be16_to_cpu(v)		(v)
 # define be32_to_cpu(v)		(v)
 # define be64_to_cpu(v)		(v)
@@ -94,7 +94,7 @@ static inline uint64_t byte_order_swap64(uint64_t val) {
 # define cpu_to_le32(v)		byte_order_swap32((v))
 # define cpu_to_le64(v)		byte_order_swap64((v))
 #else
-# error "Neither LITTLE_ENDIAN or BIG_ENDIAN is defined"
+# error "Neither ARCH_LITTLE_ENDIAN or ARCH_BIG_ENDIAN is defined"
 #endif
 
 #endif /* __ENDIAN_H */

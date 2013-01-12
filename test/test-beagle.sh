@@ -28,4 +28,4 @@ rm -f boot.scr.tmp
 if [ ! -f build/arm-omap3/beagle-nand.bin ]; then
 	gunzip -c test/beagle-nand.bin.gz > build/arm-omap3/beagle-nand.bin
 fi
-qemu-system-arm -M beagle -mtdblock build/arm-omap3/beagle-nand.bin -sd fat:build/arm-omap3 -serial stdio
+qemu-system-arm -M beagle -mtdblock build/arm-omap3/beagle-nand.bin -sd fat:build/arm-omap3 -serial stdio -monitor vc:1024x768

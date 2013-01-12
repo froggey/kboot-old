@@ -256,7 +256,8 @@ bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size
 }
 
 /** Create a new MMU context.
- * @param target	Target operation mode definition. */
+ * @param target	Target operation mode definition.
+ * @return		Pointer to context. */
 mmu_context_t *mmu_context_create(target_type_t target) {
 	mmu_context_t *ctx;
 

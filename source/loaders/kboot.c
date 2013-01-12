@@ -288,12 +288,15 @@ static void set_option(kboot_loader_t *loader, const char *name, uint32_t type) 
 static void add_bootdev_tag(kboot_loader_t *loader) {
 	kboot_tag_bootdev_t *tag;
 	net_device_t *netdev;
+	#if CONFIG_KBOOT_HAVE_DISK
 	disk_t *disk;
+	#endif
 
 	tag = kboot_allocate_tag(loader, KBOOT_TAG_BOOTDEV, sizeof(*tag));
 
 	switch(current_device->type) {
 	case DEVICE_TYPE_DISK:
+		#if CONFIG_KBOOT_HAVE_DISK
 		disk = (disk_t *)current_device;
 
 		tag->type = KBOOT_BOOTDEV_DISK;
@@ -324,6 +327,7 @@ static void add_bootdev_tag(kboot_loader_t *loader) {
 			tag->disk.partition = 0;
 			tag->disk.device = disk->id;
 		}
+		#endif
 
 		break;
 	case DEVICE_TYPE_NET:
@@ -432,6 +436,7 @@ static __noreturn void kboot_loader_load(void) {
 	ptr_t loader_start, loader_size;
 	kboot_itag_load_t *load;
 	kboot_tag_core_t *core;
+	phys_ptr_t phys;
 
 	/* These errors are detected in config_cmd_kboot(), but shouldn't be
 	 * reported until the user actually tries to boot the entry. */
@@ -556,7 +561,8 @@ static __noreturn void kboot_loader_load(void) {
 	kboot_platform_setup(loader);
 
 	/* Create a stack for the kernel. */
-	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_MEMORY_STACK, 0, &core->stack_phys);
+	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_MEMORY_STACK, 0, &phys);
+	core->stack_phys = phys;
 	core->stack_base = loader->stack_virt = kboot_allocate_virtual(loader,
 		core->stack_phys, PAGE_SIZE);
 	core->stack_size = loader->stack_size = PAGE_SIZE;

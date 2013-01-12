@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2013 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,17 +24,23 @@
 
 #if CONFIG_KBOOT_LOADER_KBOOT
 
+#define ENTRY_ARGS_TRANSITION_TTBR	0
+#define ENTRY_ARGS_VIRT			4
+#define ENTRY_ARGS_KERNEL_TTBR		8
+#define ENTRY_ARGS_SP			12
+#define ENTRY_ARGS_ENTRY		16
+#define ENTRY_ARGS_TAGS			20
+#define ENTRY_ARGS_TRAMPOLINE		24
+
 /** Enter an ARM KBoot kernel.
- * @param tags		Tag list address.
- * @param ttbr0		Address to load into TTBR0.
- * @param entry		Kernel entry point. */
-FUNCTION_START(kboot_arch_enter_real)
-#ifdef CONFIG_PLATFORM_OMAP3
+ * @param args		Entry arguments structure. */
+FUNCTION_START(kboot_arch_enter32)
 	/* Ensure that IRQs/FIQs are disabled. */
 	cpsid	if
 
-	/* Write the first level descriptor table address to TTBR0. */
-	mcr	p15, 0, r1, c2, c0, 0
+	/* Write the transition L1 table address to TTBR0. */
+	ldr	r4, [r0, #ENTRY_ARGS_TRANSITION_TTBR]
+	mcr	p15, 0, r4, c2, c0, 0
 
 	/* Ensure that TTBCR is configured to always use TTBR0. */
 	mov	r4, #0
@@ -56,21 +62,34 @@ FUNCTION_START(kboot_arch_enter_real)
 	/* Enable the MMU by setting SCTLR.M to 1. */
 	orr	r4, r4, #(1<<0)
 	mcr	p15, 0, r4, c1, c0, 0
-
-	/* Ensure that changes made are visible to any following instructions. */
 	isb
 
-	/* Clear the stack frame pointer (R11), in case the kernel is using the
-	 * APCS stack backtrace method. */
+	/* Calculate the trampoline address. */
+	ldr	r4, [r0, #ENTRY_ARGS_VIRT]
+	add	r4, r4, #ENTRY_ARGS_TRAMPOLINE
+	mov	pc, r4
+
+SYMBOL(kboot_trampoline32)
+	/* Write the main L1 table address to TTBR0. */
+	ldr	r4, [r0, #ENTRY_ARGS_KERNEL_TTBR]
+	mcr	p15, 0, r4, c2, c0, 0
+	isb
+
+	/* Set the stack pointer. */
+	ldr	sp, [r0, #ENTRY_ARGS_SP]
+
+	/* Clear the stack frame pointer (R11). */
 	mov	fp, #0
 
 	/* Call the kernel. */
-	mov	r1, r0
+	ldr	r4, [r0, #ENTRY_ARGS_ENTRY]
+	ldr	r1, [r0, #ENTRY_ARGS_TAGS]
 	ldr	r0, =KBOOT_MAGIC
-	mov	pc, r2
-#else
-1:	b	1
-#endif
-FUNCTION_END(kboot_arch_enter_real)
+	mov	pc, r4
+1:	b	1b
+
+SYMBOL(kboot_trampoline32_size)
+	.long	. - kboot_trampoline32 + 8
+FUNCTION_END(kboot_arch_enter32)
 
 #endif /* CONFIG_KBOOT_LOADER_KBOOT */

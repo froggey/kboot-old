@@ -37,4 +37,4 @@ fi
 
 mkisofs -J -R -l -b boot/cdboot.img -V "CDROM" -boot-load-size 4 -boot-info-table -no-emul-boot -o build/x86-pc/test.iso isobuild
 rm -rf isobuild
-qemu-system-x86_64 -cdrom build/x86-pc/test.iso -serial stdio -vga std -boot d -m 512
+qemu-system-x86_64 -cdrom build/x86-pc/test.iso -serial stdio -vga std -boot d -m 512 -monitor vc:1024x768

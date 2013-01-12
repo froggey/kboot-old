@@ -28,8 +28,6 @@
 #include <loader.h>
 #include <memory.h>
 
-extern char __start[];
-
 /** Detect memory regions. */
 void platform_memory_detect(void) {
 	phys_ptr_t start, end;

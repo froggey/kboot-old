@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2013 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,20 @@
 
 /**
  * @file
- * @brief		x86 endianness definition header.
+ * @brief		OMAP3 platform KBoot loader.
  */
 
-#ifndef __ARCH_ENDIAN_H
-#define __ARCH_ENDIAN_H
+#include <lib/string.h>
+#include <lib/utility.h>
 
-/** x86 is little-endian (LSB first). */
-#define LITTLE_ENDIAN	1
+#include <loaders/kboot.h>
 
-#endif /* __ARCH_ENDIAN_H */
+#include <config.h>
+#include <memory.h>
+#include <ui.h>
+
+/** Perform platform-specific setup for a KBoot kernel.
+ * @param loader	KBoot loader data structure. */
+void kboot_platform_setup(kboot_loader_t *loader) {
+	/* Nothing happens. */
+}

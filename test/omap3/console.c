@@ -24,11 +24,7 @@
 #include <omap3/omap3.h>
 #include <omap3/uart.h>
 
-#include <kboot.h>
-#include <loader.h>
-
-extern void console_putc(char ch);
-static bool have_inited = false;
+#include "../test.h"
 
 KBOOT_MAPPING(0xC1000000, OMAP3_UART1_BASE, PAGE_SIZE);
 KBOOT_MAPPING(0xC1001000, OMAP3_UART2_BASE, PAGE_SIZE);
@@ -109,13 +105,22 @@ static void uart_putch(int port, unsigned char ch) {
 	uart_write_reg(port, UART_THR_REG, ch);
 }
 
-/** Write a character to the UART console.
+/** Write a character to the serial console.
  * @param ch		Character to write. */
-void console_putc(char ch) {
-	if(!have_inited) {
-		uart_init_port(DEBUG_UART, 115200);
-		uart_putch(DEBUG_UART, '\n');
-		have_inited = true;
-	}
+static void serial_console_putch(char ch) {
 	uart_putch(DEBUG_UART, ch);
+}
+
+/** Debug console. */
+static console_t serial_console = {
+	.putch = serial_console_putch,
+};
+
+/** Initialize the console.
+ * @param tags		Tag list. */
+void console_init(kboot_tag_t *tags) {
+	uart_init_port(DEBUG_UART, 115200);
+	uart_putch(DEBUG_UART, '\n');
+
+	debug_console = &serial_console;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Alex Smith
+ * Copyright (C) 2011-2013 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,7 @@ KBOOT_VIDEO(KBOOT_VIDEO_LFB | KBOOT_VIDEO_VGA, 0, 0, 0);
 KBOOT_BOOLEAN_OPTION("bool_option", "Boolean Option", true);
 KBOOT_STRING_OPTION("string_option", "String Option", "Default Value");
 KBOOT_LOAD(0, 0, 0, VIRT_MAP_BASE, VIRT_MAP_SIZE);
-KBOOT_MAPPING(PHYS_MAP_BASE, 0, PHYS_MAP_SIZE);
+KBOOT_MAPPING(PHYS_MAP_BASE, PHYS_MAP_OFFSET, PHYS_MAP_SIZE);
 
 /** Dump a core tag. */
 static void dump_core_tag(kboot_tag_core_t *tag) {
@@ -118,6 +118,9 @@ static void dump_pagetables_tag(kboot_tag_pagetables_t *tag) {
 #elif defined(__i386__)
 	kprintf("  page_dir = 0x%" PRIx64 "\n", tag->page_dir);
 	kprintf("  mapping  = 0x%" PRIx64 "\n", tag->mapping);
+#elif defined(__arm__)
+	kprintf("  l1      = 0x%" PRIx64 "\n", tag->l1);
+	kprintf("  mapping = 0x%" PRIx64 "\n", tag->mapping);
 #endif
 }
 

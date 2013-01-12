@@ -18,7 +18,10 @@ import os
 
 Import('env', 'config')
 
-targets = [('32', []), ('64', ['-mcmodel=kernel'])]
+if config['PLATFORM'] == 'pc':
+	targets = [('32', ['-m32']), ('64', ['-m64', '-mcmodel=kernel'])]
+elif config['PLATFORM'] == 'omap3':
+	targets = [('', [])]
 
 # List of our own sources.
 sources = map(File, [
@@ -32,10 +35,10 @@ sources = map(File, [
 ])
 
 # Build test kernel for each supported configuration.
-for (target, flags) in [(x, y) for (x, y) in targets if config['KBOOT_HAVE_LOADER_KBOOT' + x]]:
+for (target, flags) in targets:
 	ldscript = env.LDScript('link%s.ld' % (target),
 		'link-%s%s.ld.in' % (config['PLATFORM'], target))
-	ccflags = [x for x in env['CCFLAGS'] if x not in ['-m32', '-m64']] + ['-m%s' % target] + flags
+	ccflags = [x for x in env['CCFLAGS'] if x not in ['-m32', '-m64']]+ flags
 	linkflags = [x for x in env['LINKFLAGS'] if x not in ['-m32', '-m64']] + [
 		'-m%s' % target, "-Wl,-T,${File('link%s.ld')}" % target]
 

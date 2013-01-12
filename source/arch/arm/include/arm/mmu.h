@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2013 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,13 +16,17 @@
 
 /**
  * @file
- * @brief		ARM endianness definition header.
+ * @brief		ARM MMU functions.
  */
 
-#ifndef __ARCH_ENDIAN_H
-#define __ARCH_ENDIAN_H
+#ifndef __ARM_MMU_H
+#define __ARM_MMU_H
 
-/** ARM is little-endian (LSB first). */
-#define LITTLE_ENDIAN	1
+#include <mmu.h>
 
-#endif /* __ARCH_ENDIAN_H */
+/** ARM MMU context structure. */
+struct mmu_context {
+	phys_ptr_t l1;			/**< Physical address of first level table. */
+};
+
+#endif /* __ARM_MMU_H */

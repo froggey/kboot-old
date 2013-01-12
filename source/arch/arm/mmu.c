@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Alex Smith
+ * Copyright (C) 2011-2013 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -19,20 +19,19 @@
  * @brief		ARM MMU functions.
  */
 
-#include <arch/page.h>
+#include <arm/mmu.h>
 
 #include <lib/string.h>
 
 #include <assert.h>
 #include <loader.h>
 #include <memory.h>
-#include <mmu.h>
 
 /** Allocate a paging structure. */
 static phys_ptr_t allocate_structure(size_t size) {
 	phys_ptr_t addr;
 
-	phys_memory_alloc(size, size, 0, 0, PHYS_ALLOC_RECLAIM, &addr);
+	phys_memory_alloc(size, size, 0, 0, PHYS_MEMORY_PAGETABLES, 0, &addr);
 	memset((void *)addr, 0, size);
 	return addr;
 }
@@ -48,7 +47,7 @@ static void map_section(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys) {
 	assert(!(virt % LARGE_PAGE_SIZE));
 	assert(!(phys % LARGE_PAGE_SIZE));
 
-	l1 = (uint32_t *)ctx->ttbr0;
+	l1 = (uint32_t *)ctx->l1;
 	l1e = virt / LARGE_PAGE_SIZE;
 	l1[l1e] = phys | (1<<1) | (1<<10);
 }
@@ -62,7 +61,7 @@ static void map_small(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys) {
 	phys_ptr_t addr;
 	int l1e, l2e;
 
-	l1 = (uint32_t *)ctx->ttbr0;
+	l1 = (uint32_t *)ctx->l1;
 	l1e = virt / LARGE_PAGE_SIZE;
 	if(!(l1[l1e] & (1<<0))) {
 		/* FIXME: Second level tables are actually 1KB. Should probably
@@ -116,11 +115,14 @@ bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size
 }
 
 /** Create a new MMU context.
+ * @param target	Target operation mode definition.
  * @return		Pointer to context. */
-mmu_context_t *mmu_context_create(void) {
+mmu_context_t *mmu_context_create(target_type_t target) {
 	mmu_context_t *ctx;
 
+	assert(target == TARGET_TYPE_32BIT);
+
 	ctx = kmalloc(sizeof(*ctx));
-	ctx->ttbr0 = allocate_structure(0x4000);
+	ctx->l1 = allocate_structure(0x4000);
 	return ctx;
 }

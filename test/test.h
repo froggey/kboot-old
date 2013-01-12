@@ -51,8 +51,14 @@ typedef Elf32_Addr elf_addr_t;
 
 #endif
 
+#ifdef CONFIG_PLATFORM_OMAP3
+# define PHYS_MAP_OFFSET	0x80000000
+#else
+# define PHYS_MAP_OFFSET	0x0
+#endif
+
 /** Get a virtual address from a physical address. */
-#define P2V(phys)		((ptr_t)(phys) + PHYS_MAP_BASE)
+#define P2V(phys)		((ptr_t)(phys - PHYS_MAP_OFFSET) + PHYS_MAP_BASE)
 
 extern void fb_init(kboot_tag_video_t *tag);
 
