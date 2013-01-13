@@ -104,10 +104,3 @@ void log_init(kboot_tag_t *tags) {
 void *kmalloc(size_t size) {
 	return NULL;
 }
-
-#ifdef __ARM_EABI__
-extern void abort(void);
-void abort(void) {
-        while(1);
-}
-#endif
