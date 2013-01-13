@@ -18,13 +18,18 @@
 warning_flags = [
         '-Wall', '-Wextra', '-Wno-variadic-macros', '-Wno-unused-parameter',
 	'-Wwrite-strings', '-Wmissing-declarations', '-Wredundant-decls',
-	'-Wno-format', '-Wno-unused-but-set-variable',
+	'-Wno-format'
 ]
 
+# GCC-specific warning flags.
+gcc_warning_flags = ['-Wno-unused-but-set-variable']
+
 import os, sys, SCons.Errors
+from subprocess import Popen, PIPE
 
 sys.path = [os.path.abspath(os.path.join('utilities', 'build'))] + sys.path
 from kconfig import ConfigParser
+import util
 
 # Create the configuration parser.
 config = ConfigParser('.config')
@@ -81,18 +86,24 @@ if not config.configured() or 'config' in COMMAND_LINE_TARGETS:
 		raise SCons.Errors.StopError(
 			"Configuration missing or out of date. Please update using 'config' target.")
 
+# Detect which compiler to use.
+compilers = ['cc', 'gcc', 'clang']
+compiler = None
+for name in compilers:
+	path = config['CROSS_COMPILER'] + name
+	if util.which(path):
+		compiler = path
+		break
+if not compiler:
+	raise SCons.Errors.StopError("Toolchain has no usable compiler available.")
+
 # Set paths to the various build utilities. The stuff below is to support use
 # of clang's static analyzer.
 if os.environ.has_key('CC') and os.path.basename(os.environ['CC']) == 'ccc-analyzer':
 	env['CC'] = os.environ['CC']
-	env['ENV']['CCC_CC'] = config['CROSS_COMPILER'] + 'gcc'
+	env['ENV']['CCC_CC'] = compiler
 else:
-	env['CC'] = config['CROSS_COMPILER'] + 'gcc'
-if os.environ.has_key('CXX') and os.path.basename(os.environ['CXX']) == 'c++-analyzer':
-	env['CXX'] = os.environ['CXX']
-	env['ENV']['CCC_CXX'] = config['CROSS_COMPILER'] + 'g++'
-else:
-	env['CXX'] = config['CROSS_COMPILER'] + 'g++'
+	env['CC'] = compiler
 env['AS']      = config['CROSS_COMPILER'] + 'as'
 env['OBJDUMP'] = config['CROSS_COMPILER'] + 'objdump'
 env['READELF'] = config['CROSS_COMPILER'] + 'readelf'
@@ -110,11 +121,19 @@ env['CFLAGS'] = ['-std=gnu99']
 env['ASFLAGS'] = ['-D__ASM__', '-nostdinc']
 env['LINKFLAGS'] = ['-nostdlib']
 
+# Add compiler-specific flags.
+output = Popen([compiler, '--version'], stdout=PIPE).communicate()[0].strip()
+is_clang = output.find('clang') >= 0
+if is_clang:
+	# Clang's integrated assembler doesn't support 16-bit code.
+	env['ASFLAGS'] += ['-no-integrated-as']
+else:
+	env['CCFLAGS'] += gcc_warning_flags
+
 # Override any optimisation level specified, we want to optimise for size.
 env['CCFLAGS'] = filter(lambda f: f[0:2] != '-O', env['CCFLAGS']) + ['-Os']
 
 # Add the GCC include directory for some standard headers.
-from subprocess import Popen, PIPE
 incdir = Popen([env['CC'], '-print-file-name=include'], stdout=PIPE).communicate()[0].strip()
 env['CCFLAGS'] += ['-isystem', incdir]
 env['ASFLAGS'] += ['-isystem', incdir]
