@@ -322,6 +322,13 @@ typedef struct kboot_tag_pagetables {
 /** KBoot ELF note name. */
 #define KBOOT_NOTE_NAME			"KBoot"
 
+/** Section type definition. */
+#ifdef __arm__
+# define KBOOT_SECTION_TYPE		"%note"
+#else
+# define KBOOT_SECTION_TYPE		"@note"
+#endif
+
 /** KBoot image tag types (used as ELF note type field). */
 #define KBOOT_ITAG_IMAGE		0	/**< Basic image information (required). */
 #define KBOOT_ITAG_LOAD			1	/**< Memory layout options. */
@@ -342,7 +349,7 @@ typedef struct kboot_itag_image {
 /** Macro to declare an image itag. */
 #define KBOOT_IMAGE(flags) \
 	__asm__( \
-		"   .pushsection \".note.kboot.image\", \"a\"\n" \
+		"   .pushsection \".note.kboot.image\", \"a\", " KBOOT_SECTION_TYPE "\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_IMAGE) "\n" \
@@ -369,7 +376,7 @@ typedef struct kboot_itag_load {
 /** Macro to declare a load itag. */
 #define KBOOT_LOAD(flags, alignment, min_alignment, virt_map_base, virt_map_size) \
 	__asm__( \
-		"   .pushsection \".note.kboot.load\", \"a\"\n" \
+		"   .pushsection \".note.kboot.load\", \"a\", " KBOOT_SECTION_TYPE "\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_LOAD) "\n" \
@@ -395,7 +402,7 @@ typedef struct kboot_itag_option {
 /** Macro to declare a boolean option itag. */
 #define KBOOT_BOOLEAN_OPTION(name, desc, default) \
 	__asm__( \
-		"   .pushsection \".note.kboot.option." name "\", \"a\"\n" \
+		"   .pushsection \".note.kboot.option." name "\", \"a\", " KBOOT_SECTION_TYPE "\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 6f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_OPTION) "\n" \
@@ -417,7 +424,7 @@ typedef struct kboot_itag_option {
 /** Macro to declare an integer option itag. */
 #define KBOOT_INTEGER_OPTION(name, desc, default) \
 	__asm__( \
-		"   .pushsection \".note.kboot.option." name "\", \"a\"\n" \
+		"   .pushsection \".note.kboot.option." name "\", \"a\", " KBOOT_SECTION_TYPE "\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 6f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_OPTION) "\n" \
@@ -439,7 +446,7 @@ typedef struct kboot_itag_option {
 /** Macro to declare an string option itag. */
 #define KBOOT_STRING_OPTION(name, desc, default) \
 	__asm__( \
-		"   .pushsection \".note.kboot.option." name "\", \"a\"\n" \
+		"   .pushsection \".note.kboot.option." name "\", \"a\", " KBOOT_SECTION_TYPE "\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 6f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_OPTION) "\n" \
@@ -468,7 +475,7 @@ typedef struct kboot_itag_mapping {
 /** Macro to declare a virtual memory mapping itag. */
 #define KBOOT_MAPPING(virt, phys, size) \
 	__asm__( \
-		"   .pushsection \".note.kboot.mapping.b" # virt "\", \"a\"\n" \
+		"   .pushsection \".note.kboot.mapping.b" # virt "\", \"a\", " KBOOT_SECTION_TYPE "\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_MAPPING) "\n" \
@@ -491,7 +498,7 @@ typedef struct kboot_itag_video {
 /** Macro to declare a video mode itag. */
 #define KBOOT_VIDEO(types, width, height, bpp) \
 	__asm__( \
-		"   .pushsection \".note.kboot.video\", \"a\"\n" \
+		"   .pushsection \".note.kboot.video\", \"a\", " KBOOT_SECTION_TYPE "\n" \
 		"   .long 1f - 0f\n" \
 		"   .long 3f - 2f\n" \
 		"   .long " XSTRINGIFY(KBOOT_ITAG_VIDEO) "\n" \
