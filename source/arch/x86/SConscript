@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2012 Alex Smith
+# Copyright (C) 2011-2013 Alex Smith
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -29,10 +29,17 @@ sources = FeatureSources(config, [
 	'mmu.c',
 ])
 
+# Add required support sources from compiler-rt.
+sources += map(lambda x : File('../../../3rdparty/compiler-rt/' + x), [
+	'i386/udivdi3.S',
+	'i386/umoddi3.S',
+	'i386/divdi3.S',
+	'i386/moddi3.S',
+])
+
 # Set build flags.
 env['CCFLAGS'] += ['-m32', '-mno-sse', '-mno-mmx', '-mno-sse2', '-mno-3dnow']
 env['ASFLAGS'] += ['-m32']
 env['LINKFLAGS'] += ['-m32']
-env['LIBS'] = ['gcc']
 
 Return('sources')
