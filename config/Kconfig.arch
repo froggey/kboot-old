@@ -37,6 +37,6 @@ config ARCH
         default "arm" if ARCH_ARM
 
 # For compatibility with main Kiwi build system.
-config SRCARCH
+config BOOTARCH
 	string
 	default ARCH

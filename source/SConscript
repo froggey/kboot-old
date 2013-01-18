@@ -49,7 +49,7 @@ sources = FeatureSources(config, [
 # not the source tree).
 env['CPPPATH'] = [
 	Dir('include'),
-	Dir('arch/%s/include' % (config['SRCARCH'])),
+	Dir('arch/%s/include' % (config['BOOTARCH'])),
 	Dir('platform/%s/include' % (config['PLATFORM'])),
 	Dir('platform/generic'),
 ]
@@ -57,7 +57,7 @@ env['CCFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config[
 env['ASFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config['PLATFORM'])]
 
 # Get the list of source files from the architecture/platform.
-arch_sources = SConscript(dirs = ['arch/' + config['SRCARCH']], exports = ['env', 'defaults'])
+arch_sources = SConscript(dirs = ['arch/' + config['BOOTARCH']], exports = ['env', 'defaults'])
 platform_sources = SConscript(dirs = ['platform/' + config['PLATFORM']], exports = ['env', 'defaults'])
 sources = arch_sources + platform_sources + sources
 
