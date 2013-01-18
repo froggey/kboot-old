@@ -30,7 +30,7 @@ sources = FeatureSources(config, [
 ])
 
 # Add required support sources from compiler-rt.
-sources += map(lambda x : File('../../../3rdparty/compiler-rt/' + x), [
+sources += map(lambda x : File('../../lib/runtime/' + x), [
 	'i386/udivdi3.S',
 	'i386/umoddi3.S',
 	'i386/divdi3.S',
