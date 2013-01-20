@@ -286,12 +286,20 @@ PRIVATE_FUNCTION_START(__loader_entry)
 	jmp	platform_init
 FUNCTION_END(__loader_entry)
 
-.section .data, "aw", @progbits
+/** Boot drive. */
+SYMBOL(boot_device_id)
+	.byte	0
+
+/** Boot partition offset LBA. */
+SYMBOL(boot_part_offset)
+	.quad	0
 
 /** GDT pointer. */
 SYMBOL(loader_gdtp)
         .word .L__gdt_end-__gdt-1
         .long __gdt
+
+.section .data, "aw", @progbits
 
 /** Global descriptor table. */
 __gdt:
@@ -303,14 +311,6 @@ __gdt:
 	.quad 0x00AF9A000000FFFF		/**< 64-bit code     (0x28). */
 	.quad 0x008F92000000FFFF		/**< 64-bit data     (0x30). */
 .L__gdt_end:
-
-/** Boot drive. */
-SYMBOL(boot_device_id)
-	.byte	0
-
-/** Boot partition offset LBA. */
-SYMBOL(boot_part_offset)
-	.quad	0
 
 /** Multiboot magic number. */
 SYMBOL(multiboot_magic)
