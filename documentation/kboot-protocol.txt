@@ -291,6 +291,9 @@ used then the kernel will be entered with CR4.PSE set to 1, however this is not
 guaranteed to be set and the kernel should explicitly enable it should it wish
 to use large pages.
 
+The address space set up by the boot loader will _not_ have the global flag set
+on any mappings.
+
 To allow the kernel to manipulate the virtual address space, the page directory
 is recursively mapped. A 4MB region of address space is allocated, and the page
 directory entry for that range is set to point to itself. The format of the
@@ -330,6 +333,9 @@ may not be valid, the kernel should set up its own GDT and IDT.
 The boot loader may make use of large (2MB) pages within a single virtual
 mapping when constructing the virtual address space, however separate mappings
 should not be mapped together on a single large page.
+
+The address space set up by the boot loader will _not_ have the global flag set
+on any mappings.
 
 To allow the kernel to manipulate the virtual address space, the PML4 is
 recursively mapped. A 512GB region of the virtual address space is allocated,
