@@ -16,9 +16,9 @@
 
 # C/C++ warning flags.
 warning_flags = [
-        '-Wall', '-Wextra', '-Wno-variadic-macros', '-Wno-unused-parameter',
+    '-Wall', '-Wextra', '-Wno-variadic-macros', '-Wno-unused-parameter',
 	'-Wwrite-strings', '-Wmissing-declarations', '-Wredundant-decls',
-	'-Wno-format'
+	'-Wno-format', '-Wimplicit-function-declaration'
 ]
 
 # GCC-specific warning flags.

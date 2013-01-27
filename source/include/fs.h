@@ -87,9 +87,9 @@ typedef struct mount {
 	fs_type_t *type;		/**< Type structure for the filesystem. */
 	struct file_handle *root;	/**< Handle to root of FS (not needed if open() implemented). */
 	void *data;			/**< Implementation-specific data pointer. */
-#if CONFIG_KBOOT_HAVE_DISK
+	#if CONFIG_KBOOT_HAVE_DISK
 	disk_t *disk;			/**< Disk that the filesystem resides on. */
-#endif
+	#endif
 	char *label;			/**< Label of the filesystem. */
 	char *uuid;			/**< UUID of the filesystem. */
 } mount_t;
@@ -100,6 +100,9 @@ typedef struct file_handle {
 	bool directory;			/**< Whether the entry is a directory. */
 	void *data;			/**< Implementation-specific data pointer. */
 	int count;			/**< Reference count. */
+	#if CONFIG_KBOOT_FS_ZLIB
+	void *compressed;		/**< If the file is compressed, pointer to decompress data. */
+	#endif
 } file_handle_t;
 
 extern file_handle_t *file_handle_create(mount_t *mount, bool directory, void *data);

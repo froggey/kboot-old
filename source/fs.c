@@ -27,6 +27,10 @@
 #include <fs.h>
 #include <memory.h>
 
+#if CONFIG_KBOOT_FS_ZLIB
+# include "fs/decompress.h"
+#endif
+
 /** Create a file handle.
  * @param path		Path to filesystem entry.
  * @param mount		Mount the entry resides on.
@@ -39,6 +43,9 @@ file_handle_t *file_handle_create(mount_t *mount, bool directory, void *data) {
 	handle->directory = directory;
 	handle->data = data;
 	handle->count = 1;
+	#if CONFIG_KBOOT_FS_ZLIB
+	handle->compressed = NULL;
+	#endif
 	return handle;
 }
 
@@ -120,58 +127,73 @@ file_handle_t *file_open(const char *path, file_handle_t *from) {
 	}
 
 	/* Use the provided open() implementation if any. */
-	if(mount->type->open)
-		return mount->type->open(mount, path, from);
+	if(mount->type->open) {
+		handle = mount->type->open(mount, path, from);
+	} else {
+		assert(mount->type->iterate);
 
-	assert(mount->type->iterate);
+		/* Strip leading / characters from the path. */
+		while(*path == '/')
+			path++;
 
-	/* Strip leading / characters from the path. */
-	while(*path == '/')
-		path++;
+		assert(handle);
+		handle->count++;
 
-	assert(handle);
-	handle->count++;
+		/* Loop through each element of the path string. The string must be
+		 * duplicated so that it can be modified. */
+		dup = orig = kstrdup(path);
+		while(true) {
+			tok = strsep(&dup, "/");
+			if(tok == NULL) {
+				/* The last token was the last element of the path
+				 * string, return the node we're currently on. */
+				kfree(orig);
+				break;
+			} else if(!handle->directory) {
+				/* The previous node was not a directory: this means
+				 * the path string is trying to treat a non-directory
+				 * as a directory. Reject this. */
+				file_close(handle);
+				kfree(orig);
+				return NULL;
+			} else if(!tok[0]) {
+				/* Zero-length path component, do nothing. */
+				continue;
+			}
 
-	/* Loop through each element of the path string. The string must be
-	 * duplicated so that it can be modified. */
-	dup = orig = kstrdup(path);
-	while(true) {
-		tok = strsep(&dup, "/");
-		if(tok == NULL) {
-			/* The last token was the last element of the path
-			 * string, return the node we're currently on. */
-			kfree(orig);
-			return handle;
-		} else if(!handle->directory) {
-			/* The previous node was not a directory: this means
-			 * the path string is trying to treat a non-directory
-			 * as a directory. Reject this. */
+			/* Search the directory for the entry. */
+			data.name = tok;
+			data.handle = NULL;
+			if(!mount->type->iterate(handle, file_open_cb, &data) || !data.handle) {
+				file_close(handle);
+				kfree(orig);
+				return NULL;
+			}
+
 			file_close(handle);
-			kfree(orig);
-			return NULL;
-		} else if(!tok[0]) {
-			/* Zero-length path component, do nothing. */
-			continue;
+			handle = data.handle;
 		}
-
-		/* Search the directory for the entry. */
-		data.name = tok;
-		data.handle = NULL;
-		if(!mount->type->iterate(handle, file_open_cb, &data) || !data.handle) {
-			file_close(handle);
-			kfree(orig);
-			return NULL;
-		}
-
-		file_close(handle);
-		handle = data.handle;
 	}
+
+	#if CONFIG_KBOOT_FS_ZLIB
+	/* If the file is compressed, initialize decompression state. This will
+	 * set handle->compressed to non-NULL if the file is compressed. */
+	if(!handle->directory)
+		decompress_open(handle);
+	#endif
+
+	return handle;
 }
 
 /** Close a handle.
  * @param handle	Handle to close. */
 void file_close(file_handle_t *handle) {
 	if(--handle->count == 0) {
+		#if CONFIG_KBOOT_FS_ZLIB
+		if(handle->compressed)
+			decompress_close(handle);
+		#endif
+
 		if(handle->mount->type->close)
 			handle->mount->type->close(handle);
 
@@ -191,6 +213,11 @@ bool file_read(file_handle_t *handle, void *buf, size_t count, offset_t offset) 
 	if(!count)
 		return true;
 
+	#if CONFIG_KBOOT_FS_ZLIB
+	if(handle->compressed)
+		return decompress_read(handle, buf, count, offset);
+	#endif
+
 	return handle->mount->type->read(handle, buf, count, offset);
 }
 
@@ -199,6 +226,12 @@ bool file_read(file_handle_t *handle, void *buf, size_t count, offset_t offset) 
  * @return		Size of the file. */
 offset_t file_size(file_handle_t *handle) {
 	assert(!handle->directory);
+
+	#if CONFIG_KBOOT_FS_ZLIB
+	if(handle->compressed)
+		return decompress_size(handle);
+	#endif
+
 	return handle->mount->type->size(handle);
 }
 

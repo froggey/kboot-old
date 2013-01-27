@@ -40,6 +40,12 @@ config KBOOT_FS_ISO9660
 	help
 	  Enable support for booting from ISO9660-formatted CDs.
 
+config KBOOT_FS_ZLIB
+	bool "File decompression support"
+	default y
+	help
+	  Enable support for reading compressed files via zlib.
+
 #######
 endmenu
 #######
