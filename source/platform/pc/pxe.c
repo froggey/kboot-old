@@ -144,8 +144,11 @@ static bool tftp_read_packet(tftp_handle_t *data) {
 
 	read.buffer.addr = BIOS_MEM_BASE;
 	read.buffer_size = data->packet_size;
-	if(pxe_call(PXENV_TFTP_READ, &read) != PXENV_EXIT_SUCCESS || read.status)
+	if(pxe_call(PXENV_TFTP_READ, &read) != PXENV_EXIT_SUCCESS || read.status) {
+		dprintf("pxe: failed to read packet: 0x%x\n", read.status);
+		backtrace(dprintf);
 		return false;
+	}
 
 	data->packet_number++;
 	return true;
@@ -289,7 +292,7 @@ bool pxe_detect(void) {
 		pxe_entry_point.offset, SEGOFF2LIN(pxe_entry_point.addr));
 
 	/* Obtain the server IP address for use with the TFTP calls. */
-	ci.packet_type = PXENV_PACKET_TYPE_DHCP_ACK;
+	ci.packet_type = PXENV_PACKET_TYPE_CACHED_REPLY;
 	ci.buffer.addr = 0;
 	ci.buffer_size = 0;
 	if(pxe_call(PXENV_GET_CACHED_INFO, &ci) != PXENV_EXIT_SUCCESS || ci.status)
@@ -308,6 +311,9 @@ bool pxe_detect(void) {
 		bp->server_ip.a[2], bp->server_ip.a[3]);
 	dprintf(" gateway IP: %d.%d.%d.%d\n", bp->gateway_ip.a[0], bp->gateway_ip.a[1],
 		bp->gateway_ip.a[2], bp->gateway_ip.a[3]);
+	dprintf(" client MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
+		bp->client_addr[0], bp->client_addr[1], bp->client_addr[2],
+		bp->client_addr[3], bp->client_addr[4], bp->client_addr[5]);
 
 	/* Mount a TFTP filesystem. */
 	mount = kmalloc(sizeof(mount_t));

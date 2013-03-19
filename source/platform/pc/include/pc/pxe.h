@@ -35,7 +35,9 @@
 #define PXENV_GET_CACHED_INFO		0x0071	/**< Get cached information. */
 
 /** Packet types for PXENV_GET_CACHED_INFO. */
-#define PXENV_PACKET_TYPE_DHCP_ACK	2	/**< Get DHCP ACK packet. */
+#define PXENV_PACKET_TYPE_DHCP_DISCOVER	1	/**< Get DHCPDISCOVER packet. */
+#define PXENV_PACKET_TYPE_DHCP_ACK	2	/**< Get DHCPACK packet. */
+#define PXENV_PACKET_TYPE_CACHED_REPLY	3	/**< Get DHCP reply packet. */
 
 /** Return codes from PXE calls. */
 #define PXENV_EXIT_SUCCESS		0x0000	/**< Success. */
