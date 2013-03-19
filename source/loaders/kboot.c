@@ -199,6 +199,7 @@ static void load_module(kboot_loader_t *loader, file_handle_t *handle, const cha
  * @param list		List to load. */
 static void load_module_list(kboot_loader_t *loader, value_list_t *list) {
 	file_handle_t *handle;
+	char *tmp;
 	size_t i;
 
 	for(i = 0; i < list->count; i++) {
@@ -206,7 +207,8 @@ static void load_module_list(kboot_loader_t *loader, value_list_t *list) {
 		if(!handle)
 			boot_error("Could not open module %s", list->values[i].string);
 
-		load_module(loader, handle, strrchr(list->values[i].string, '/') + 1);
+		tmp = strrchr(list->values[i].string, '/');
+		load_module(loader, handle, (tmp) ? tmp + 1 : list->values[i].string);
 		file_close(handle);
 	}
 }

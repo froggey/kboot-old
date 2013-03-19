@@ -291,6 +291,12 @@ bool pxe_detect(void) {
 	dprintf("pxe: booting via PXE, entry point at %04x:%04x (%p)\n", pxe_entry_point.segment,
 		pxe_entry_point.offset, SEGOFF2LIN(pxe_entry_point.addr));
 
+	/* When using PXE, 0x8D000 onwards is reserved for use by the PXE stack
+	 * so we need to mark it as internal to ensure we don't load anything
+	 * there. Also reserve a bit more because the PXE ROM on one of my test
+	 * machines appears to take a dump over memory below there as well. */
+	phys_memory_protect(0x80000, 0x9F000 - 0x80000);
+
 	/* Obtain the server IP address for use with the TFTP calls. */
 	ci.packet_type = PXENV_PACKET_TYPE_CACHED_REPLY;
 	ci.buffer.addr = 0;
