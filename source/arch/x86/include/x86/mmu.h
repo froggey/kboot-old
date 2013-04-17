@@ -39,6 +39,7 @@
 struct mmu_context {
 	uint32_t cr3;			/**< Value loaded into CR3. */
 	bool is64;			/**< Whether this is a 64-bit context. */
+	unsigned phys_type;		/**< Physical memory type for page tables. */
 };
 
 #endif /* __X86_MMU_H */

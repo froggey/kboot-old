@@ -501,7 +501,7 @@ static __noreturn void kboot_loader_load(void) {
 
 	/* Create the virtual address space and address allocator. Try to
 	 * reserve a page to ensure that we never allocate virtual address 0. */
-	loader->mmu = mmu_context_create(loader->target);
+	loader->mmu = mmu_context_create(loader->target, PHYS_MEMORY_PAGETABLES);
 	allocator_init(&loader->alloc, load->virt_map_base, load->virt_map_size);
 	allocator_reserve(&loader->alloc, 0, PAGE_SIZE);
 
@@ -583,15 +583,15 @@ static __noreturn void kboot_loader_load(void) {
 	 *    mode using the temporary address space.
 	 *  - Jump to the trampoline code which switches to the real address
 	 *    space and then jumps to the kernel.
-	 * FIXME: Should mark all allocated page tables as internal so the
-	 * kernel won't see them as in use at all. */
+	 * All allocated page tables for the temporary address space are marked
+	 * as internal so the kernel won't see them as in use at all. */
 	loader_start = ROUND_DOWN((ptr_t)__start, PAGE_SIZE);
 	loader_size = ROUND_UP((ptr_t)__end - (ptr_t)__start, PAGE_SIZE);
 	allocator_reserve(&loader->alloc, loader_start, loader_size);
 	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_MEMORY_INTERNAL, 0, &loader->trampoline_phys);
 	loader->trampoline_virt = kboot_allocate_virtual(loader, loader->trampoline_phys,
 		PAGE_SIZE);
-	loader->transition = mmu_context_create(loader->target);
+	loader->transition = mmu_context_create(loader->target, PHYS_MEMORY_INTERNAL);
 	mmu_map(loader->transition, loader_start, loader_start, loader_size);
 	mmu_map(loader->transition, loader->trampoline_phys, loader->trampoline_phys,
 		PAGE_SIZE);

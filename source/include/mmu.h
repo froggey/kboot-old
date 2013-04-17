@@ -30,6 +30,6 @@ typedef struct mmu_context mmu_context_t;
 extern bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys,
 	target_size_t size);
 
-extern mmu_context_t *mmu_context_create(target_type_t target);
+extern mmu_context_t *mmu_context_create(target_type_t target, unsigned phys_type);
 
 #endif /* __MMU_H */

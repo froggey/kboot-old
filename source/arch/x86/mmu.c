@@ -32,11 +32,11 @@
 #include <mmu.h>
 
 /** Allocate a paging structure. */
-static phys_ptr_t allocate_structure(void) {
+static phys_ptr_t allocate_structure(mmu_context_t *ctx) {
 	phys_ptr_t addr;
 
 	phys_memory_alloc(PAGE_SIZE, PAGE_SIZE, 0, 0x100000000ULL,
-		PHYS_MEMORY_PAGETABLES, 0, &addr);
+		ctx->phys_type, 0, &addr);
 	memset((void *)((ptr_t)addr), 0, PAGE_SIZE);
 	return addr;
 }
@@ -55,7 +55,7 @@ static uint64_t *get_pdir64(mmu_context_t *ctx, uint64_t virt) {
 	/* Get the page directory pointer number. A PDP covers 512GB. */
 	pml4e = (virt & 0x0000FFFFFFFFF000) / 0x8000000000;
 	if(!(pml4[pml4e] & X86_PTE_PRESENT)) {
-		addr = allocate_structure();
+		addr = allocate_structure(ctx);
 		pml4[pml4e] = addr | X86_PTE_PRESENT | X86_PTE_WRITE;
 	}
 
@@ -65,7 +65,7 @@ static uint64_t *get_pdir64(mmu_context_t *ctx, uint64_t virt) {
 	/* Get the page directory number. A page directory covers 1GB. */
 	pdpe = (virt % 0x8000000000) / 0x40000000;
 	if(!(pdp[pdpe] & X86_PTE_PRESENT)) {
-		addr = allocate_structure();
+		addr = allocate_structure(ctx);
 		pdp[pdpe] = addr | X86_PTE_PRESENT | X86_PTE_WRITE;
 	}
 
@@ -106,7 +106,7 @@ static void map_small64(mmu_context_t *ctx, uint64_t virt, uint64_t phys) {
 	/* Get the page directory entry number. */
 	pde = (virt % 0x40000000) / 0x200000;
 	if(!(pdir[pde] & X86_PTE_PRESENT)) {
-		addr = allocate_structure();
+		addr = allocate_structure(ctx);
 		pdir[pde] = addr | X86_PTE_PRESENT | X86_PTE_WRITE;
 	}
 
@@ -187,7 +187,7 @@ static void map_small32(mmu_context_t *ctx, uint32_t virt, uint32_t phys) {
 	/* Get the page directory entry number. */
 	pde = virt / 0x400000;
 	if(!(pdir[pde] & X86_PTE_PRESENT)) {
-		addr = allocate_structure();
+		addr = allocate_structure(ctx);
 		pdir[pde] = addr | X86_PTE_PRESENT | X86_PTE_WRITE;
 	}
 
@@ -257,12 +257,14 @@ bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size
 
 /** Create a new MMU context.
  * @param target	Target operation mode definition.
+ * @param phys_type	Physical memory type to use when allocating tables.
  * @return		Pointer to context. */
-mmu_context_t *mmu_context_create(target_type_t target) {
+mmu_context_t *mmu_context_create(target_type_t target, unsigned phys_type) {
 	mmu_context_t *ctx;
 
 	ctx = kmalloc(sizeof(*ctx));
 	ctx->is64 = target == TARGET_TYPE_64BIT;
-	ctx->cr3 = allocate_structure();
+	ctx->phys_type = phys_type;
+	ctx->cr3 = allocate_structure(ctx);
 	return ctx;
 }
