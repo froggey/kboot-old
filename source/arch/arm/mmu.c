@@ -28,10 +28,10 @@
 #include <memory.h>
 
 /** Allocate a paging structure. */
-static phys_ptr_t allocate_structure(size_t size) {
+static phys_ptr_t allocate_structure(mmu_context_t *ctx, size_t size) {
 	phys_ptr_t addr;
 
-	phys_memory_alloc(size, size, 0, 0, PHYS_MEMORY_PAGETABLES, 0, &addr);
+	phys_memory_alloc(size, size, 0, 0, ctx->phys_type, 0, &addr);
 	memset((void *)addr, 0, size);
 	return addr;
 }
@@ -66,7 +66,7 @@ static void map_small(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys) {
 	if(!(l1[l1e] & (1<<0))) {
 		/* FIXME: Second level tables are actually 1KB. Should probably
 		 * split up these pages and use them fully. */
-		addr = allocate_structure(PAGE_SIZE);
+		addr = allocate_structure(ctx, PAGE_SIZE);
 		l1[l1e] = addr | (1<<0);
 	}
 
@@ -116,13 +116,15 @@ bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size
 
 /** Create a new MMU context.
  * @param target	Target operation mode definition.
+ * @param phys_type	Physical memory type to use when allocating tables.
  * @return		Pointer to context. */
-mmu_context_t *mmu_context_create(target_type_t target) {
+mmu_context_t *mmu_context_create(target_type_t target, unsigned phys_type) {
 	mmu_context_t *ctx;
 
 	assert(target == TARGET_TYPE_32BIT);
 
 	ctx = kmalloc(sizeof(*ctx));
-	ctx->l1 = allocate_structure(0x4000);
+	ctx->phys_type = phys_type;
+	ctx->l1 = allocate_structure(ctx, 0x4000);
 	return ctx;
 }

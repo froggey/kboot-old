@@ -36,6 +36,8 @@ elif config['PLATFORM'] == 'omap3':
 			'../3rdparty/compiler-rt/umoddi3.c',
 		])
 	]
+else:
+    targets = []
 
 # List of our own sources.
 sources = [

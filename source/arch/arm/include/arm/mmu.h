@@ -27,6 +27,7 @@
 /** ARM MMU context structure. */
 struct mmu_context {
 	phys_ptr_t l1;			/**< Physical address of first level table. */
+	unsigned phys_type;		/**< Physical memory type for page tables. */
 };
 
 #endif /* __ARM_MMU_H */
