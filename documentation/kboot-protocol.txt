@@ -242,8 +242,10 @@ space (see below). The following procedure is used to build the address space:
  * Map the kernel image.
  * Map ranges specified by `KBOOT_ITAG_MAPPING` tags.
  * Allocate space for other mappings (e.g. tag list, framebuffer, log buffer)
-   within the address range specified by the `KBOOT_ITAG_LOAD` tag.
- * Allocate space for the stack.
+   as well as the stack. Address space for these mappings is allocated within
+   the address range specified by the `KBOOT_ITAG_LOAD` tag. They are all
+   allocated contiguously, however padding is permitted between mappings only
+   as necessary to satisfy any alignment requirements.
 
 A map of the virtual address space is provided in the tag list, see
 `KBOOT_TAG_VMEM`. Note that the address space set up by the boot loader is
