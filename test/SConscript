@@ -36,6 +36,17 @@ elif config['PLATFORM'] == 'omap3':
 			'../3rdparty/compiler-rt/umoddi3.c',
 		])
 	]
+elif config['PLATFORM'] == 'bcm2835':
+    targets = [
+        ('', [], [], [
+            '../3rdparty/compiler-rt/arm/aeabi_uldivmod.S',
+            '../3rdparty/compiler-rt/arm/udivsi3.S',
+            '../3rdparty/compiler-rt/arm/umodsi3.S',
+            '../3rdparty/compiler-rt/udivmoddi4.c',
+            '../3rdparty/compiler-rt/umoddi3.c',
+            '../source/platform/generic/pl011/pl011.c',
+        ])
+    ]
 else:
     targets = []
 
