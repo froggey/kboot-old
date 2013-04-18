@@ -19,47 +19,47 @@ from util import FeatureSources
 
 # List of our own sources.
 sources = FeatureSources(config, [
-	('KBOOT_FS_ZLIB', 'fs/decompress.c'),
-	('KBOOT_FS_EXT2', 'fs/ext2.c'),
-	('KBOOT_FS_ISO9660', 'fs/iso9660.c'),
-	('!KBOOT_HAVE_DISK', 'fs/tar.c'),
+    ('KBOOT_FS_ZLIB', 'fs/decompress.c'),
+    ('KBOOT_FS_EXT2', 'fs/ext2.c'),
+    ('KBOOT_FS_ISO9660', 'fs/iso9660.c'),
+    ('!KBOOT_HAVE_DISK', 'fs/tar.c'),
 
-	('KBOOT_FS_ZLIB', 'lib/zlib/adler32.c'),
-	('KBOOT_FS_ZLIB', 'lib/zlib/crc32.c'),
-	('KBOOT_FS_ZLIB', 'lib/zlib/inffast.c'),
-	('KBOOT_FS_ZLIB', 'lib/zlib/inflate.c'),
-	('KBOOT_FS_ZLIB', 'lib/zlib/inftrees.c'),
-	('KBOOT_FS_ZLIB', 'lib/zlib/zutil.c'),
+    ('KBOOT_FS_ZLIB', 'lib/zlib/adler32.c'),
+    ('KBOOT_FS_ZLIB', 'lib/zlib/crc32.c'),
+    ('KBOOT_FS_ZLIB', 'lib/zlib/inffast.c'),
+    ('KBOOT_FS_ZLIB', 'lib/zlib/inflate.c'),
+    ('KBOOT_FS_ZLIB', 'lib/zlib/inftrees.c'),
+    ('KBOOT_FS_ZLIB', 'lib/zlib/zutil.c'),
 
-	'lib/allocator.c',
-	'lib/printf.c',
-	'lib/string.c',
+    'lib/allocator.c',
+    'lib/printf.c',
+    'lib/string.c',
 
-	('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
-	('KBOOT_LOADER_KBOOT', 'loaders/kboot_elf.c'),
-	('KBOOT_LOADER_LINUX', 'loaders/linux.c'),
+    ('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
+    ('KBOOT_LOADER_KBOOT', 'loaders/kboot_elf.c'),
+    ('KBOOT_LOADER_LINUX', 'loaders/linux.c'),
 
-	('KBOOT_PARTITION_MAP_MSDOS', 'partitions/msdos.c'),
+    ('KBOOT_PARTITION_MAP_MSDOS', 'partitions/msdos.c'),
 
-	'config.c',
-	'console.c',
-	'device.c',
-	('KBOOT_HAVE_DISK', 'disk.c'),
-	'error.c',
-	'fs.c',
-	'main.c',
-	'memory.c',
-	('KBOOT_UI', 'menu.c'),
-	('KBOOT_UI', 'ui.c'),
+    'config.c',
+    'console.c',
+    'device.c',
+    ('KBOOT_HAVE_DISK', 'disk.c'),
+    'error.c',
+    'fs.c',
+    'main.c',
+    'memory.c',
+    ('KBOOT_UI', 'menu.c'),
+    ('KBOOT_UI', 'ui.c'),
 ])
 
 # Set the include search paths (done here so it points to the build directory,
 # not the source tree).
 env['CPPPATH'] = [
-	Dir('include'),
-	Dir('arch/%s/include' % (config['BOOTARCH'])),
-	Dir('platform/%s/include' % (config['PLATFORM'])),
-	Dir('platform/generic'),
+    Dir('include'),
+    Dir('arch/%s/include' % (config['BOOTARCH'])),
+    Dir('platform/%s/include' % (config['PLATFORM'])),
+    Dir('platform/generic'),
 ]
 env['CCFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config['PLATFORM'])]
 env['ASFLAGS'] += ['-include', 'build/%s-%s/config.h' % (config['ARCH'], config['PLATFORM'])]
@@ -71,17 +71,17 @@ sources = arch_sources + platform_sources + sources
 
 # Link the bootloader.
 env.Program('loader.elf', map(env.Object, sources), LINKFLAGS = env['LINKFLAGS'] + [
-	'-Wl,-T,$LDSCRIPT',
-	'-Wl,--build-id=none',
-	'-Wl,-Map,${TARGET.dir}/loader.map',
+    '-Wl,-T,$LDSCRIPT',
+    '-Wl,--build-id=none',
+    '-Wl,-Map,${TARGET.dir}/loader.map',
 ])
 Depends('loader.elf', env['LDSCRIPT'])
 
 # Generate various information files and the stripped boot loader image.
 target = env.Command(['loader', 'loader.lst', 'loader.rde', 'loader.sym'], 'loader.elf', [
-	Action('$OBJCOPY -O binary --strip-all $SOURCE ${TARGETS[0]}', '$GENCOMSTR'),
-	Action('$OBJDUMP -d $SOURCE > ${TARGETS[1]}', None),
-	Action('$READELF -a $SOURCE > ${TARGETS[2]}', None),
-	Action('$NM -C $SOURCE | sort > ${TARGETS[3]}', None),
+    Action('$OBJCOPY -O binary --strip-all $SOURCE ${TARGETS[0]}', '$GENCOMSTR'),
+    Action('$OBJDUMP -d $SOURCE > ${TARGETS[1]}', None),
+    Action('$READELF -a $SOURCE > ${TARGETS[2]}', None),
+    Action('$NM -C $SOURCE | sort > ${TARGETS[3]}', None),
 ])
 defaults.append(target)

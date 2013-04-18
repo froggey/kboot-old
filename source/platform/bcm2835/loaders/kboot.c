@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Alex Smith
+ * Copyright (C) 2013 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,40 +16,20 @@
 
 /**
  * @file
- * @brief		OMAP3 platform startup code.
+ * @brief		BCM2835 platform KBoot loader.
  */
 
-#include <arm/atag.h>
+#include <lib/string.h>
+#include <lib/utility.h>
 
-#include <omap3/omap3.h>
-#include <omap3/uart.h>
+#include <loaders/kboot.h>
 
-#include <loader.h>
+#include <config.h>
 #include <memory.h>
-#include <tar.h>
+#include <ui.h>
 
-extern void platform_init(atag_t *atags);
-
-/** Main function of the OMAP3 loader.
- * @param atags		ATAG list from U-Boot. */
-void platform_init(atag_t *atags) {
-	/* Set up the UART for debug output. */
-	uart_init();
-
-	dprintf("loader: loaded, ATAGs at %p\n", atags);
-
-	/* Initialize the architecture. */
-	arch_init(atags);
-
-	/* The boot image is passed to us as an initial ramdisk. */
-	ATAG_ITERATE(tag, ATAG_INITRD2) {
-		tar_mount((void *)tag->initrd.start, tag->initrd.size);
-		break;
-	}
-
-	/* Initialize hardware. */
-	memory_init();
-
-	/* Call the main function. */
-	loader_main();
+/** Perform platform-specific setup for a KBoot kernel.
+ * @param loader	KBoot loader data structure. */
+void kboot_platform_setup(kboot_loader_t *loader) {
+	/* Nothing happens. */
 }

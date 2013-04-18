@@ -19,23 +19,23 @@ import os
 Import('env', 'config')
 
 if config['PLATFORM'] == 'pc':
-	targets = [
-		('32', ['-m32'], ['-m32'], [
-			'../3rdparty/compiler-rt/i386/udivdi3.S',
-			'../3rdparty/compiler-rt/i386/umoddi3.S',
-		]),
-		('64', ['-m64', '-mcmodel=kernel'], ['-m64'], [])
-	]
+    targets = [
+        ('32', ['-m32'], ['-m32'], [
+            '../3rdparty/compiler-rt/i386/udivdi3.S',
+            '../3rdparty/compiler-rt/i386/umoddi3.S',
+        ]),
+        ('64', ['-m64', '-mcmodel=kernel'], ['-m64'], [])
+    ]
 elif config['PLATFORM'] == 'omap3':
-	targets = [
-		('', [], [], [
-			'../3rdparty/compiler-rt/arm/aeabi_uldivmod.S',
-			'../3rdparty/compiler-rt/arm/udivsi3.S',
-			'../3rdparty/compiler-rt/arm/umodsi3.S',
-			'../3rdparty/compiler-rt/udivmoddi4.c',
-			'../3rdparty/compiler-rt/umoddi3.c',
-		])
-	]
+    targets = [
+        ('', [], [], [
+            '../3rdparty/compiler-rt/arm/aeabi_uldivmod.S',
+            '../3rdparty/compiler-rt/arm/udivsi3.S',
+            '../3rdparty/compiler-rt/arm/umodsi3.S',
+            '../3rdparty/compiler-rt/udivmoddi4.c',
+            '../3rdparty/compiler-rt/umoddi3.c',
+        ])
+    ]
 elif config['PLATFORM'] == 'bcm2835':
     targets = [
         ('', [], [], [
@@ -52,27 +52,27 @@ else:
 
 # List of our own sources.
 sources = [
-	'%s/console.c' % (config['PLATFORM']),
-	'main.c',
-	'support.c',
-	'fb.c',
-	'font.c',
-	'../source/lib/printf.c',
-	'../source/lib/string.c',
+    '%s/console.c' % (config['PLATFORM']),
+    'main.c',
+    'support.c',
+    'fb.c',
+    'font.c',
+    '../source/lib/printf.c',
+    '../source/lib/string.c',
 ]
 
 # Build test kernel for each supported configuration.
 for (target, ccflags, linkflags, extra_sources) in targets:
-	ldscript = env.LDScript('link%s.ld' % (target),
-		'link-%s%s.ld.in' % (config['PLATFORM'], target))
-	ccflags += [x for x in env['CCFLAGS'] if x not in ['-m32', '-m64']]
-	linkflags += [x for x in env['LINKFLAGS'] if x not in ['-m32', '-m64']] + [
-		"-Wl,-T,${File('link%s.ld')}" % target]
+    ldscript = env.LDScript('link%s.ld' % (target),
+        'link-%s%s.ld.in' % (config['PLATFORM'], target))
+    ccflags += [x for x in env['CCFLAGS'] if x not in ['-m32', '-m64']]
+    linkflags += [x for x in env['LINKFLAGS'] if x not in ['-m32', '-m64']] + [
+        "-Wl,-T,${File('link%s.ld')}" % target]
 
-	env.Program('test%s.elf' % (target),
-		map(lambda x: env.Object('%s%s.o'
-			% (os.path.splitext(os.path.basename(str(x)))[0], target), x,
-			CCFLAGS = ccflags), map(File, sources + extra_sources)),
-		LINKFLAGS = linkflags)
-	Depends('test%s.elf' % target, ldscript)
-	Alias('test', File('test%s.elf' % target))
+    env.Program('test%s.elf' % (target),
+        map(lambda x: env.Object('%s%s.o'
+            % (os.path.splitext(os.path.basename(str(x)))[0], target), x,
+            CCFLAGS = ccflags), map(File, sources + extra_sources)),
+        LINKFLAGS = linkflags)
+    Depends('test%s.elf' % target, ldscript)
+    Alias('test', File('test%s.elf' % target))

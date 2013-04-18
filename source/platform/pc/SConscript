@@ -18,38 +18,38 @@ Import('env', 'defaults', 'config')
 from util import FeatureSources
 
 sources = FeatureSources(config, [
-	'loaders/chainload.c',
-	'loaders/enter.S',
-	('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
-	('KBOOT_LOADER_LINUX', 'loaders/linux.c'),
+    'loaders/chainload.c',
+    'loaders/enter.S',
+    ('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
+    ('KBOOT_LOADER_LINUX', 'loaders/linux.c'),
 
-	'bios.S',
-	'console.c',
-	'disk.c',
-	'memory.c',
-	'multiboot.c',
-	'platform.c',
-	'pxe.c',
-	'start.S',
-	'vbe.c',
+    'bios.S',
+    'console.c',
+    'disk.c',
+    'memory.c',
+    'multiboot.c',
+    'platform.c',
+    'pxe.c',
+    'start.S',
+    'vbe.c',
 ])
 
 # Build the stage 1 loaders.
 stage1s = ['cdboot', 'pxeboot']
 if config['KBOOT_FS_EXT2']:
-	stage1s += ['ext2boot']
+    stage1s += ['ext2boot']
 for f in stage1s:
-	env.Program('stage1/%s.elf' % (f), 'stage1/%s.S' % (f), LIBS = [], LINKFLAGS = env['LINKFLAGS'] + [
-		'-Wl,-T,${SOURCE.srcdir}/stage1.ld',
-		'-Wl,-N',
-		'-Wl,--build-id=none',
-	])
-	Depends('stage1/%s.elf' % (f), File('stage1/stage1.ld'))
-	target = env.Command('stage1/%s' % (f), 'stage1/%s.elf' % (f), [
-		Action("$OBJCOPY -O binary --strip-all -R '.note.*' -R .comment $SOURCE $TARGET", '$GENCOMSTR'),
-		Action('$OBJDUMP -d -m i386 -M i8086 $SOURCE > ${TARGET}.lst', None),
-	])
-	defaults.append(target)
+    env.Program('stage1/%s.elf' % (f), 'stage1/%s.S' % (f), LIBS = [], LINKFLAGS = env['LINKFLAGS'] + [
+        '-Wl,-T,${SOURCE.srcdir}/stage1.ld',
+        '-Wl,-N',
+        '-Wl,--build-id=none',
+    ])
+    Depends('stage1/%s.elf' % (f), File('stage1/stage1.ld'))
+    target = env.Command('stage1/%s' % (f), 'stage1/%s.elf' % (f), [
+        Action("$OBJCOPY -O binary --strip-all -R '.note.*' -R .comment $SOURCE $TARGET", '$GENCOMSTR'),
+        Action('$OBJDUMP -d -m i386 -M i8086 $SOURCE > ${TARGET}.lst', None),
+    ])
+    defaults.append(target)
 
 # Set the linker script path.
 env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')
