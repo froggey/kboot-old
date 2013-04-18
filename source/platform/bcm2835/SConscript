@@ -14,17 +14,20 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env')
+Import('env', 'config')
+from util import FeatureSources
 
 # Generic components.
 pl011_sources = SConscript(dirs = ['../generic/pl011'], exports = ['env'])
 
-sources = pl011_sources + map(File, [
-	'gpio.c',
-	'memory.c',
-	'platform.c',
-	'start.S',
-	'uart.c',
+sources = pl011_sources + FeatureSources(config, [
+    ('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
+
+    'gpio.c',
+    'memory.c',
+    'platform.c',
+    'start.S',
+    'uart.c',
 ])
 
 # Set build flags.

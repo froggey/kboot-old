@@ -64,7 +64,7 @@ typedef struct kboot_loader {
 typedef struct kboot_itag {
 	list_t header;			/**< List header. */
 	uint32_t type;			/**< Type of the tag. */
-} kboot_itag_t;
+} __aligned(8) kboot_itag_t;
 
 /** Iterate over all tags of a certain type in the KBoot image tag list.
  * @note		Hurray for language abuse. */

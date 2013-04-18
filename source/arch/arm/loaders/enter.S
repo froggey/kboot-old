@@ -32,6 +32,12 @@
 #define ENTRY_ARGS_TAGS			20
 #define ENTRY_ARGS_TRAMPOLINE		24
 
+#if __ARM_ARCH == 6
+# define ISB	mcr	p15, 0, r0, c7, c5, 4
+#else
+# define ISB	isb
+#endif
+
 /** Enter an ARM KBoot kernel.
  * @param args		Entry arguments structure. */
 FUNCTION_START(kboot_arch_enter32)
@@ -62,7 +68,7 @@ FUNCTION_START(kboot_arch_enter32)
 	/* Enable the MMU by setting SCTLR.M to 1. */
 	orr	r4, r4, #(1<<0)
 	mcr	p15, 0, r4, c1, c0, 0
-	isb
+	ISB
 
 	/* Calculate the trampoline address. */
 	ldr	r4, [r0, #ENTRY_ARGS_VIRT]
@@ -73,7 +79,7 @@ SYMBOL(kboot_trampoline32)
 	/* Write the main L1 table address to TTBR0. */
 	ldr	r4, [r0, #ENTRY_ARGS_KERNEL_TTBR]
 	mcr	p15, 0, r4, c2, c0, 0
-	isb
+	ISB
 
 	/* Set the stack pointer. */
 	ldr	sp, [r0, #ENTRY_ARGS_SP]

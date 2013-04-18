@@ -22,6 +22,7 @@
 #include <arch/page.h>
 
 #include <bcm2835/bcm2835.h>
+#include <bcm2835/gpio.h>
 #include <bcm2835/uart.h>
 
 #include <pl011/pl011.h>
@@ -29,9 +30,14 @@
 #include "../test.h"
 
 KBOOT_MAPPING(0xC1000000, BCM2835_UART0_BASE, PAGE_SIZE);
+KBOOT_MAPPING(0xC1001000, BCM2835_GPIO_BASE, PAGE_SIZE);
 
 /** Initialize the console.
  * @param tags		Tag list. */
 void console_init(kboot_tag_t *tags) {
+	/* Disable the OK LED (loader sets it on, so we can see if we reach here). */
+	volatile uint32_t *gpio_mapping = (volatile uint32_t *)0xC1001000;
+	gpio_mapping[GPIO_REG_SET0] = 1 << 16;
+
 	pl011_init(0xC1000000, UART0_CLOCK);
 }

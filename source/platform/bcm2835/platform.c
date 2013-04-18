@@ -40,6 +40,8 @@ void platform_init(atag_t *atags) {
 	/* Set up the UART for debug output. */
 	uart_init();
 
+	dprintf("loader: loaded, ATAGs at %p\n", atags);
+
 	/* Initialize the architecture. */
 	arch_init(atags);
 
