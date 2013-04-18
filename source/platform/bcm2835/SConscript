@@ -29,6 +29,7 @@ sources = pl011_sources + map(File, [
 
 # Set build flags.
 env['CCFLAGS'] += ['-mcpu=arm1176jzf-s']
+env['ASFLAGS'] += ['-mcpu=arm1176jzf-s']
 
 # Set the linker script path.
 env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')
