@@ -31,6 +31,7 @@
 typedef struct heap_chunk {
 	list_t header;			/**< Link to chunk list. */
 	size_t size;			/**< Size of chunk including struct (low bit == used). */
+	bool allocated;			/**< Whether the chunk is allocated. */
 } heap_chunk_t;
 
 /** Size of the heap (128KB). */
@@ -42,20 +43,6 @@ static LIST_DECLARE(heap_chunks);
 
 /** List of physical memory ranges. */
 LIST_DECLARE(memory_ranges);
-
-/** Get the size of a heap chunk.
- * @param chunk		Chunk to get size of.
- * @return		Size of chunk. */
-static inline size_t heap_chunk_size(heap_chunk_t *chunk) {
-	return (chunk->size & ~(1<<0));
-}
-
-/** Check whether a heap chunk is free.
- * @param chunk		Chunk to check.
- * @return		Whether chunk is free. */
-static inline bool heap_chunk_free(heap_chunk_t *chunk) {
-	return !(chunk->size & (1<<0));
-}
 
 /** Allocate memory from the heap.
  * @note		An internal error will be raised if heap is full.
@@ -76,13 +63,14 @@ void *kmalloc(size_t size) {
 	if(list_empty(&heap_chunks)) {
 		chunk = (heap_chunk_t *)heap;
 		chunk->size = HEAP_SIZE;
+		chunk->allocated = false;
 		list_init(&chunk->header);
 		list_append(&heap_chunks, &chunk->header);
 	} else {
 		/* Search for a free chunk. */
 		LIST_FOREACH(&heap_chunks, iter) {
 			chunk = list_entry(iter, heap_chunk_t, header);
-			if(heap_chunk_free(chunk) && chunk->size >= total) {
+			if(!chunk->allocated && chunk->size >= total) {
 				break;
 			} else {
 				chunk = NULL;
@@ -103,7 +91,7 @@ void *kmalloc(size_t size) {
 		chunk->size = total;
 	}
 
-	chunk->size |= (1<<0);
+	chunk->allocated = true;
 	return ((char *)chunk + sizeof(heap_chunk_t));
 }
 
@@ -122,7 +110,7 @@ void *krealloc(void *addr, size_t size) {
 		new = kmalloc(size);
 		if(addr) {
 			chunk = (heap_chunk_t *)((char *)addr - sizeof(heap_chunk_t));
-			memcpy(new, addr, MIN(heap_chunk_size(chunk) - sizeof(heap_chunk_t), size));
+			memcpy(new, addr, MIN(chunk->size - sizeof(heap_chunk_t), size));
 			kfree(addr);
 		}
 		return new;
@@ -139,14 +127,14 @@ void kfree(void *addr) {
 
 	/* Get the chunk and free it. */
 	chunk = (heap_chunk_t *)((char *)addr - sizeof(heap_chunk_t));
-	if(heap_chunk_free(chunk))
+	if(!chunk->allocated)
 		internal_error("Double free on address %p", addr);
-	chunk->size &= ~(1<<0);
+	chunk->allocated = false;
 
 	/* Coalesce adjacent free segments. */
 	if(chunk->header.next != &heap_chunks) {
 		adj = list_entry(chunk->header.next, heap_chunk_t, header);
-		if(heap_chunk_free(adj)) {
+		if(!adj->allocated) {
 			assert(adj == (heap_chunk_t *)((char *)chunk + chunk->size));
 			chunk->size += adj->size;
 			list_remove(&adj->header);
@@ -154,7 +142,7 @@ void kfree(void *addr) {
 	}
 	if(chunk->header.prev != &heap_chunks) {
 		adj = list_entry(chunk->header.prev, heap_chunk_t, header);
-		if(heap_chunk_free(adj)) {
+		if(!adj->allocated) {
 			assert(chunk == (heap_chunk_t *)((char *)adj + adj->size));
 			adj->size += chunk->size;
 			list_remove(&chunk->header);
