@@ -363,5 +363,8 @@ void kmain(uint32_t magic, kboot_tag_t *tags) {
 	__asm__ volatile("wbinvd");
 	#endif
 
+	fill_rect(300, 300, 200, 200, 0xff0000);
+	fill_rect(400, 400, 200, 200, 0x00ff00);
+	fill_rect(500, 500, 200, 200, 0x0000ff);
 	while(true);
 }

@@ -48,7 +48,7 @@ extern unsigned char console_font[];
 #define OFFSET(x, y)		((y * video_info->lfb.pitch) + (x * (video_info->lfb.bpp / 8)))
 
 /** Framebuffer information. */
-static kboot_tag_video_t *video_info;
+static kboot_tag_video_t *video_info = NULL;
 
 /** Framebuffer console information. */
 static uint16_t fb_console_cols;
@@ -88,8 +88,11 @@ static void put_pixel(uint16_t x, uint16_t y, uint32_t rgb) {
  * @param width		Width of rectangle.
  * @param height	Height of rectangle.
  * @param rgb		Colour to draw in. */
-static void fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t rgb) {
+void fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t rgb) {
 	uint16_t i, j;
+
+	if(!video_info)
+		return;
 
 	for(i = 0; i < height; i++) {
 		for(j = 0; j < width; j++) {

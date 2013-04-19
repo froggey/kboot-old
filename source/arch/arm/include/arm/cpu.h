@@ -38,4 +38,34 @@
 #define ARM_MODE_ABT		0x17	/**< Abort. */
 #define ARM_MODE_UND		0x1B	/**< Undefined. */
 
+#ifndef __ASM__
+
+/** Execute a data memory barrier. */
+static inline void arm_dmb(void) {
+#if __ARM_ARCH >= 7
+	__asm__ volatile("dmb" ::: "memory");
+#else
+	__asm__ volatile("mcr p15, 0, %0, c7, c10, 5" :: "r"(0) : "memory");
+#endif
+}
+
+/** Execute a data synchronization barrier. */
+static inline void arm_dsb(void) {
+#if __ARM_ARCH >= 7
+	__asm__ volatile("dsb" ::: "memory");
+#else
+	__asm__ volatile("mcr p15, 0, %0, c7, c10, 4" :: "r"(0) : "memory");
+#endif
+}
+
+/** Execute an instruction synchronization barrier. */
+static inline void arm_isb(void) {
+#if __ARM_ARCH >= 7
+	__asm__ volatile("isb" ::: "memory");
+#else
+	__asm__ volatile("mcr p15, 0, %0, c7, c5, 4" :: "r"(0) : "memory");
+#endif
+}
+
+#endif /* __ASM__ */
 #endif /* __ARM_CPU_H */

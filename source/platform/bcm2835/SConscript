@@ -23,7 +23,9 @@ pl011_sources = SConscript(dirs = ['../generic/pl011'], exports = ['env'])
 sources = pl011_sources + FeatureSources(config, [
     ('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
 
+    'fb.c',
     'gpio.c',
+    'mbox.c',
     'memory.c',
     'platform.c',
     'start.S',

@@ -29,6 +29,7 @@
 #define BCM2835_PERIPH_SIZE	0x1000000	/**< Size of peripheral area. */
 
 /** Memory mapped peripheral addresses. */
+#define BCM2835_MBOX0_BASE	(BCM2835_PERIPH_BASE + 0xB880)
 #define BCM2835_GPIO_BASE	(BCM2835_PERIPH_BASE + 0x200000)
 #define BCM2835_UART0_BASE	(BCM2835_PERIPH_BASE + 0x201000)
 

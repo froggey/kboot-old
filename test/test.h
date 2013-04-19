@@ -60,6 +60,7 @@ typedef Elf32_Addr elf_addr_t;
 /** Get a virtual address from a physical address. */
 #define P2V(phys)		((ptr_t)(phys - PHYS_MAP_OFFSET) + PHYS_MAP_BASE)
 
+extern void fill_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t rgb);
 extern void fb_init(kboot_tag_video_t *tag);
 
 extern void console_init(kboot_tag_t *tags);

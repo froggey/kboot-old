@@ -32,10 +32,10 @@
 #define ENTRY_ARGS_TAGS			20
 #define ENTRY_ARGS_TRAMPOLINE		24
 
-#if __ARM_ARCH == 6
-# define ISB	mcr	p15, 0, r0, c7, c5, 4
-#else
+#if __ARM_ARCH >= 7
 # define ISB	isb
+#else
+# define ISB	mcr	p15, 0, r0, c7, c5, 4
 #endif
 
 /** Enter an ARM KBoot kernel.
