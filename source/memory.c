@@ -86,6 +86,7 @@ void *kmalloc(size_t size) {
 	if(chunk->size >= (total + sizeof(heap_chunk_t))) {
 		new = (heap_chunk_t *)((char *)chunk + total);
 		new->size = chunk->size - total;
+		new->allocated = false;
 		list_init(&new->header);
 		list_add_after(&chunk->header, &new->header);
 		chunk->size = total;

@@ -76,7 +76,6 @@ void mbox_write(uint8_t channel, uint32_t data) {
 			break;
 
 		value = mbox_mapping[MBOX_REG_READ];
-		arm_dmb();
 	}
 
 	while(true) {
