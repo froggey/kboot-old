@@ -75,13 +75,14 @@ static void zlib_free(void *data, void *addr) {
  * @param handle	Handle to file to open. */
 void decompress_open(file_handle_t *handle) {
 	decompress_state_t *state;
-	uint8_t buf[4];
+	uint8_t id[4];
+	uint32_t size;
 
-	if(!handle->mount->type->read(handle, buf, sizeof(buf), 0))
+	if(!handle->mount->type->read(handle, id, sizeof(id), 0))
 		return;
 
 	/* Check for gzip identification information. */
-	if(buf[0] != GZIP_MAGIC1 || buf[1] != GZIP_MAGIC2 || buf[2] != GZIP_DEFLATE)
+	if(id[0] != GZIP_MAGIC1 || id[1] != GZIP_MAGIC2 || id[2] != GZIP_DEFLATE)
 		return;
 
 	/* Allocate a state structure. */
@@ -91,12 +92,12 @@ void decompress_open(file_handle_t *handle) {
 
 	/* Get the original file size. This is stored in the last 4 bytes of
 	 * the file (ISIZE field). */
-	if(!handle->mount->type->read(handle, buf, sizeof(buf), state->input_size - 4)) {
+	if(!handle->mount->type->read(handle, &size, sizeof(size), state->input_size - 4)) {
 		kfree(state);
 		return;
 	}
 
-	state->output_size = le32_to_cpu(*(uint32_t *)buf);
+	state->output_size = le32_to_cpu(size);
 	state->output_offset = 0;
 
 	/* Store the state so that the FS code will direct reads through us. */
