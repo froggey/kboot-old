@@ -576,7 +576,10 @@ been loaded.
     
     	kboot_paddr_t addr;
     	uint32_t      size;
+    	uint32_t      name_size;
     } kboot_tag_module_t;
+
+This structure is followed by a variable length `name` field.
 
 Fields:
 
@@ -584,6 +587,9 @@ Fields:
    page size. The data is not mapped into the virtual address space. The memory
    containing module data is marked as `KBOOT_MEMORY_MODULES`.
  * `size`: Size of the module data, in bytes.
+ * `name_size`: Length of the name string, including null terminator.
+ * `name`: Name of the module. This is the base name of the file that the module
+   was loaded from.
 
 ### `KBOOT_TAG_VIDEO` (`7`)
 

@@ -30,7 +30,7 @@
 /** Structure representing an area on the heap. */
 typedef struct heap_chunk {
 	list_t header;			/**< Link to chunk list. */
-	size_t size;			/**< Size of chunk including struct (low bit == used). */
+	size_t size;			/**< Size of chunk including struct. */
 	bool allocated;			/**< Whether the chunk is allocated. */
 } heap_chunk_t;
 

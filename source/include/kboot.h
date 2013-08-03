@@ -123,6 +123,7 @@ typedef struct kboot_tag_module {
 
 	kboot_paddr_t addr;			/**< Address of the module. */
 	uint32_t size;				/**< Size of the module. */
+	uint32_t name_size;			/**< Length of name string, including null terminator. */
 } kboot_tag_module_t;
 
 /** Structure describing an RGB colour. */

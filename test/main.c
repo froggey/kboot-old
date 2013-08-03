@@ -126,9 +126,14 @@ static void dump_pagetables_tag(kboot_tag_pagetables_t *tag) {
 
 /** Dump a module tag. */
 static void dump_module_tag(kboot_tag_module_t *tag) {
+	const char *name;
 	kprintf("KBOOT_TAG_MODULE:\n");
-	kprintf("  addr = 0x%" PRIx64 "\n", tag->addr);
-	kprintf("  size = %" PRIu32 "\n", tag->size);
+	kprintf("  addr      = 0x%" PRIx64 "\n", tag->addr);
+	kprintf("  size      = %" PRIu32 "\n", tag->size);
+	kprintf("  name_size = %" PRIu32 "\n", tag->name_size);
+
+	name = (const char *)ROUND_UP((ptr_t)tag + sizeof(kboot_tag_module_t), 8);
+	kprintf("  name      = `%s'\n", name);
 }
 
 /** Dump a video tag. */

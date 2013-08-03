@@ -172,6 +172,7 @@ static void load_module(kboot_loader_t *loader, file_handle_t *handle, const cha
 	kboot_tag_module_t *tag;
 	phys_ptr_t addr;
 	offset_t size;
+	uint32_t name_size;
 
 	if(handle->directory)
 		return;
@@ -185,10 +186,16 @@ static void load_module(kboot_loader_t *loader, file_handle_t *handle, const cha
 	if(!file_read(handle, (void *)((ptr_t)addr), size, 0))
 		boot_error("Could not read module `%s'", name);
 
+	name_size = strlen(name) + 1;
+
 	/* Add the module to the tag list. */
-	tag = kboot_allocate_tag(loader, KBOOT_TAG_MODULE, sizeof(*tag));
+	tag = kboot_allocate_tag(loader, KBOOT_TAG_MODULE, ROUND_UP(sizeof(*tag), 8)
+		+ name_size);
 	tag->addr = addr;
 	tag->size = size;
+	tag->name_size = name_size;
+
+	memcpy((char *)tag + ROUND_UP(sizeof(*tag), 8), name, name_size);
 
 	dprintf("kboot: loaded module %s to 0x%" PRIxPHYS " (size: %" PRIu64 ")\n",
 		name, addr, size);
