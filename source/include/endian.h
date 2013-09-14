@@ -67,7 +67,7 @@ static inline uint64_t byte_order_swap64(uint64_t val) {
 	return out;
 }
 
-#if ARCH_LITTLE_ENDIAN
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 # define be16_to_cpu(v)		byte_order_swap16((v))
 # define be32_to_cpu(v)		byte_order_swap32((v))
 # define be64_to_cpu(v)		byte_order_swap64((v))
@@ -80,7 +80,7 @@ static inline uint64_t byte_order_swap64(uint64_t val) {
 # define cpu_to_le16(v)		(v)
 # define cpu_to_le32(v)		(v)
 # define cpu_to_le64(v)		(v)
-#elif ARCH_BIG_ENDIAN
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 # define be16_to_cpu(v)		(v)
 # define be32_to_cpu(v)		(v)
 # define be64_to_cpu(v)		(v)
@@ -94,7 +94,7 @@ static inline uint64_t byte_order_swap64(uint64_t val) {
 # define cpu_to_le32(v)		byte_order_swap32((v))
 # define cpu_to_le64(v)		byte_order_swap64((v))
 #else
-# error "Neither ARCH_LITTLE_ENDIAN or ARCH_BIG_ENDIAN is defined"
+# error "__BYTE_ORDER__ is not defined"
 #endif
 
 #endif /* __ENDIAN_H */
