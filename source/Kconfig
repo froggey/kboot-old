@@ -91,12 +91,18 @@ endmenu
 if ARCH_ARM
 source "arch/arm/Kconfig"
 endif
+if ARCH_MIPS
+source "arch/mips/Kconfig"
+endif
 if ARCH_X86
 source "arch/x86/Kconfig"
 endif
 
 if PLATFORM_BCM2835
 source "platform/bcm2835/Kconfig"
+endif
+if PLATFORM_MALTA
+source "platform/malta/Kconfig"
 endif
 if PLATFORM_OMAP3
 source "platform/omap3/Kconfig"

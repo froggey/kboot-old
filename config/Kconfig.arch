@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011 Alex Smith
+# Copyright (C) 2011-2013 Alex Smith
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -14,17 +14,31 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+config LITTLE_ENDIAN
+        bool
+
+config BIG_ENDIAN
+        bool
+
 choice
 	prompt "Architecture"
 	default ARCH_X86
 
 config ARCH_ARM
 	bool "ARM"
+	select LITTLE_ENDIAN
 	help
 	  Target the built system to ARM processors.
 
+config ARCH_MIPS
+	bool "MIPS"
+	help
+	  Target the built system to MIPS processors. Endianness is determined
+	  by the platform type selected.
+
 config ARCH_X86
 	bool "x86"
+	select LITTLE_ENDIAN
 	help
 	  Target the built system to x86 CPUs (will support both 32- and 64-bit
 	  kernels).
@@ -33,10 +47,17 @@ endchoice
 
 config ARCH
         string
-        default "x86" if ARCH_X86
         default "arm" if ARCH_ARM
+        default "mips" if ARCH_MIPS
+        default "x86" if ARCH_X86
 
 # For compatibility with main Kiwi build system.
 config BOOTARCH
 	string
 	default ARCH
+
+config ARCH_CCFLAGS
+        string
+	default "-EL" if ARCH_MIPS && LITTLE_ENDIAN
+	default "-EB" if ARCH_MIPS && BIG_ENDIAN
+	default ""
