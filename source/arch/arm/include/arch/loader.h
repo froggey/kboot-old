@@ -22,9 +22,6 @@
 #ifndef __ARCH_LOADER_H
 #define __ARCH_LOADER_H
 
-/** ARM is little-endian (LSB first). */
-#define ARCH_LITTLE_ENDIAN	1
-
 struct atag;
 
 extern void arch_init(struct atag *atags);

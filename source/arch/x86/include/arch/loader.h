@@ -22,9 +22,6 @@
 #ifndef __ARCH_LOADER_H
 #define __ARCH_LOADER_H
 
-/** x86 is little-endian (LSB first). */
-#define ARCH_LITTLE_ENDIAN	1
-
 /** x86 uses 64-bit physical addresses. */
 #define ARCH_PHYSICAL_64BIT	1
 
