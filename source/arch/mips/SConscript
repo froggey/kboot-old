@@ -20,6 +20,13 @@ from util import FeatureSources
 sources = FeatureSources(config, [
 ])
 
+# Add required support sources from compiler-rt.
+sources += map(lambda x : File('../../lib/runtime/' + x), [
+    'udivmoddi4.c',
+    'udivdi3.c',
+    'umoddi3.c',
+])
+
 # Set the linker script path.
 env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')
 

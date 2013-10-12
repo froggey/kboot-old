@@ -32,15 +32,9 @@
 #endif
 
 /* Include the standard compiler builtin headers we use functionality from. */
-#include <limits.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <float.h>
+#include <types.h>
 
 /* Include the commonly used internal type definitions. */
 #include "int_types.h"
-
-/* Include internal utility function declarations. */
-//#include "int_util.h"
 
 #endif /* INT_LIB_H */

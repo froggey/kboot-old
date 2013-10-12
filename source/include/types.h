@@ -47,4 +47,7 @@ typedef int64_t timeout_t;		/**< Type used to store a time value in microseconds
 #define INT64_MAX	9223372036854775807ll
 #define UINT64_MAX	18446744073709551615ull
 
+/** Number of bits in a char. */
+#define CHAR_BIT	8
+
 #endif /* __TYPES_H */
