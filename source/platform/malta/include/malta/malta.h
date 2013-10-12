@@ -16,37 +16,16 @@
 
 /**
  * @file
- * @brief		MIPS Malta platform startup code.
+ * @brief		MIPS Malta core definitions.
  */
 
-#include <malta/console.h>
+#ifndef __MALTA_MALTA_H
+#define __MALTA_MALTA_H
 
-#include <loader.h>
-#include <memory.h>
+/** Physical address of I/O port memory mapping.
+ * @todo		I think this can differ depending on which system
+ *			controller is being used, and should be decided on at
+ *			runtime. */
+#define MALTA_IO_PORT_BASE	0x18000000
 
-extern void platform_init(int argc, char **argv, char **envp, unsigned memsize);
-
-/** Main function of the Malta loader.
- * @param argc		Argument count.
- * @param argv		Argument array.
- * @param envp		Environment array.
- * @param memsize	Memory size. */
-void platform_init(int argc, char **argv, char **envp, unsigned memsize) {
-	/* Set up console output. */
-	console_init();
-
-	dprintf("Hello, World! argc = %d, argv = %p, envp = %p, memsize = 0x%x\n",
-		argc, argv, envp, memsize);
-
-	for(int i = 0; i < argc; i++) {
-		dprintf(" argv[%d] = '%s'\n", i, argv[i]);
-	}
-
-	int i = 0;
-	while(envp[i]) {
-		dprintf(" envp[%d] = '%s'\n", i, envp[i]);
-		i++;
-	}
-
-	while(true) {}
-}
+#endif /* __MALTA_MALTA_H */

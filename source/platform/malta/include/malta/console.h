@@ -16,37 +16,15 @@
 
 /**
  * @file
- * @brief		MIPS Malta platform startup code.
+ * @brief		Malta console definitions.
  */
 
-#include <malta/console.h>
+#ifndef __PC_CONSOLE_H
+#define __PC_CONSOLE_H
 
-#include <loader.h>
-#include <memory.h>
+/** Define the serial port to use. */
+#define SERIAL_PORT		0x3f8
 
-extern void platform_init(int argc, char **argv, char **envp, unsigned memsize);
+extern void console_init(void);
 
-/** Main function of the Malta loader.
- * @param argc		Argument count.
- * @param argv		Argument array.
- * @param envp		Environment array.
- * @param memsize	Memory size. */
-void platform_init(int argc, char **argv, char **envp, unsigned memsize) {
-	/* Set up console output. */
-	console_init();
-
-	dprintf("Hello, World! argc = %d, argv = %p, envp = %p, memsize = 0x%x\n",
-		argc, argv, envp, memsize);
-
-	for(int i = 0; i < argc; i++) {
-		dprintf(" argv[%d] = '%s'\n", i, argv[i]);
-	}
-
-	int i = 0;
-	while(envp[i]) {
-		dprintf(" envp[%d] = '%s'\n", i, envp[i]);
-		i++;
-	}
-
-	while(true) {}
-}
+#endif /* __PC_CONSOLE_H */
