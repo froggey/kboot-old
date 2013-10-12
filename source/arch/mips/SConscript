@@ -33,8 +33,8 @@ env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')
 
 # Set build flags.
 endian_flag = '-EB' if config['BIG_ENDIAN'] else '-EL'
-env['CCFLAGS'] += [endian_flag, '-mabi=32', '-G', '0', '-mno-abicalls', '-fno-pic']
-env['ASFLAGS'] += [endian_flag, '-mno-abicalls']
+env['CCFLAGS'] += [endian_flag, '-mabi=32', '-mno-abicalls', '-G', '0', '-fno-pic']
+env['ASFLAGS'] += [endian_flag, '-mabi=32', '-mno-abicalls']
 env['LINKFLAGS'] += [endian_flag]
 
 Return('sources')

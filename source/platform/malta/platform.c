@@ -16,13 +16,19 @@
 
 /**
  * @file
- * @brief		MIPS Malta platform core definitions.
+ * @brief		MIPS Malta platform startup code.
  */
 
-#ifndef __PLATFORM_LOADER_H
-#define __PLATFORM_LOADER_H
+#include <loader.h>
+#include <memory.h>
 
-/** Load address (start of RAM, KSEG0). */
-#define LOADER_LOAD_ADDR		0x80010000
+extern void platform_init(int argc, char **argv, char **envp, unsigned memsize);
 
-#endif /* __PLATFORM_LOADER_H */
+/** Main function of the Malta loader.
+ * @param argc		Argument count.
+ * @param argv		Argument array.
+ * @param envp		Environment array.
+ * @param memsize	Memory size. */
+void platform_init(int argc, char **argv, char **envp, unsigned memsize) {
+	while(true) {}
+}
