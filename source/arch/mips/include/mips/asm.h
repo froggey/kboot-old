@@ -16,62 +16,34 @@
 
 /**
  * @file
- * @brief		MIPS loader linker script.
+ * @brief		MIPS assembly code definitions.
  */
 
-#include <arch/page.h>
+#ifndef __MIPS_ASM_H
+#define __MIPS_ASM_H
 
-#include <platform/loader.h>
+#ifndef __ASM__
+# error "What are you doing?"
+#endif
 
-OUTPUT_ARCH("mips")
+/** Macro to define the beginning of a global function. */
+#define FUNCTION_START(name)		\
+	.global name; \
+	.type name, @function; \
+	name:
 
-SECTIONS {
-	. = LOADER_LOAD_ADDR;
-	__start = .;
+/** Macro to define the beginning of a private function. */
+#define PRIVATE_FUNCTION_START(name)	\
+	.type name, @function; \
+	name:
 
-	.text : {
-		__text_start = .;
-		*(.init.text)
-		*(.text)
-		*(.text.*)
-		__text_end = .;
-	}
+/** Macro to define the end of a function. */
+#define FUNCTION_END(name)		\
+	.size name, . - name
 
-	.rodata ALIGN(32) : {
-		__rodata_start = .;
-		*(.rodata)
-		*(.rodata.*)
-		__rodata_end = .;
-	}
+/** Macro to define a global symbol. */
+#define SYMBOL(name)			\
+	.global name; \
+	name:
 
-	.data ALIGN(32) : {
-		__data_start = .;
-		*(.data)
-		*(.data.*)
-
-		__builtins_start = .;
-		*(.builtins)
-		__builtins_end = .;
-
-		__data_end = .;
-	}
-
-	.bss ALIGN(32) : {
-		__bss_start = .;
-		*(.bss)
-		*(.bss.*)
-		*(COMMON)
-		__bss_end = .;
-	}
-
-	. = ALIGN(PAGE_SIZE);
-	__end = .;
-
-	/DISCARD/ : {
-		*(.note.*)
-		*(.gnu.*)
-		*(.comment*)
-		*(.eh_frame*)
-		*(.reginfo)
-	}
-}
+#endif /* __MIPS_ASM_H */

@@ -16,62 +16,13 @@
 
 /**
  * @file
- * @brief		MIPS loader linker script.
+ * @brief		MIPS Malta memory management.
  */
 
-#include <arch/page.h>
+#include <loader.h>
+#include <memory.h>
 
-#include <platform/loader.h>
-
-OUTPUT_ARCH("mips")
-
-SECTIONS {
-	. = LOADER_LOAD_ADDR;
-	__start = .;
-
-	.text : {
-		__text_start = .;
-		*(.init.text)
-		*(.text)
-		*(.text.*)
-		__text_end = .;
-	}
-
-	.rodata ALIGN(32) : {
-		__rodata_start = .;
-		*(.rodata)
-		*(.rodata.*)
-		__rodata_end = .;
-	}
-
-	.data ALIGN(32) : {
-		__data_start = .;
-		*(.data)
-		*(.data.*)
-
-		__builtins_start = .;
-		*(.builtins)
-		__builtins_end = .;
-
-		__data_end = .;
-	}
-
-	.bss ALIGN(32) : {
-		__bss_start = .;
-		*(.bss)
-		*(.bss.*)
-		*(COMMON)
-		__bss_end = .;
-	}
-
-	. = ALIGN(PAGE_SIZE);
-	__end = .;
-
-	/DISCARD/ : {
-		*(.note.*)
-		*(.gnu.*)
-		*(.comment*)
-		*(.eh_frame*)
-		*(.reginfo)
-	}
+/** Detect memory regions. */
+void platform_memory_detect(void) {
+	internal_error("TODO");
 }

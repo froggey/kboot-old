@@ -18,6 +18,7 @@ Import('env', 'config')
 from util import FeatureSources
 
 sources = FeatureSources(config, [
+    'backtrace.c',
 ])
 
 # Add required support sources from compiler-rt.
@@ -33,7 +34,7 @@ env['LDSCRIPT'] = env.LDScript('link.ld', 'link.ld.in')
 # Set build flags.
 endian_flag = '-EB' if config['BIG_ENDIAN'] else '-EL'
 env['CCFLAGS'] += [endian_flag, '-mabi=32', '-G', '0', '-mno-abicalls', '-fno-pic']
-env['ASFLAGS'] += [endian_flag]
+env['ASFLAGS'] += [endian_flag, '-mno-abicalls']
 env['LINKFLAGS'] += [endian_flag]
 
 Return('sources')

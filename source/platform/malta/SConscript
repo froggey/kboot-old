@@ -18,6 +18,8 @@ Import('env', 'config')
 from util import FeatureSources
 
 sources = FeatureSources(config, [
+    'memory.c',
+    'start.S',
 ])
 
 Return('sources')
