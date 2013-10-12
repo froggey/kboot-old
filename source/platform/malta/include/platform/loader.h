@@ -16,61 +16,13 @@
 
 /**
  * @file
- * @brief		MIPS loader linker script.
+ * @brief		MIPS Malta platform core definitions.
  */
 
-#include <arch/page.h>
+#ifndef __PLATFORM_LOADER_H
+#define __PLATFORM_LOADER_H
 
-#include <platform/loader.h>
+/** Load address (start of RAM, KSEG0). */
+#define LOADER_LOAD_ADDR		0x80001000
 
-OUTPUT_ARCH("mips")
-
-SECTIONS {
-	. = LOADER_LOAD_ADDR;
-	__start = .;
-
-	.text : {
-		__text_start = .;
-		*(.init.text)
-		*(.text)
-		*(.text.*)
-		__text_end = .;
-	}
-
-	.rodata ALIGN(32) : {
-		__rodata_start = .;
-		*(.rodata)
-		*(.rodata.*)
-		__rodata_end = .;
-	}
-
-	.data ALIGN(32) : {
-		__data_start = .;
-		*(.data)
-		*(.data.*)
-
-		__builtins_start = .;
-		*(.builtins)
-		__builtins_end = .;
-
-		__data_end = .;
-	}
-
-	.bss ALIGN(32) : {
-		__bss_start = .;
-		*(.bss)
-		*(.bss.*)
-		*(COMMON)
-		__bss_end = .;
-	}
-
-	. = ALIGN(PAGE_SIZE);
-	__end = .;
-
-	/DISCARD/ : {
-		*(.note.*)
-		*(.gnu.*)
-		*(.comment*)
-		*(.eh_frame*)
-	}
-}
+#endif /* __PLATFORM_LOADER_H */

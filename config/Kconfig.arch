@@ -55,9 +55,3 @@ config ARCH
 config BOOTARCH
 	string
 	default ARCH
-
-config ARCH_CCFLAGS
-        string
-	default "-EL" if ARCH_MIPS && LITTLE_ENDIAN
-	default "-EB" if ARCH_MIPS && BIG_ENDIAN
-	default ""

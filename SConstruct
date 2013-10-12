@@ -115,7 +115,7 @@ env['OBJCOPY'] = config['CROSS_COMPILER'] + 'objcopy'
 env['LD']      = config['CROSS_COMPILER'] + 'ld'
 
 # Set our flags in the environment.
-env['CCFLAGS'] = warning_flags + config['ARCH_CCFLAGS'].split() + [
+env['CCFLAGS'] = warning_flags + [
 	'-gdwarf-2', '-pipe', '-nostdlib', '-nostdinc', '-ffreestanding',
 	'-fno-stack-protector'] + config['EXTRA_CCFLAGS'].split()
 env['CFLAGS'] = ['-std=gnu99']
