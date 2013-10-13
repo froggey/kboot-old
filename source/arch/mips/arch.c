@@ -16,13 +16,12 @@
 
 /**
  * @file
- * @brief		MIPS Malta memory management.
+ * @brief		MIPS architecture initialisation functions.
  */
 
 #include <loader.h>
-#include <memory.h>
 
-/** Detect memory regions. */
-void platform_memory_detect(void) {
-	internal_error("TODO");
+/** Perform early architecture initialisation. */
+void arch_init(void) {
+	/* Nothing happens. */
 }

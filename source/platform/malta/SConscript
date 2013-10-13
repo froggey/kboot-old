@@ -19,7 +19,6 @@ from util import FeatureSources
 
 sources = FeatureSources(config, [
     'console.c',
-    'memory.c',
     'platform.c',
     'start.S',
 ])

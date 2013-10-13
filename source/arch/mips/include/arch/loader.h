@@ -22,6 +22,6 @@
 #ifndef __ARCH_LOADER_H
 #define __ARCH_LOADER_H
 
-
+extern void arch_init(void);
 
 #endif /* __ARCH_LOADER_H */

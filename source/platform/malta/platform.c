@@ -19,6 +19,8 @@
  * @brief		MIPS Malta platform startup code.
  */
 
+#include <lib/utility.h>
+
 #include <malta/console.h>
 
 #include <loader.h>
@@ -33,18 +35,16 @@ void platform_init(int argc, char **argv, char **envp, unsigned memsize) {
 	/* Set up console output. */
 	console_init();
 
-	dprintf("Hello, World! argc = %d, argv = %p, envp = %p, memsize = 0x%x\n",
-		argc, argv, envp, memsize);
+	/* Initialize the architecture. */
+	arch_init();
 
-	for(int i = 0; i < argc; i++) {
-		dprintf(" argv[%d] = '%s'\n", i, argv[i]);
-	}
-
-	int i = 0;
-	while(envp[i]) {
-		dprintf(" envp[%d] = '%s'\n", i, envp[i]);
-		i++;
-	}
+	/* Initialize the memory manager. The low 1MB is mostly reserved, but
+	 * the YAMON code is marked as internal so that it can be freed once we
+	 * enter the kernel. */
+	phys_memory_add(0x1000, 0xef000, PHYS_MEMORY_INTERNAL);
+	phys_memory_add(0x100000, ROUND_DOWN(memsize, PAGE_SIZE) - 0x100000,
+		PHYS_MEMORY_FREE);
+	memory_init();
 
 	while(true) {}
 }
