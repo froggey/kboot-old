@@ -125,9 +125,9 @@ static void FUNC(load_kernel)(kboot_loader_t *loader, kboot_itag_load_t *load) {
 		if(load->flags & KBOOT_LOAD_FIXED) {
 			allocate_segment(loader, load, phdrs[i].p_vaddr, phdrs[i].p_paddr,
 				phdrs[i].p_memsz, i);
-			dest = phdrs[i].p_paddr;
+			dest = P2V(phdrs[i].p_paddr);
 		} else {
-			dest = phys + (phdrs[i].p_vaddr - virt_base);
+			dest = P2V(phys + (phdrs[i].p_vaddr - virt_base));
 		}
 
 		if(!file_read(loader->kernel, (void *)dest, phdrs[i].p_filesz, phdrs[i].p_offset))
@@ -164,7 +164,7 @@ static void FUNC(load_sections)(kboot_loader_t *loader) {
 	if(!file_read(loader->kernel, tag->sections, size, ehdr.e_shoff))
 		boot_error("Could not read kernel image");
 
-	core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
+	core = (kboot_tag_core_t *)P2V(loader->tags_phys);
 
 	/* Iterate through the headers and load in additional loadable sections. */
 	for(i = 0; i < ehdr.e_shnum; i++) {
@@ -186,7 +186,7 @@ static void FUNC(load_sections)(kboot_loader_t *loader) {
 		shdr->sh_addr = addr;
 
 		/* Load in the section data. */
-		dest = (void *)((ptr_t)addr);
+		dest = (void *)P2V(addr);
 		if(shdr->sh_type == ELF_SHT_NOBITS) {
 			memset(dest, 0, shdr->sh_size);
 		} else {

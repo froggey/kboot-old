@@ -51,8 +51,9 @@ void platform_init(atag_t *atags) {
 	 * Additionally mark the region between the start of SDRAM and our load
 	 * address as internal, as U-Boot puts things like the ATAG list
 	 * here. */
-	phys_memory_add(OMAP3_SDRAM_BASE, ROUND_DOWN((ptr_t)__start, PAGE_SIZE)
-		- OMAP3_SDRAM_BASE, PHYS_MEMORY_INTERNAL);
+	phys_memory_add(OMAP3_SDRAM_BASE,
+		ROUND_DOWN(V2P((ptr_t)__start), PAGE_SIZE) - OMAP3_SDRAM_BASE,
+		PHYS_MEMORY_INTERNAL);
 
 	/* Initialize the memory manager. */
 	memory_init();

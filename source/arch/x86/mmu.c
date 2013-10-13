@@ -37,7 +37,7 @@ static phys_ptr_t allocate_structure(mmu_context_t *ctx) {
 
 	phys_memory_alloc(PAGE_SIZE, PAGE_SIZE, 0, 0x100000000ULL,
 		ctx->phys_type, 0, &addr);
-	memset((void *)((ptr_t)addr), 0, PAGE_SIZE);
+	memset((void *)P2V(addr), 0, PAGE_SIZE);
 	return addr;
 }
 
@@ -50,7 +50,7 @@ static uint64_t *get_pdir64(mmu_context_t *ctx, uint64_t virt) {
 	phys_ptr_t addr;
 	int pml4e, pdpe;
 
-	pml4 = (uint64_t *)ctx->cr3;
+	pml4 = (uint64_t *)P2V(ctx->cr3);
 
 	/* Get the page directory pointer number. A PDP covers 512GB. */
 	pml4e = (virt & 0x0000FFFFFFFFF000) / 0x8000000000;
@@ -60,7 +60,7 @@ static uint64_t *get_pdir64(mmu_context_t *ctx, uint64_t virt) {
 	}
 
 	/* Get the PDP from the PML4. */
-	pdp = (uint64_t *)((ptr_t)(pml4[pml4e] & 0x000000FFFFFFF000LL));
+	pdp = (uint64_t *)P2V((ptr_t)(pml4[pml4e] & 0x000000FFFFFFF000LL));
 
 	/* Get the page directory number. A page directory covers 1GB. */
 	pdpe = (virt % 0x8000000000) / 0x40000000;
@@ -70,7 +70,7 @@ static uint64_t *get_pdir64(mmu_context_t *ctx, uint64_t virt) {
 	}
 
 	/* Return the page directory address. */
-	return (uint64_t *)((ptr_t)(pdp[pdpe] & 0x000000FFFFFFF000LL));
+	return (uint64_t *)P2V((ptr_t)(pdp[pdpe] & 0x000000FFFFFFF000LL));
 }
 
 /** Map a large page in a 64-bit context.
@@ -111,7 +111,7 @@ static void map_small64(mmu_context_t *ctx, uint64_t virt, uint64_t phys) {
 	}
 
 	/* Get the page table from the page directory. */
-	ptbl = (uint64_t *)((ptr_t)(pdir[pde] & 0x000000FFFFFFF000LL));
+	ptbl = (uint64_t *)P2V((ptr_t)(pdir[pde] & 0x000000FFFFFFF000LL));
 
 	/* Map the page. */
 	pte = (virt % 0x200000) / PAGE_SIZE;
@@ -165,7 +165,7 @@ static void map_large32(mmu_context_t *ctx, uint32_t virt, uint32_t phys) {
 	assert(!(virt % 0x400000));
 	assert(!(phys % 0x400000));
 
-	pdir = (uint32_t *)ctx->cr3;
+	pdir = (uint32_t *)P2V(ctx->cr3);
 	pde = virt / 0x400000;
 	pdir[pde] = phys | X86_PTE_PRESENT | X86_PTE_WRITE | X86_PTE_LARGE;
 }
@@ -182,7 +182,7 @@ static void map_small32(mmu_context_t *ctx, uint32_t virt, uint32_t phys) {
 	assert(!(virt % PAGE_SIZE));
 	assert(!(phys % PAGE_SIZE));
 
-	pdir = (uint32_t *)ctx->cr3;
+	pdir = (uint32_t *)P2V(ctx->cr3);
 
 	/* Get the page directory entry number. */
 	pde = virt / 0x400000;
@@ -192,7 +192,7 @@ static void map_small32(mmu_context_t *ctx, uint32_t virt, uint32_t phys) {
 	}
 
 	/* Get the page table from the page directory. */
-	ptbl = (uint32_t *)((ptr_t)(pdir[pde] & 0xFFFFF000));
+	ptbl = (uint32_t *)P2V((ptr_t)(pdir[pde] & 0xFFFFF000));
 
 	/* Map the page. */
 	pte = (virt % 0x400000) / PAGE_SIZE;

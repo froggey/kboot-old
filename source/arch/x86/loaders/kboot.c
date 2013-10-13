@@ -146,7 +146,7 @@ void kboot_arch_setup(kboot_loader_t *loader) {
 	if(loader->target == TARGET_TYPE_64BIT) {
 		/* Search backward from the end of the address space for a free
 		 * PML4 entry. */
-		pml4 = (uint64_t *)loader->mmu->cr3;
+		pml4 = (uint64_t *)P2V(loader->mmu->cr3);
 		i = 512;
 		while(i-- > 1) {
 			if(!(pml4[i] & X86_PTE_PRESENT)) {
@@ -166,7 +166,7 @@ void kboot_arch_setup(kboot_loader_t *loader) {
 		if(!allocator_alloc(&loader->alloc, 0x400000, 0x400000, &addr))
 			boot_error("Unable to allocate page table mapping space");
 
-		pdir = (uint32_t *)loader->mmu->cr3;
+		pdir = (uint32_t *)P2V(loader->mmu->cr3);
 		pdir[addr / 0x400000] = loader->mmu->cr3 | X86_PTE_PRESENT | X86_PTE_WRITE;
 	}
 

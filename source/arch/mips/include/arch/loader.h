@@ -22,6 +22,21 @@
 #ifndef __ARCH_LOADER_H
 #define __ARCH_LOADER_H
 
+/**
+ * Offset to apply to a physical address to get a virtual address.
+ *
+ * On MIPS we always run from the virtual address space. KSEG0 and KSEG1 are
+ * windows onto the low 256MB of physical memory, the former is cached while
+ * the latter is uncached. The loader runs from KSEG0, and for all generic
+ * accesses we also want to go through KSEG0 (i.e. we want to use the cache).
+ * Platform code which needs uncached access uses KSEG1 explicitly, this
+ * definition is only relevant for generic code.
+ */
+#define LOADER_VIRT_OFFSET	0x80000000
+
+/** Highest physical address accessible to the loader. */
+#define LOADER_PHYS_MAX		0x1fffffff
+
 extern void arch_init(void);
 
 #endif /* __ARCH_LOADER_H */

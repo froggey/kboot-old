@@ -81,13 +81,13 @@ void kboot_arch_setup(kboot_loader_t *loader) {
 
 	/* Create a second level table to cover the region. */
 	phys_memory_alloc(PAGE_SIZE, PAGE_SIZE, 0, 0, PHYS_MEMORY_PAGETABLES, 0, &phys);
-	memset((void *)phys, 0, PAGE_SIZE);
+	memset((void *)P2V(phys), 0, PAGE_SIZE);
 
 	/* Insert it into the first level table, then point its last entry to
 	 * itself. */
-	l1 = (uint32_t *)loader->mmu->l1;
+	l1 = (uint32_t *)P2V(loader->mmu->l1);
 	l1[virt / 0x100000] = phys | (1<<0);
-	l2 = (uint32_t *)phys;
+	l2 = (uint32_t *)P2V(phys);
 	l2[255] = phys | (1<<1) | (1<<4);
 
 	/* Add the pagetables tag. */

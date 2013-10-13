@@ -155,7 +155,7 @@ void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd, const char *c
 	/* Allocate memory for the parameters data (the "zero page"). */
 	phys_memory_alloc(sizeof(linux_params_t) + ROUND_UP(cmdline_size, PAGE_SIZE),
 		PAGE_SIZE, 0x10000, 0x90000, PHYS_MEMORY_RECLAIMABLE, 0, &load_addr);
-	params = (linux_params_t *)(ptr_t)load_addr;
+	params = (linux_params_t *)P2V(load_addr);
 
 	/* Ensure that the parameters page is cleared and copy in the setup
 	 * header. */
@@ -188,7 +188,7 @@ void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd, const char *c
 	params->hdr.code32_start = load_addr + (params->hdr.code32_start - LINUX_BZIMAGE_ADDR);
 
 	/* Read in the kernel image. */
-	if(!file_read(kernel, (void *)(ptr_t)load_addr, prot_size, prot_offset))
+	if(!file_read(kernel, (void *)P2V(load_addr), prot_size, prot_offset))
 		boot_error("Failed to read kernel image");
 
 	/* Load in the initrd. */
@@ -210,7 +210,7 @@ void linux_arch_load(file_handle_t *kernel, file_handle_t *initrd, const char *c
 		if(!quiet)
 			kprintf("Loading initrd...\n");
 
-		if(!file_read(initrd, (void *)(ptr_t)load_addr, initrd_size, 0))
+		if(!file_read(initrd, (void *)P2V(load_addr), initrd_size, 0))
 			boot_error("Failed to read initrd");
 
 		params->hdr.ramdisk_image = load_addr;

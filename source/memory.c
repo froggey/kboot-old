@@ -325,7 +325,7 @@ static bool is_suitable_range(memory_range_t *range, phys_size_t size,
 
 	/* Check if this range contains addresses in the requested range. */
 	match_start = MAX(min_addr, range->start);
-	match_end = MIN(max_addr - 1, range->start + range->size - 1);
+	match_end = MIN(max_addr, range->start + range->size - 1);
 	if(match_end <= match_start)
 		return false;
 
@@ -373,15 +373,13 @@ bool phys_memory_alloc(phys_size_t size, phys_size_t align, phys_ptr_t min_addr,
 	if(!align)
 		align = PAGE_SIZE;
 
-	#if ARCH_PHYSICAL_64BIT
-	/* Typically the boot loader runs in 32-bit mode, need to ensure that
-	 * all addresses allocated are accessible. */
-	if(!max_addr || max_addr > 0x100000000LL)
-		max_addr = 0x100000000LL;
-	#endif
+	/* Ensure that all addresses allocated are accessible to us. */
+	max_addr = max_addr - 1;
+	if(max_addr > LOADER_PHYS_MAX)
+		max_addr = LOADER_PHYS_MAX;
 
 	assert(!(size % PAGE_SIZE));
-	assert(((max_addr - 1) - min_addr) >= (size - 1));
+	assert((max_addr - min_addr) >= (size - 1));
 	assert(type >= PHYS_MEMORY_ALLOCATED);
 
 	/* Find a free range that is large enough to hold the new range. */
@@ -465,8 +463,8 @@ void memory_init(void) {
 
 	/* Mark the boot loader itself as internal so that it gets reclaimed
 	 * before entering the kernel. */
-	start = ROUND_DOWN((phys_ptr_t)((ptr_t)__start), PAGE_SIZE);
-	end = ROUND_UP((phys_ptr_t)((ptr_t)__end), PAGE_SIZE);
+	start = ROUND_DOWN(V2P((ptr_t)__start), PAGE_SIZE);
+	end = ROUND_UP(V2P((ptr_t)__end), PAGE_SIZE);
 	phys_memory_protect(start, end - start);
 
 	dprintf("memory: initial memory map:\n");

@@ -60,7 +60,7 @@ static phys_ptr_t allocate_kernel(kboot_loader_t *loader, kboot_itag_load_t *loa
 	/* Map in the kernel image. */
 	kboot_map_virtual(loader, virt_base, ret, size);
 
-	core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
+	core = (kboot_tag_core_t *)P2V(loader->tags_phys);
 	core->kernel_phys = ret;
 	return ret;
 }

@@ -81,10 +81,10 @@ static inline void *add_image_tag(kboot_loader_t *loader, uint32_t type, size_t 
  * @param size		Size of the tag data.
  * @return		Pointer to allocated tag. Will be cleared to 0. */
 void *kboot_allocate_tag(kboot_loader_t *loader, uint32_t type, size_t size) {
-	kboot_tag_core_t *core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
+	kboot_tag_core_t *core = (kboot_tag_core_t *)P2V(loader->tags_phys);
 	kboot_tag_t *ret;
 
-	ret = (kboot_tag_t *)((ptr_t)loader->tags_phys + core->tags_size);
+	ret = (kboot_tag_t *)P2V(loader->tags_phys + core->tags_size);
 	memset(ret, 0, size);
 	ret->type = type;
 	ret->size = size;
@@ -183,7 +183,7 @@ static void load_module(kboot_loader_t *loader, file_handle_t *handle, const cha
 	size = file_size(handle);
 	phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), 0, 0, 0, PHYS_MEMORY_MODULES,
 		0, &addr);
-	if(!file_read(handle, (void *)((ptr_t)addr), size, 0))
+	if(!file_read(handle, (void *)P2V(addr), size, 0))
 		boot_error("Could not read module `%s'", name);
 
 	name_size = strlen(name) + 1;
@@ -384,7 +384,7 @@ static void add_log_tag(kboot_loader_t *loader) {
 			0, &tag->prev_phys))
 		{
 			tag->prev_size = KBOOT_LOG_SIZE;
-			memcpy((void *)((ptr_t)tag->prev_phys), (void *)KBOOT_LOG_BUFFER,
+			memcpy((void *)P2V(tag->prev_phys), (void *)P2V(KBOOT_LOG_BUFFER),
 				KBOOT_LOG_SIZE);
 		}
 	}
@@ -459,7 +459,7 @@ static __noreturn void kboot_loader_load(void) {
 	 * as we cannot yet perform virtual allocations. For now, assume that
 	 * the tag list never exceeds a page, which is probably reasonable. */
 	phys_memory_alloc(PAGE_SIZE, 0, 0, 0, PHYS_MEMORY_RECLAIMABLE, 0, &loader->tags_phys);
-	core = (kboot_tag_core_t *)((ptr_t)loader->tags_phys);
+	core = (kboot_tag_core_t *)P2V(loader->tags_phys);
 	memset(core, 0, sizeof(kboot_tag_core_t));
 	core->header.type = KBOOT_TAG_CORE;
 	core->header.size = sizeof(kboot_tag_core_t);
@@ -727,7 +727,7 @@ static uint32_t calculate_log_magic(void) {
 /** Add a viewer for the kernel log.
  * @param loader	KBoot loader data structure. */
 static void init_log_viewer(kboot_loader_t *loader) {
-	kboot_log_t *log = (kboot_log_t *)KBOOT_LOG_BUFFER;
+	kboot_log_t *log = (kboot_log_t *)P2V(KBOOT_LOG_BUFFER);
 	ui_window_t *window;
 
 	if(log->magic != loader->log_magic)

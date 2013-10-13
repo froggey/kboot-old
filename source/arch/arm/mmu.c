@@ -32,7 +32,7 @@ static phys_ptr_t allocate_structure(mmu_context_t *ctx, size_t size) {
 	phys_ptr_t addr;
 
 	phys_memory_alloc(size, size, 0, 0, ctx->phys_type, 0, &addr);
-	memset((void *)addr, 0, size);
+	memset((void *)P2V(addr), 0, size);
 	return addr;
 }
 
@@ -47,7 +47,7 @@ static void map_section(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys) {
 	assert(!(virt % LARGE_PAGE_SIZE));
 	assert(!(phys % LARGE_PAGE_SIZE));
 
-	l1 = (uint32_t *)ctx->l1;
+	l1 = (uint32_t *)P2V(ctx->l1);
 	l1e = virt / LARGE_PAGE_SIZE;
 	l1[l1e] = phys | (1<<1) | (1<<10);
 }
@@ -61,7 +61,7 @@ static void map_small(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys) {
 	phys_ptr_t addr;
 	int l1e, l2e;
 
-	l1 = (uint32_t *)ctx->l1;
+	l1 = (uint32_t *)P2V(ctx->l1);
 	l1e = virt / LARGE_PAGE_SIZE;
 	if(!(l1[l1e] & (1<<0))) {
 		/* FIXME: Second level tables are actually 1KB. Should probably
@@ -70,7 +70,7 @@ static void map_small(mmu_context_t *ctx, ptr_t virt, phys_ptr_t phys) {
 		l1[l1e] = addr | (1<<0);
 	}
 
-	l2 = (uint32_t *)(l1[l1e] & 0xFFFFFC00);
+	l2 = (uint32_t *)P2V(l1[l1e] & 0xFFFFFC00);
 	l2e = (virt % LARGE_PAGE_SIZE) / PAGE_SIZE;
 	l2[l2e] = phys | (1<<1) | (1<<4);
 }

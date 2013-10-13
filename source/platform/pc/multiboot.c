@@ -141,11 +141,11 @@ void multiboot_init(void) {
 			/* We now need to re-allocate the module data as high
 			 * as possible so as to make it unlikely that we will
 			 * conflict with fixed load addresses for a kernel. */
-			phys_memory_alloc(ROUND_UP(file->size, PAGE_SIZE),
-				0, 0, 0x100000000LL, PHYS_MEMORY_INTERNAL,
-				PHYS_ALLOC_HIGH, &addr);
-			file->addr = (void *)((ptr_t)addr);
-			memcpy(file->addr, (void *)modules[i].mod_start, file->size);
+			phys_memory_alloc(ROUND_UP(file->size, PAGE_SIZE), 0,
+				0, 0, PHYS_MEMORY_INTERNAL, PHYS_ALLOC_HIGH,
+				&addr);
+			file->addr = (void *)P2V(addr);
+			memcpy(file->addr, (void *)P2V(modules[i].mod_start), file->size);
 
 			list_append(&multiboot_files, &file->header);
 		}

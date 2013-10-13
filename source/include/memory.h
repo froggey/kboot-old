@@ -49,7 +49,7 @@ extern list_t memory_ranges;
 
 /** Flags for phys_memory_alloc(). */
 #define PHYS_ALLOC_CANFAIL	(1<<0)	/**< The allocation is allowed to fail. */
-#define PHYS_ALLOC_HIGH		(1<<1)	/**< Allocate the highest possible address. */
+#define PHYS_ALLOC_HIGH		(1<<1)	/**< Allocate the highest possible accessible address. */
 
 extern void *kmalloc(size_t size);
 extern void *krealloc(void *addr, size_t size);
