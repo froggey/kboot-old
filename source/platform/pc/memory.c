@@ -29,7 +29,7 @@
 #include <memory.h>
 
 /** Detect physical memory. */
-void platform_memory_detect(void) {
+void memory_probe(void) {
 	e820_entry_t *mmap = (e820_entry_t *)BIOS_MEM_BASE;
 	phys_ptr_t start, end;
 	size_t count = 0, i;
@@ -111,4 +111,7 @@ void platform_memory_detect(void) {
 
 	/* Mark the memory area we use for BIOS calls as internal. */
 	phys_memory_protect(BIOS_MEM_BASE, BIOS_MEM_SIZE + PAGE_SIZE);
+
+	/* Initialize the memory manager. */
+	memory_init();
 }

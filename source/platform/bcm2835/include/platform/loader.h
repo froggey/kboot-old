@@ -36,4 +36,12 @@
  */
 #define LOADER_LOAD_ADDR		0x8000
 
+#ifndef __ASM__
+
+struct atag;
+
+extern void platform_init(struct atag *atags);
+
+#endif
+
 #endif /* __PLATFORM_LOADER_H */

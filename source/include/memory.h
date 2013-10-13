@@ -60,8 +60,6 @@ extern void phys_memory_protect(phys_ptr_t start, phys_size_t size);
 extern bool phys_memory_alloc(phys_size_t size, phys_size_t align, phys_ptr_t min_addr,
 	phys_ptr_t max_addr, unsigned type, unsigned flags, phys_ptr_t *physp);
 
-extern void platform_memory_detect(void);
-
 extern void memory_init(void);
 extern void memory_finalize(void);
 

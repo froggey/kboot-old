@@ -26,7 +26,6 @@ sources = pl011_sources + FeatureSources(config, [
     'fb.c',
     'gpio.c',
     'mbox.c',
-    'memory.c',
     'platform.c',
     'start.S',
     'uart.c',

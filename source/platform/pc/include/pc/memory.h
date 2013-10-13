@@ -49,4 +49,6 @@ typedef struct e820_entry {
 	uint32_t attr;			/**< Attributes of range. */
 } __packed e820_entry_t;
 
+extern void memory_probe(void);
+
 #endif /* __PC_MEMORY_H */

@@ -26,6 +26,7 @@
 #include <lib/string.h>
 
 #include <pc/console.h>
+#include <pc/memory.h>
 #include <pc/multiboot.h>
 #include <pc/vbe.h>
 
@@ -34,8 +35,6 @@
 #include <memory.h>
 #include <tar.h>
 #include <time.h>
-
-extern void platform_init(void);
 
 /** Main function of the PC loader. */
 void platform_init(void) {
@@ -46,7 +45,7 @@ void platform_init(void) {
 	arch_init();
 
 	/* Initialize hardware. */
-	memory_init();
+	memory_probe();
 	disk_init();
 	vbe_init();
 

@@ -42,6 +42,7 @@
 #ifndef __ASM__
 
 extern void platform_reboot(void);
+extern void platform_init(void);
 
 #endif /* __ASM__ */
 

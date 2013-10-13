@@ -25,4 +25,10 @@
 /** Load address (start of RAM, KSEG0). */
 #define LOADER_LOAD_ADDR		0x80010000
 
+#ifndef __ASM__
+
+extern void platform_init(int argc, char **argv, char **envp, unsigned memsize);
+
+#endif
+
 #endif /* __PLATFORM_LOADER_H */

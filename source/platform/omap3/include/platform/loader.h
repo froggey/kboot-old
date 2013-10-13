@@ -25,4 +25,12 @@
 /** Load address (start of SDRAM). */
 #define LOADER_LOAD_ADDR		0x80008000
 
+#ifndef __ASM__
+
+struct atag;
+
+extern void platform_init(struct atag *atags);
+
+#endif
+
 #endif /* __PLATFORM_LOADER_H */

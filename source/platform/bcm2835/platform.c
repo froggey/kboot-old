@@ -21,14 +21,15 @@
 
 #include <arm/atag.h>
 
+#include <lib/utility.h>
+
+#include <bcm2835/bcm2835.h>
 #include <bcm2835/gpio.h>
 #include <bcm2835/uart.h>
 
 #include <loader.h>
 #include <memory.h>
 #include <tar.h>
-
-extern void platform_init(atag_t *atags);
 
 /** Main function of the BCM2835 loader.
  * @param atags		ATAG list from the firmware/U-Boot. */
@@ -51,7 +52,14 @@ void platform_init(atag_t *atags) {
 		break;
 	}
 
-	/* Initialize hardware. */
+	/* Architecture code adds memory ranges specified by the ATAG list.
+	 * Additionally mark the region between the start of SDRAM and our load
+	 * address as internal, as the firmware puts things like the ATAG list
+	 * here. */
+	phys_memory_add(BCM2835_SDRAM_BASE, ROUND_DOWN((ptr_t)__start, PAGE_SIZE)
+		- BCM2835_SDRAM_BASE, PHYS_MEMORY_INTERNAL);
+
+	/* Initialize the memory manager. */
 	memory_init();
 
 	/* Call the main function. */

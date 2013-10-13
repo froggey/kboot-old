@@ -457,12 +457,11 @@ static void phys_memory_dump(void) {
 	}
 }
 
-/** Initialise the memory manager. */
+/** Initialise the memory manager.
+ * @note		Platform code is expected to add all memory ranges
+ *			before calling this function. */
 void memory_init(void) {
 	phys_ptr_t start, end;
-
-	/* Detect memory ranges. */
-	platform_memory_detect();
 
 	/* Mark the boot loader itself as internal so that it gets reclaimed
 	 * before entering the kernel. */

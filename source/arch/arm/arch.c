@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Alex Smith
+ * Copyright (C) 2011-2013 Alex Smith
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +22,10 @@
 #include <arm/atag.h>
 #include <arm/except.h>
 
+#include <lib/utility.h>
+
 #include <loader.h>
+#include <memory.h>
 
 /** Address of the ATAG list. */
 atag_t *atag_list = NULL;
@@ -99,6 +102,8 @@ static void install_handler(size_t num, void (*addr)(void)) {
 /** Perform early architecture initialization.
  * @param atags		ATAG list from the firmware/U-Boot. */
 void arch_init(atag_t *atags) {
+	phys_ptr_t start, end;
+
 	/* Install exception handlers. */
 	install_handler(ARM_VECTOR_UNDEFINED, arm_undefined);
 	install_handler(ARM_VECTOR_PREFETCH_ABORT, arm_prefetch_abort);
@@ -109,4 +114,26 @@ void arch_init(atag_t *atags) {
 	/* Verify that the list is valid: it must begin with an ATAG_CORE tag. */
 	if(atag_list->hdr.tag != ATAG_CORE)
 		internal_error("ATAG list is not valid (%p)", atag_list);
+
+	/* Iterate through all ATAG_MEM tags and add the regions they describe. */
+	ATAG_ITERATE(tag, ATAG_MEM) {
+		if(tag->mem.size) {
+			/* Cut the region short if it is not page-aligned. */
+			start = ROUND_UP(tag->mem.start, PAGE_SIZE);
+			end = ROUND_DOWN(tag->mem.start + tag->mem.size, PAGE_SIZE);
+			phys_memory_add(start, end - start, PHYS_MEMORY_FREE);
+		}
+	}
+
+	/* Mark any supplied boot image as internal, the memory taken by it is
+	 * no longer used once the kernel is entered. */
+	ATAG_ITERATE(tag, ATAG_INITRD2) {
+		if(tag->initrd.size) {
+			/* Ensure the whole region is covered if it is not
+			 * page-aligned. */
+			start = ROUND_DOWN(tag->initrd.start, PAGE_SIZE);
+			end = ROUND_UP(tag->initrd.start + tag->initrd.size, PAGE_SIZE);
+			phys_memory_add(start, end - start, PHYS_MEMORY_INTERNAL);
+		}
+	}
 }

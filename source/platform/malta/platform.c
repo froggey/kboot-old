@@ -24,8 +24,6 @@
 #include <loader.h>
 #include <memory.h>
 
-extern void platform_init(int argc, char **argv, char **envp, unsigned memsize);
-
 /** Main function of the Malta loader.
  * @param argc		Argument count.
  * @param argv		Argument array.

@@ -20,7 +20,6 @@ from util import FeatureSources
 sources = FeatureSources(config, [
     ('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
 
-    'memory.c',
     'platform.c',
     'start.S',
     'uart.c',
