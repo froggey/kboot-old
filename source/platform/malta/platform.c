@@ -19,12 +19,16 @@
  * @brief		MIPS Malta platform startup code.
  */
 
+#include <mips/memory.h>
+
+#include <lib/string.h>
 #include <lib/utility.h>
 
 #include <malta/console.h>
 
 #include <loader.h>
 #include <memory.h>
+#include <tar.h>
 
 /** Main function of the Malta loader.
  * @param argc		Argument count.
@@ -32,19 +36,49 @@
  * @param envp		Environment array.
  * @param memsize	Memory size. */
 void platform_init(int argc, char **argv, char **envp, unsigned memsize) {
+	ptr_t initrd_start = 0;
+	size_t initrd_size = 0;
+	phys_ptr_t start, end;
+	char *str;
+	int i;
+
 	/* Set up console output. */
 	console_init();
 
 	/* Initialize the architecture. */
 	arch_init();
 
-	/* Initialize the memory manager. The low 1MB is mostly reserved, but
-	 * the YAMON code is marked as internal so that it can be freed once we
+	/* The boot image is passed to us as an initrd. The initrd location and
+	 * size are passed on the command line. */
+	for(i = 1; i < argc; i++) {
+		str = strstr(argv[i], "rd_start=");
+		if(str)
+			initrd_start = strtoull(str + 9, NULL, 0);
+		str = strstr(argv[i], "rd_size=");
+		if(str)
+			initrd_size = strtoull(str + 8, NULL, 0);
+	}
+
+	/* Add usable memory ranges. The low 1MB is mostly reserved, but the
+	 * YAMON code is marked as internal so that it can be freed once we
 	 * enter the kernel. */
 	phys_memory_add(0x1000, 0xef000, PHYS_MEMORY_INTERNAL);
 	phys_memory_add(0x100000, ROUND_DOWN(memsize, PAGE_SIZE) - 0x100000,
 		PHYS_MEMORY_FREE);
+
+	if(initrd_start >= KSEG0 && initrd_size) {
+		start = ROUND_DOWN(initrd_start, PAGE_SIZE);
+		end = ROUND_UP(initrd_start + initrd_size, PAGE_SIZE);
+		phys_memory_add(V2P(initrd_start), end - start, PHYS_MEMORY_INTERNAL);
+	}
+
+	/* Initalize the memory manager. */
 	memory_init();
 
-	while(true) {}
+	/* Mount the boot image. */
+	if(initrd_start >= KSEG0 && initrd_size)
+		tar_mount((void *)initrd_start, initrd_size);
+
+	/* Call the main function. */
+	loader_main();
 }

@@ -32,8 +32,7 @@
 FUNCTION_START(_start)
 .set noreorder
 	/*
-	 * We are loaded as a MIPS Linux kernel. Registers upon entry are as
-	 * follows:
+	 * Registers upon entry are as follows:
 	 *  a0 - Number of kernel arguments.
 	 *  a1 - Address of the kernel arguments table.
 	 *  a2 - Address of the environment variables table.
