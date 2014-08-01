@@ -373,14 +373,16 @@ bool phys_memory_alloc(phys_size_t size, phys_size_t align, phys_ptr_t min_addr,
 	if(!align)
 		align = PAGE_SIZE;
 
+	assert(!(size % PAGE_SIZE));
+	assert(!(align % PAGE_SIZE));
+	assert(type >= PHYS_MEMORY_ALLOCATED);
+
 	/* Ensure that all addresses allocated are accessible to us. */
 	max_addr = max_addr - 1;
 	if(max_addr > LOADER_PHYS_MAX)
 		max_addr = LOADER_PHYS_MAX;
 
-	assert(!(size % PAGE_SIZE));
-	assert((max_addr - min_addr) >= (size - 1));
-	assert(type >= PHYS_MEMORY_ALLOCATED);
+	assert(max_addr > min_addr);
 
 	/* Find a free range that is large enough to hold the new range. */
 	if(flags & PHYS_ALLOC_HIGH) {
