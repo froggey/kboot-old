@@ -115,6 +115,26 @@ void *memmove(void *dest, const void *src, size_t count) {
 	return dest;
 }
 
+/** Compare two areas of memory.
+ * @param s1		Pointer to the first memory area.
+ * @param s2		Pointer to the second memory area.
+ * @param count		Maximum number of bytes to compare.
+ * @return		An integer less than, equal to or greater than 0 if
+ *			s1 is found, respectively, to be less than, to match,
+ *			or to be greater than s2. */
+int memcmp(const void *s1, const void *s2, size_t count) {
+	const unsigned char *s1_ = s1;
+	const unsigned char *s2_ = s2;
+
+	for(size_t i = 0; i < count; i++) {
+		if(s1_[i] != s2_[i]) {
+			return s1_[i] - s2_[i];
+		}
+	}
+
+	return 0;
+}
+
 /** Get the length of a string.
  * @param str		Pointer to the string.
  * @return		Length of the string. */
@@ -196,7 +216,7 @@ int strncmp(const char *s1, const char *s2, size_t count) {
  *
  * @param stringp	Pointer to a pointer to the string to separate.
  * @param delim		String containing all possible delimeters.
- * 
+ *
  * @return		NULL if stringp is NULL, otherwise a pointer to the
  *			token found.
  */
@@ -281,7 +301,7 @@ char *strstr(const char *s, const char *what) {
 
 /**
  * Strip whitespace from a string.
- * 
+ *
  * Strips whitespace from the start and end of a string. The string is modified
  * in-place.
  *
@@ -314,7 +334,7 @@ char *strstrip(char *str) {
  *
  * @param dest		Pointer to the destination buffer.
  * @param src		Pointer to the source buffer.
- * 
+ *
  * @return		The value specified for dest.
  */
 char *strcpy(char *__restrict dest, const char *__restrict src) {
@@ -333,12 +353,12 @@ char *strcpy(char *__restrict dest, const char *__restrict src) {
  * @param dest		Pointer to the destination buffer.
  * @param src		Pointer to the source buffer.
  * @param count		Maximum number of bytes to copy.
- * 
+ *
  * @return		The value specified for dest.
  */
 char *strncpy(char *__restrict dest, const char *__restrict src, size_t count) {
 	size_t i;
-	
+
 	for(i = 0; i < count; i++) {
 		dest[i] = src[i];
 		if(!src[i])
@@ -355,7 +375,7 @@ char *strncpy(char *__restrict dest, const char *__restrict src, size_t count) {
  *
  * @param dest		Pointer to the string to append to.
  * @param src		Pointer to the string to append.
- * 
+ *
  * @return		Pointer to dest.
  */
 char *strcat(char *__restrict dest, const char *__restrict src) {
@@ -373,7 +393,7 @@ char *strcat(char *__restrict dest, const char *__restrict src) {
  * string to it. The pointer returned should be freed with kfree().
  *
  * @param src		Pointer to the source buffer.
- * 
+ *
  * @return		Pointer to the allocated buffer containing the string.
  */
 char *kstrdup(const char *src) {
@@ -396,7 +416,7 @@ char *kstrdup(const char *src) {
  *
  * @param src		Pointer to the source buffer.
  * @param n		Maximum number of bytes to copy.
- * 
+ *
  * @return		Pointer to the allocated buffer containing the string.
  */
 char *kstrndup(const char *src, size_t n) {
