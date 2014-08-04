@@ -84,6 +84,13 @@ config KBOOT_LOADER_LINUX
 	help
 	  Enable support for loading Linux kernels.
 
+config KBOOT_LOADER_MEZZANINE
+	bool "Mezzanine support"
+	default y
+	depends on KBOOT_HAVE_LOADER_MEZZANINE
+	help
+	  Enable support for loading Mezzanine images.
+
 #######
 endmenu
 #######

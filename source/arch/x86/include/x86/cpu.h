@@ -71,6 +71,7 @@
 
 /** Model Specific Registers. */
 #define X86_MSR_EFER		0xC0000080	/**< Extended Feature Enable register. */
+#define X86_MSR_GSBASE		0xC0000101	/**< GS Base register. */
 
 /** EFER MSR flags. */
 #define X86_EFER_LME		(1<<8)		/**< Long Mode (IA-32e) Enable. */

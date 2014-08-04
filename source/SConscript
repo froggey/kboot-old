@@ -38,6 +38,7 @@ sources = FeatureSources(config, [
     ('KBOOT_LOADER_KBOOT', 'loaders/kboot.c'),
     ('KBOOT_LOADER_KBOOT', 'loaders/kboot_elf.c'),
     ('KBOOT_LOADER_LINUX', 'loaders/linux.c'),
+    ('KBOOT_LOADER_MEZZANINE', 'loaders/mezzanine.c'),
 
     ('KBOOT_PARTITION_MAP_MSDOS', 'partitions/msdos.c'),
 
