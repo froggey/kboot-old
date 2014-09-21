@@ -236,7 +236,12 @@ __linux_gdt:
  * @param transition_pml4	Transition PML4.
  * @param pml4			Final PML4.
  * @param entry_fref		Value of the entry fref.
- * @param initial_process	Value of the initial process. */
+ * @param initial_process	Value of the initial process.
+ * @param idt_size
+ * @param idt_pointer
+ * @param boot_information_location (fixnum)
+ * @param gdt_size
+ * @param gdt_pointer */
 FUNCTION_START(mezzanine_arch_enter)
 .code32
 	/* Enable PAE, PGE, and SSE. */
@@ -273,29 +278,29 @@ FUNCTION_START(mezzanine_arch_enter)
 
         /* Fetch the arguments from the stack. */
         movq    20(%esp), %r13   /* entry fref */
-        movq    28(%esp), %r8    /* initial process */
+        movq    28(%esp), %r12   /* initial process */
+        movq    36(%esp), %r8    /* boot info location */
 
 	/* Move to the pmap. */
 	movq	$0xFFFF800000000000, %rax
         leaq    1f(%rip), %rcx
         addq    %rcx, %rax
-	jmp	*%rax
-.align 8
+        jmp     *%rax
 1:
+
 	/* Switch to the real kernel page directory. */
         movq    12(%esp), %rax
 	movq	%rax, %cr3
 
 	/* Load the initial process into GS. */
-        movq    %r8, %rax
-        movq    %r8, %rdx
+        movq    %r12, %rax
+        movq    %r12, %rdx
         sarq    $32, %rdx
         movl    $X86_MSR_GSBASE, %ecx
         wrmsr
 
         /* Load stack from the initial process */
-        movq    31(%r8), %rsp   /* +stack-group-offset-control-stack-base+ */
-        addq    39(%r8), %rsp   /* +stack-group-offset-control-stack-size+ */
+        movq    31(%r12), %rsp   /* +thread-stack-pointer+ */
 
         /* Clear FPU/SSE state. */
         push    $0x1F80         /* All exceptions masked. Flush to zero disabled. Denormals are zero disabled. Round to nearest. */
@@ -309,13 +314,11 @@ FUNCTION_START(mezzanine_arch_enter)
 
         /* Clear registers. */
         xorl    %eax, %eax
-        xorl    %ecx, %ecx
         xorl    %edx, %edx
         xorl    %ebx, %ebx
         xorl    %ebp, %ebp
         xorl    %esi, %esi
         xorl    %edi, %edi
-        xorl    %r8d, %r8d
         xorl    %r9d, %r9d
         xorl    %r10d, %r10d
         xorl    %r11d, %r11d
@@ -324,7 +327,8 @@ FUNCTION_START(mezzanine_arch_enter)
         xorl    %r14d, %r14d
         xorl    %r15d, %r15d
 
-        /* Call the entry function. rcx is already set to 0 for a no-args call. */
+        /* Call the entry function. Single argument call. */
+        movl    $1<<1, %ecx
         call    *15(%r13)  /* +fref-entry-point+ */
 
         /* Crash if it returns. */
