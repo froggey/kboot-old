@@ -48,8 +48,10 @@ typedef struct mezzanine_extent {
 	uint64_t virtual_base;
 	uint64_t size;
 	uint64_t flags;
-	uint64_t _pad;
+	uint64_t extra;
 } __packed mezzanine_extent_t;
+
+#define EXTENT_FLAG_ALIAS 1 // alias virtual_base to extra.
 
 /* On-disk image header. */
 typedef struct mezzanine_header {
@@ -81,7 +83,7 @@ typedef struct mezzanine_buddy_bin {
 
 static const char mezzanine_magic[] = "\x00MezzanineImage\x00";
 static const uint16_t mezzanine_protocol_major = 0;
-static const uint16_t mezzanine_protocol_minor = 16;
+static const uint16_t mezzanine_protocol_minor = 17;
 // FIXME: Duplicated in enter.S
 static const uint64_t mezzanine_physical_map_address = 0xFFFF800000000000ull;
 static const uint64_t mezzanine_physical_info_address = 0xFFFF808000000000ull;
@@ -471,7 +473,7 @@ static void *read_cached_block(mezzanine_loader_t *loader, uint64_t block_id) {
 	phys_memory_alloc(0x1000, // size
 			  0x1000, // alignment
 			  0, 0, // min/max address
-			  PHYS_MEMORY_RECLAIMABLE, // type
+			  PHYS_MEMORY_INTERNAL, // type
 			  0, // flags
 			  &phys_addr);
 	e->data = (void *)P2V(phys_addr);
@@ -555,6 +557,11 @@ static __noreturn void mezzanine_loader_load(void) {
 		if(loader->header.extents[i].virtual_base % PAGE_SIZE ||
 		   loader->header.extents[i].size % PAGE_SIZE) {
 			boot_error("Extent %" PRIu32 " is misaligned", i);
+		}
+
+		if(loader->header.extents[i].flags & EXTENT_FLAG_ALIAS) {
+			mmu_alias(mmu, loader->header.extents[i].virtual_base, loader->header.extents[i].extra, loader->header.extents[i].size);
+			continue;
 		}
 
 		// Load each page in the region.

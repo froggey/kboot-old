@@ -255,6 +255,36 @@ bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys, target_size
 	}
 }
 
+/** Create an aliased mapping in an MMU context.
+ * @param ctx		Context to map in.
+ * @param target	Virtual address to map.
+ * @param source	Virtual address to alias to.
+ * @param size		Size of the mapping to create.
+ * @return		Whether created successfully. */
+bool mmu_alias(mmu_context_t *ctx, target_ptr_t target, target_ptr_t source, target_size_t size) {
+	if(target % PAGE_SIZE || source % PAGE_SIZE || size % PAGE_SIZE)
+		return false;
+
+	/* froggey is super lazy. Only support mapping at the PML4 level. */
+	assert(ctx->is64);
+	assert((target % (512LL * 1024 * 1024 * 1024)) == 0);
+	assert((source % (512LL * 1024 * 1024 * 1024)) == 0);
+	assert((size % (512LL * 1024 * 1024 * 1024)) == 0);
+
+	uint64_t *pml4 = (uint64_t *)P2V(ctx->cr3);
+	while(size) {
+		/* Get the page directory pointer number. A PDP covers 512GB. */
+		int target_pml4e = (target & 0x0000FFFFFFFFF000) / 0x8000000000;
+		int source_pml4e = (source & 0x0000FFFFFFFFF000) / 0x8000000000;
+		if(!(pml4[source_pml4e] & X86_PTE_PRESENT)) {
+			pml4[source_pml4e] = allocate_structure(ctx) | X86_PTE_PRESENT | X86_PTE_WRITE;
+		}
+		pml4[target_pml4e] = pml4[source_pml4e];
+		size -= (512LL * 1024 * 1024 * 1024);
+	}
+	return true;
+}
+
 /** Create a new MMU context.
  * @param target	Target operation mode definition.
  * @param phys_type	Physical memory type to use when allocating tables.
