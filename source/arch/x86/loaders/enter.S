@@ -301,6 +301,8 @@ FUNCTION_START(mezzanine_arch_enter)
 
         /* Load stack from the initial process */
         movq    31(%r12), %rsp   /* +thread-stack-pointer+ */
+        addq    $0xFFF, %rsp
+        andq    $~0xFFF, %rsp
 
         /* Clear FPU/SSE state. */
         push    $0x1F80         /* All exceptions masked. Flush to zero disabled. Denormals are zero disabled. Round to nearest. */
