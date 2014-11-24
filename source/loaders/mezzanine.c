@@ -45,11 +45,10 @@
 #include <ui.h>
 
 typedef struct mezzanine_extent {
-	uint64_t store_base;
 	uint64_t virtual_base;
 	uint64_t size;
-	uint64_t bump;
 	uint64_t flags;
+	uint64_t _pad;
 } __packed mezzanine_extent_t;
 
 /* On-disk image header. */
@@ -82,7 +81,7 @@ typedef struct mezzanine_buddy_bin {
 
 static const char mezzanine_magic[] = "\x00MezzanineImage\x00";
 static const uint16_t mezzanine_protocol_major = 0;
-static const uint16_t mezzanine_protocol_minor = 13;
+static const uint16_t mezzanine_protocol_minor = 16;
 // FIXME: Duplicated in enter.S
 static const uint64_t mezzanine_physical_map_address = 0xFFFF800000000000ull;
 static const uint64_t mezzanine_physical_info_address = 0xFFFF808000000000ull;
@@ -101,6 +100,8 @@ typedef struct mezzanine_boot_information {
 	uint64_t framebuffer_pitch;                                // +544 fixnum, bytes.
 	uint64_t framebuffer_height;                               // +552 fixnum, pixels.
 	uint64_t framebuffer_layout;                               // +560 fixnum.
+	uint64_t module_info_base;                                 // +568 fixnum.
+	uint64_t module_info_size;                                 // +576 fixnum.
 } __packed mezzanine_boot_information_t;
 
 // Common(ish) layouts. Layouts beyond 32-bit XRGB will be supported in later boot protocols.
@@ -117,19 +118,19 @@ typedef struct mezzanine_boot_information {
 //#define FRAMEBUFFER_LAYOUT_R5_G5_B5_X1 11 // 16-bit 555 RGBX
 //#define FRAMEBUFFER_LAYOUT_B5_G5_R5_X1 12 // 16-bit 555 BGRX
 
-#define MEZZANINE_EXTENT_TYPE_MASK 0x7
-#define MEZZANINE_EXTENT_TYPE_PINNED 0x0
-#define MEZZANINE_EXTENT_TYPE_PINNED_2G 0x1
-#define MEZZANINE_EXTENT_TYPE_DYNAMIC 0x2
-#define MEZZANINE_EXTENT_TYPE_DYNAMIC_CONS 0x3
-#define MEZZANINE_EXTENT_TYPE_NURSERY 0x4
-#define MEZZANINE_EXTENT_TYPE_STACK 0x5
-#define MEZZANINE_EXTENT_WIRED 0x8
-#define MEZZANINE_EXTENT_LARGE 0x10
-#define MEZZANINE_EXTENT_FINISHED 0x20
-#define MEZZANINE_EXTENT_FLIPPED 0x40
-
 #define MEZZANINE_STACK_MARK_BIT 0x100000000000
+
+#define BLOCK_MAP_PRESENT 1
+#define BLOCK_MAP_WRITABLE 2
+#define BLOCK_MAP_ZERO_FILL 4
+#define BLOCK_MAP_FLAG_MASK 0xFF
+#define BLOCK_MAP_ID_SHIFT 8
+
+typedef struct block_cache_entry {
+	uint64_t block;
+	void *data;
+	struct block_cache_entry *next;
+} block_cache_entry_t;
 
 /** Structure containing Mezzanine image loader state. */
 typedef struct mezzanine_loader {
@@ -137,6 +138,9 @@ typedef struct mezzanine_loader {
 	char *device_name;		/**< Image device name. */
 
 	mezzanine_header_t header;
+	value_t modules;		/**< Modules to load. */
+
+	block_cache_entry_t *block_cache;
 } mezzanine_loader_t;
 
 extern void __noreturn mezzanine_arch_enter(phys_ptr_t transition_pml4, phys_ptr_t pml4, uint64_t entry_fref, uint64_t initial_process, uint64_t boot_information_location);
@@ -204,7 +208,7 @@ static void generate_pmap(mmu_context_t *mmu) {
 		phys_ptr_t phys_info_addr;
 		phys_memory_alloc(info_end - info_start, // size
 				  0x1000, // alignment
-				  0, 0, // min/max address
+				  0x100000, 0, // min/max address
 				  PHYS_MEMORY_ALLOCATED, // type
 				  0, // flags
 				  &phys_info_addr);
@@ -416,6 +420,125 @@ static void set_video_mode(mezzanine_boot_information_t *boot_info)
 	vbe_mode_set(mode);
 }
 
+static void load_module(phys_ptr_t current, file_handle_t *handle, const char *name) {
+	if(handle->directory) {
+		boot_error("%s is a directory.", name);
+	}
+
+	kprintf("Loading %s...\n", name);
+
+	/* Allocate a chunk of memory to load to. */
+	offset_t size = file_size(handle);
+	phys_ptr_t addr;
+	phys_memory_alloc(ROUND_UP(size, PAGE_SIZE), 0, 0x100000, 0, PHYS_MEMORY_ALLOCATED,
+		0, &addr);
+	if(!file_read(handle, (void *)P2V(addr), size, 0)) {
+		boot_error("Could not read module '%s'", name);
+	}
+
+	size_t name_size = strlen(name);
+
+	((uint64_t *)(uint32_t)current)[0] = fixnum(addr);
+	((uint64_t *)(uint32_t)current)[1] = fixnum(size);
+	((uint64_t *)(uint32_t)current)[2] = fixnum(name_size);
+
+	memcpy((char *)((uint32_t)current + 24), name, name_size);
+
+	dprintf("mezzanine: loaded module %s to 0x%" PRIxPHYS " (size: %" PRIu64 ")\n",
+		name, addr, size);
+}
+
+static void *read_cached_block(mezzanine_loader_t *loader, uint64_t block_id) {
+	block_cache_entry_t **prev = &loader->block_cache;
+	for(block_cache_entry_t *e = loader->block_cache; e; e = e->next) {
+		if(e->block == block_id) {
+			// Bring recently used blocks to the front of the list.
+			*prev = e->next;
+			e->next = loader->block_cache;
+			loader->block_cache = e;
+			return e->data;
+		}
+		prev = &e->next;
+	}
+	// Not present in cache. Read from disk.
+	block_cache_entry_t *e = kmalloc(sizeof(block_cache_entry_t));
+	e->next = loader->block_cache;
+	loader->block_cache = e;
+	e->block = block_id;
+
+	// Heap is fixed-size, use pages directly.
+	phys_ptr_t phys_addr;
+	phys_memory_alloc(0x1000, // size
+			  0x1000, // alignment
+			  0, 0, // min/max address
+			  PHYS_MEMORY_RECLAIMABLE, // type
+			  0, // flags
+			  &phys_addr);
+	e->data = (void *)P2V(phys_addr);
+
+	if(!disk_read(loader->disk,
+		      e->data,
+		      0x1000,
+		      block_id * 0x1000)) {
+		boot_error("Could not read block %" PRIu64, block_id);
+	}
+
+	return e->data;
+}
+
+static uint64_t read_info_for_page(mezzanine_loader_t *loader, uint64_t virtual) {
+	// Indices into each level of the block map.
+	uint64_t bml4i = (virtual >> 39) & 0x1FF;
+	uint64_t bml3i = (virtual >> 30) & 0x1FF;
+	uint64_t bml2i = (virtual >> 21) & 0x1FF;
+	uint64_t bml1i = (virtual >> 12) & 0x1FF;
+	uint64_t *bml4 = read_cached_block(loader, loader->header.bml4);
+	if((bml4[bml4i] & BLOCK_MAP_PRESENT) == 0) {
+		return 0;
+	}
+	uint64_t *bml3 = read_cached_block(loader, bml4[bml4i] >> BLOCK_MAP_ID_SHIFT);
+	if((bml3[bml3i] & BLOCK_MAP_PRESENT) == 0) {
+		return 0;
+	}
+	uint64_t *bml2 = read_cached_block(loader, bml3[bml3i] >> BLOCK_MAP_ID_SHIFT);
+	if((bml2[bml2i] & BLOCK_MAP_PRESENT) == 0) {
+		return 0;
+	}
+	uint64_t *bml1 = read_cached_block(loader, bml2[bml2i] >> BLOCK_MAP_ID_SHIFT);
+	return bml1[bml1i];
+}
+
+static void load_page(mezzanine_loader_t *loader, mmu_context_t *mmu, uint64_t virtual) {
+	uint64_t info = read_info_for_page(loader, virtual);
+	if((info & BLOCK_MAP_PRESENT) == 0) {
+		return;
+	}
+
+	// Alloc phys.
+	phys_ptr_t phys_addr;
+	phys_memory_alloc(PAGE_SIZE, // size
+			  0x1000, // alignment
+			  0x100000, 0, // min/max address
+			  PHYS_MEMORY_ALLOCATED, // type
+			  0, // flags
+			  &phys_addr);
+	// Map...
+	mmu_map(mmu, virtual, phys_addr, PAGE_SIZE);
+	// Write block number to page info struct.
+	set_page_info_bin(mmu, phys_addr, fixnum(virtual));
+
+	if(info & BLOCK_MAP_ZERO_FILL) {
+		memset((void *)P2V(phys_addr), 0, PAGE_SIZE);
+	} else {
+		if(!disk_read(loader->disk,
+			      (void *)P2V(phys_addr),
+			      0x1000,
+			      (info >> BLOCK_MAP_ID_SHIFT) * 0x1000)) {
+			boot_error("Could not read block %" PRIu64 " for virtual address %" PRIx64, info, virtual);
+		}
+	}
+}
+
 /** Load the operating system. */
 static __noreturn void mezzanine_loader_load(void) {
 	mezzanine_loader_t *loader = current_environ->data;
@@ -425,84 +548,76 @@ static __noreturn void mezzanine_loader_load(void) {
 	generate_pmap(mmu);
 
 	for(uint32_t i = 0; i < loader->header.n_extents; ++i) {
-		// Each extent must be 4k (block) aligned on-disk and
-		// 4k (page) aligned in memory.
-		dprintf("mezzanine: extent % 2" PRIu32 " %016" PRIx64 " %016" PRIx64 " %08" PRIx64 " %08" PRIx64 " %04" PRIx64 "\n",
-			i, loader->header.extents[i].store_base, loader->header.extents[i].virtual_base,
-			loader->header.extents[i].size, loader->header.extents[i].bump,
-			loader->header.extents[i].flags);
-		if(loader->header.extents[i].store_base % 4096 ||
-		   loader->header.extents[i].virtual_base % PAGE_SIZE ||
+		// Each extent must be 4k (page) aligned in memory.
+		dprintf("mezzanine: extent % 2" PRIu32 " %016" PRIx64 " %08" PRIx64 " %04" PRIx64 "\n",
+			i, loader->header.extents[i].virtual_base,
+			loader->header.extents[i].size, loader->header.extents[i].flags);
+		if(loader->header.extents[i].virtual_base % PAGE_SIZE ||
 		   loader->header.extents[i].size % PAGE_SIZE) {
 			boot_error("Extent %" PRIu32 " is misaligned", i);
 		}
 
-		// Skip non-wired extents.
-		if((loader->header.extents[i].flags & MEZZANINE_EXTENT_WIRED) == 0) {
-			continue;
-		}
-
-		// Allocate physical memory. If the extent if 2M aligned, then
-		// use 2M pages, otherwise fall back to 4k pages.
-		bool use_large_pages = !(loader->header.extents[i].virtual_base % 0x200000 ||
-					 loader->header.extents[i].size % 0x200000);
-		phys_ptr_t phys_addr;
-		phys_memory_alloc(loader->header.extents[i].size, // size
-				  use_large_pages ? 0x200000 : 0x1000, // alignment
-				  0, 0, // min/max address
-				  PHYS_MEMORY_ALLOCATED, // type
-				  0, // flags
-				  &phys_addr);
-
-		// Initialize each region.
-		// Stacks grow downwards, other regions grow upwards.
-		if((loader->header.extents[i].flags & MEZZANINE_EXTENT_TYPE_MASK) == MEZZANINE_EXTENT_TYPE_STACK) {
-			// Stacks do not need to be zero-initialized.
-			if(!disk_read(loader->disk,
-				      (void *)P2V(phys_addr + ROUND_DOWN(loader->header.extents[i].bump, 0x1000)),
-				      loader->header.extents[i].size - ROUND_DOWN(loader->header.extents[i].bump, 0x1000),
-				      loader->header.extents[i].store_base + ROUND_DOWN(loader->header.extents[i].bump, 0x1000))) {
-				boot_error("Could not read extent %" PRIu32, i);
-			}
-		} else {
-			if(!disk_read(loader->disk,
-				      (void *)P2V(phys_addr),
-				      ROUND_UP(loader->header.extents[i].bump, 0x1000),
-				      loader->header.extents[i].store_base)) {
-				boot_error("Could not read extent %" PRIu32, i);
-			}
-			memset((void*)P2V(phys_addr + loader->header.extents[i].bump),
-			       0,
-			       loader->header.extents[i].size - loader->header.extents[i].bump);
-		}
-
-		// Map this entry in.
-		mmu_map(mmu, loader->header.extents[i].virtual_base, phys_addr,
-			loader->header.extents[i].size);
-		if((loader->header.extents[i].flags & MEZZANINE_EXTENT_TYPE_MASK) == MEZZANINE_EXTENT_TYPE_STACK) {
-			mmu_map(mmu, loader->header.extents[i].virtual_base | MEZZANINE_STACK_MARK_BIT, phys_addr,
-				loader->header.extents[i].size);
-		}
-
-		// Write block numbers to page info structs.
-		for(phys_ptr_t i = 0; i < loader->header.extents[i].size; i += PAGE_SIZE) {
-			set_page_info_bin(mmu, phys_addr + i, fixnum(loader->header.extents[i].virtual_base + i));
+		// Load each page in the region.
+		// TODO: Use 2M pages.
+		for(uint64_t offset = 0; offset < loader->header.extents[i].size; offset += PAGE_SIZE) {
+			load_page(loader, mmu, loader->header.extents[i].virtual_base + offset);
 		}
 	}
-
-	loader_preboot();
 
 	// Allocate the boot info page.
 	phys_ptr_t boot_info_page;
 	phys_memory_alloc(PAGE_SIZE, // size
 			  0x1000, // alignment
-			  0, 0, // min/max address
+			  0x100000, 0, // min/max address
 			  PHYS_MEMORY_ALLOCATED, // type
 			  0, // flags
 			  &boot_info_page);
 	mezzanine_boot_information_t *boot_info = (mezzanine_boot_information_t *)P2V(boot_info_page);
 
+	// When there are modules, allocate the module info pages.
+	if(loader->modules.list->count) {
+		size_t total_size = 0;
+		value_list_t *list = loader->modules.list;
+
+		for(size_t i = 0; i < list->count; i++) {
+			if(list->values[i].type != VALUE_TYPE_STRING) {
+				boot_error("Invalid arguments (modules must be strings)");
+			}
+			char *tmp = strrchr(list->values[i].string, '/');
+			char *name = (tmp) ? tmp + 1 : list->values[i].string;
+			total_size += (24 + strlen(name) + 15) & ~15;
+		}
+		phys_ptr_t mod_info_pages;
+		phys_memory_alloc(ROUND_UP(total_size, PAGE_SIZE), // size
+				  0x1000, // alignment
+				  0x100000, 0, // min/max address
+				  PHYS_MEMORY_ALLOCATED, // type
+				  0, // flags
+				  &mod_info_pages);
+		boot_info->module_info_base = fixnum(mod_info_pages);
+		boot_info->module_info_size = fixnum(total_size);
+		phys_ptr_t current = mod_info_pages;
+		for(size_t i = 0; i < list->count; i++) {
+			file_handle_t *handle = file_open(list->values[i].string, NULL);
+			if(!handle) {
+				boot_error("Could not open module %s", list->values[i].string);
+			}
+
+			char *tmp = strrchr(list->values[i].string, '/');
+			char *name = (tmp) ? tmp + 1 : list->values[i].string;
+			load_module(current, handle, name);
+			file_close(handle);
+
+			current += (24 + strlen(name) + 15) & ~15;
+		}
+	} else {
+		boot_info->module_info_base = fixnum(0);
+		boot_info->module_info_size = fixnum(0);
+	}
+
 	memcpy(boot_info->uuid, loader->header.uuid, 16);
+
+	loader_preboot();
 
 	set_video_mode(boot_info);
 
@@ -568,7 +683,9 @@ static loader_type_t mezzanine_loader_type = {
 static bool config_cmd_mezzanine(value_list_t *args) {
 	mezzanine_loader_t *data;
 
-	if((args->count != 1) || args->values[0].type != VALUE_TYPE_STRING) {
+	if((args->count != 1 && args->count != 2) ||
+	   args->values[0].type != VALUE_TYPE_STRING ||
+	   (args->count == 2 && args->values[1].type != VALUE_TYPE_LIST)) {
 		dprintf("config: mezzanine: invalid arguments\n");
 		return false;
 	}
@@ -582,8 +699,16 @@ static bool config_cmd_mezzanine(value_list_t *args) {
 	}
 
 	data = kmalloc(sizeof *data);
+	data->block_cache = NULL;
 	data->device_name = kstrdup(args->values[0].string);
 	data->disk = (disk_t *)device;
+
+	/* Copy the modules value. If there isn't one, just set an empty list. */
+	if(args->count == 2) {
+		value_copy(&args->values[1], &data->modules);
+	} else {
+		value_init(&data->modules, VALUE_TYPE_LIST);
+	}
 
 	/* Read in the header. */
 	if(!disk_read(data->disk, &data->header, sizeof(mezzanine_header_t), 0)) {
@@ -624,16 +749,6 @@ static bool config_cmd_mezzanine(value_list_t *args) {
 
 	dprintf("mezzanine: Entry fref at %08" PRIx64 ". Initial process at %08" PRIx64 ".\n",
 		data->header.entry_fref, data->header.initial_process);
-
-
-	for(uint32_t i = 0; i < data->header.n_extents; ++i) {
-		// Each extent must be 4k (block) aligned on-disk and
-		// 4k (page) aligned in memory.
-		dprintf("mezzanine: extent % 2" PRIu32 " %016" PRIx64 " %016" PRIx64 " %08" PRIx64 " %08" PRIx64 " %04" PRIx64 "\n",
-			i, data->header.extents[i].store_base, data->header.extents[i].virtual_base,
-			data->header.extents[i].size, data->header.extents[i].bump,
-			data->header.extents[i].flags);
-	}
 
 	current_environ->loader = &mezzanine_loader_type;
 	current_environ->data = data;
