@@ -83,7 +83,7 @@ typedef struct mezzanine_buddy_bin {
 
 static const char mezzanine_magic[] = "\x00MezzanineImage\x00";
 static const uint16_t mezzanine_protocol_major = 0;
-static const uint16_t mezzanine_protocol_minor = 17;
+static const uint16_t mezzanine_protocol_minor = 18;
 // FIXME: Duplicated in enter.S
 static const uint64_t mezzanine_physical_map_address = 0xFFFF800000000000ull;
 static const uint64_t mezzanine_physical_info_address = 0xFFFF808000000000ull;
@@ -225,6 +225,8 @@ static uint64_t fixnum(int64_t val) {
 }
 
 #define PAGE_FLAG_FREE 1
+#define PAGE_FLAG_CACHE 2
+#define PAGE_FLAG_WRITEBACK 4
 
 static uint64_t page_info_flags(mmu_context_t *mmu, phys_ptr_t page) {
 	uint64_t offset = page / PAGE_SIZE;
@@ -527,7 +529,8 @@ static void load_page(mezzanine_loader_t *loader, mmu_context_t *mmu, uint64_t v
 	// Map...
 	mmu_map(mmu, virtual, phys_addr, PAGE_SIZE);
 	// Write block number to page info struct.
-	set_page_info_bin(mmu, phys_addr, fixnum(virtual));
+	set_page_info_bin(mmu, phys_addr, fixnum(info >> BLOCK_MAP_ID_SHIFT));
+	set_page_info_flags(mmu, phys_addr, fixnum(virtual & ~0xFFF) | fixnum(PAGE_FLAG_CACHE));
 
 	if(info & BLOCK_MAP_ZERO_FILL) {
 		memset((void *)P2V(phys_addr), 0, PAGE_SIZE);
