@@ -32,4 +32,8 @@ extern bool mmu_map(mmu_context_t *ctx, target_ptr_t virt, phys_ptr_t phys,
 
 extern mmu_context_t *mmu_context_create(target_type_t target, unsigned phys_type);
 
+extern void mmu_memset(mmu_context_t *ctx, target_ptr_t addr, uint8_t value, target_size_t size);
+extern void mmu_memcpy_to(mmu_context_t *ctx, target_ptr_t addr, const void *source, target_size_t size);
+extern void mmu_memcpy_from(mmu_context_t *ctx, void *dest, target_ptr_t addr, target_size_t size);
+
 #endif /* __MMU_H */

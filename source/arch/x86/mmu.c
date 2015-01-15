@@ -268,3 +268,99 @@ mmu_context_t *mmu_context_create(target_type_t target, unsigned phys_type) {
 	ctx->cr3 = allocate_structure(ctx);
 	return ctx;
 }
+
+/** Set bytes in an area of memory. The area must not cross a page boundary.
+ * @param ctx		Context to use.
+ * @param addr		Virtual address to write to, must be mapped.
+ * @param value		Value to write.
+ * @param size		Number of bytes to write. */
+void mmu_memset(mmu_context_t *ctx, target_ptr_t addr, uint8_t value, target_size_t size) {
+	uint64_t *pdir, *ptbl;
+	ptr_t page;
+	int pde, pte;
+
+	assert(ctx->is64);
+	assert(addr / PAGE_SIZE == (addr + size) / PAGE_SIZE);
+
+	pdir = get_pdir64(ctx, addr);
+
+	/* Get the page directory entry number. */
+	pde = (addr % 0x40000000) / 0x200000;
+
+	/* Get the page table from the page directory. */
+	assert(pdir[pde] & X86_PTE_PRESENT);
+	ptbl = (uint64_t *)P2V((ptr_t)(pdir[pde] & 0x000000FFFFFFF000LL));
+
+	/* Get the page table entry number. */
+	pte = (addr % 0x200000) / PAGE_SIZE;
+
+	/* Get the page from the page table. */
+	assert(ptbl[pte] & X86_PTE_PRESENT);
+	page = P2V((ptr_t)(ptbl[pte] & 0x000000FFFFFFF000LL));
+
+	memset((void *)(page + addr % PAGE_SIZE), value, size);
+}
+
+/** Set bytes in an area of memory. The area must not cross a page boundary.
+ * @param ctx		Context to use.
+ * @param addr		Virtual address to write to, must be mapped.
+ * @param source	Memory to read from.
+ * @param size		Number of bytes to write. */
+void mmu_memcpy_to(mmu_context_t *ctx, target_ptr_t addr, const void *source, target_size_t size) {
+	uint64_t *pdir, *ptbl;
+	ptr_t page;
+	int pde, pte;
+
+	assert(ctx->is64);
+	assert(addr / PAGE_SIZE == (addr + size) / PAGE_SIZE);
+
+	pdir = get_pdir64(ctx, addr);
+
+	/* Get the page directory entry number. */
+	pde = (addr % 0x40000000) / 0x200000;
+
+	/* Get the page table from the page directory. */
+	assert(pdir[pde] & X86_PTE_PRESENT);
+	ptbl = (uint64_t *)P2V((ptr_t)(pdir[pde] & 0x000000FFFFFFF000LL));
+
+	/* Get the page table entry number. */
+	pte = (addr % 0x200000) / PAGE_SIZE;
+
+	/* Get the page from the page table. */
+	assert(ptbl[pte] & X86_PTE_PRESENT);
+	page = P2V((ptr_t)(ptbl[pte] & 0x000000FFFFFFF000LL));
+
+	memcpy((void *)(page + addr % PAGE_SIZE), source, size);
+}
+
+/** Read bytes from an area of memory. The area must not cross a page boundary.
+ * @param ctx		Context to use.
+ * @param dest		Memory to write to.
+ * @param addr		Virtual address to read from, must be mapped.
+ * @param size		Number of bytes to read. */
+void mmu_memcpy_from(mmu_context_t *ctx, void *dest, target_ptr_t addr, target_size_t size) {
+	uint64_t *pdir, *ptbl;
+	ptr_t page;
+	int pde, pte;
+
+	assert(ctx->is64);
+	assert(addr / PAGE_SIZE == (addr + size) / PAGE_SIZE);
+
+	pdir = get_pdir64(ctx, addr);
+
+	/* Get the page directory entry number. */
+	pde = (addr % 0x40000000) / 0x200000;
+
+	/* Get the page table from the page directory. */
+	assert(pdir[pde] & X86_PTE_PRESENT);
+	ptbl = (uint64_t *)P2V((ptr_t)(pdir[pde] & 0x000000FFFFFFF000LL));
+
+	/* Get the page table entry number. */
+	pte = (addr % 0x200000) / PAGE_SIZE;
+
+	/* Get the page from the page table. */
+	assert(ptbl[pte] & X86_PTE_PRESENT);
+	page = P2V((ptr_t)(ptbl[pte] & 0x000000FFFFFFF000LL));
+
+	memcpy(dest, (void *)(page + addr % PAGE_SIZE), size);
+}
