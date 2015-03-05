@@ -299,6 +299,10 @@ mmu_context_t *mmu_context_create(target_type_t target, unsigned phys_type) {
 	return ctx;
 }
 
+static bool does_not_cross_page_boundary(uint64_t addr, uint64_t size) {
+	return size == 0 || addr / PAGE_SIZE == (addr + size - 1) / PAGE_SIZE;
+}
+
 /** Set bytes in an area of memory. The area must not cross a page boundary.
  * @param ctx		Context to use.
  * @param addr		Virtual address to write to, must be mapped.
@@ -310,7 +314,7 @@ void mmu_memset(mmu_context_t *ctx, target_ptr_t addr, uint8_t value, target_siz
 	int pde, pte;
 
 	assert(ctx->is64);
-	assert(addr / PAGE_SIZE == (addr + size) / PAGE_SIZE);
+	assert(does_not_cross_page_boundary(addr, size));
 
 	pdir = get_pdir64(ctx, addr);
 
@@ -328,7 +332,7 @@ void mmu_memset(mmu_context_t *ctx, target_ptr_t addr, uint8_t value, target_siz
 	assert(ptbl[pte] & X86_PTE_PRESENT);
 	page = P2V((ptr_t)(ptbl[pte] & 0x000000FFFFFFF000LL));
 
-	memset((void *)(page + addr % PAGE_SIZE), value, size);
+	memset((void *)(ptr_t)(page + addr % PAGE_SIZE), value, size);
 }
 
 /** Set bytes in an area of memory. The area must not cross a page boundary.
@@ -342,7 +346,7 @@ void mmu_memcpy_to(mmu_context_t *ctx, target_ptr_t addr, const void *source, ta
 	int pde, pte;
 
 	assert(ctx->is64);
-	assert(addr / PAGE_SIZE == (addr + size) / PAGE_SIZE);
+	assert(does_not_cross_page_boundary(addr, size));
 
 	pdir = get_pdir64(ctx, addr);
 
@@ -360,7 +364,7 @@ void mmu_memcpy_to(mmu_context_t *ctx, target_ptr_t addr, const void *source, ta
 	assert(ptbl[pte] & X86_PTE_PRESENT);
 	page = P2V((ptr_t)(ptbl[pte] & 0x000000FFFFFFF000LL));
 
-	memcpy((void *)(page + addr % PAGE_SIZE), source, size);
+	memcpy((void *)(ptr_t)(page + addr % PAGE_SIZE), source, size);
 }
 
 /** Read bytes from an area of memory. The area must not cross a page boundary.
@@ -374,7 +378,7 @@ void mmu_memcpy_from(mmu_context_t *ctx, void *dest, target_ptr_t addr, target_s
 	int pde, pte;
 
 	assert(ctx->is64);
-	assert(addr / PAGE_SIZE == (addr + size) / PAGE_SIZE);
+	assert(does_not_cross_page_boundary(addr, size));
 
 	pdir = get_pdir64(ctx, addr);
 
@@ -392,5 +396,5 @@ void mmu_memcpy_from(mmu_context_t *ctx, void *dest, target_ptr_t addr, target_s
 	assert(ptbl[pte] & X86_PTE_PRESENT);
 	page = P2V((ptr_t)(ptbl[pte] & 0x000000FFFFFFF000LL));
 
-	memcpy(dest, (void *)(page + addr % PAGE_SIZE), size);
+	memcpy(dest, (void *)(ptr_t)(page + addr % PAGE_SIZE), size);
 }
