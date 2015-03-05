@@ -81,30 +81,38 @@ typedef struct mezzanine_buddy_bin {
 	uint64_t count;
 } __packed mezzanine_buddy_bin_t;
 
+typedef struct mezzanine_memory_map_entry {
+	uint64_t start;
+	uint64_t end;
+} __packed mezzanine_memory_map_entry_t;
+
 static const char mezzanine_magic[] = "\x00MezzanineImage\x00";
 static const uint16_t mezzanine_protocol_major = 0;
-static const uint16_t mezzanine_protocol_minor = 18;
+static const uint16_t mezzanine_protocol_minor = 20;
 // FIXME: Duplicated in enter.S
 static const uint64_t mezzanine_physical_map_address = 0xFFFF800000000000ull;
 static const uint64_t mezzanine_physical_info_address = 0xFFFF808000000000ull;
 static const uint64_t mezzanine_physical_map_size = 0x8000000000ull;
-#define mezzanine_n_buddy_bins 32
+#define log2_4k_page 12
+// Modifying these will change the layout of the boot info page.
+// Changes the protocol version to be bumped.
+// 32 bits - log2(4k_page_size)
+#define mezzanine_n_buddy_bins_32_bit (32-log2_4k_page)
+// The physical map covers 512GB, log2 is 39.
+#define mezzanine_n_buddy_bins_64_bit (39-log2_4k_page)
+// I have yet to see an E820 memory map with more than 16 entries.
+#define mezzanine_max_memory_map_size 32
 
 /* Boot info page */
 
-typedef struct mezzanine_boot_information {
-	uint8_t uuid[16];                                          // +0 octets.
-	mezzanine_buddy_bin_t buddy_bin[mezzanine_n_buddy_bins];   // +16
-	// Video information.
+typedef struct mezzanine_video_information {
 	// Framebuffer size is stride * height, aligned up to page size.
-	uint64_t framebuffer_physical_address;                     // +528 fixnum.
-	uint64_t framebuffer_width;                                // +536 fixnum, pixels.
-	uint64_t framebuffer_pitch;                                // +544 fixnum, bytes.
-	uint64_t framebuffer_height;                               // +552 fixnum, pixels.
-	uint64_t framebuffer_layout;                               // +560 fixnum.
-	uint64_t module_info_base;                                 // +568 fixnum.
-	uint64_t module_info_size;                                 // +576 fixnum.
-} __packed mezzanine_boot_information_t;
+	uint64_t framebuffer_physical_address;                     //  +0 fixnum.
+	uint64_t framebuffer_width;                                //  +8 fixnum, pixels.
+	uint64_t framebuffer_pitch;                                // +16 fixnum, bytes.
+	uint64_t framebuffer_height;                               // +24 fixnum, pixels.
+	uint64_t framebuffer_layout;                               // +32 fixnum.
+} __packed mezzanine_video_information_t;
 
 // Common(ish) layouts. Layouts beyond 32-bit XRGB will be supported in later boot protocols.
 #define FRAMEBUFFER_LAYOUT_X8_R8_G8_B8 1  // 32-bit XRGB
@@ -120,7 +128,23 @@ typedef struct mezzanine_boot_information {
 //#define FRAMEBUFFER_LAYOUT_R5_G5_B5_X1 11 // 16-bit 555 RGBX
 //#define FRAMEBUFFER_LAYOUT_B5_G5_R5_X1 12 // 16-bit 555 BGRX
 
-#define MEZZANINE_STACK_MARK_BIT 0x100000000000
+typedef struct mezzanine_boot_information {
+	uint8_t uuid[16];                                          // +0 octets.
+	// Buddy allocator for memory below 4GB.
+	mezzanine_buddy_bin_t buddy_bin_32[mezzanine_n_buddy_bins_32_bit]; // +16
+	// Buddy allocator for remaining memory.
+	mezzanine_buddy_bin_t buddy_bin_64[mezzanine_n_buddy_bins_64_bit]; // +336
+	// Video information.
+	mezzanine_video_information_t video;                       // +768
+	// Boot modules (not very useful, marked for death).
+	uint64_t module_info_base;                                 // +888 fixnum.
+	uint64_t module_info_size;                                 // +896 fixnum.
+	// The memory map specifies where RAM exists, not what it can be used for.
+	// If it's in the memory map, then it has an info struct mapped.
+	// This is sorted in address order, with no overlaps.
+	uint64_t n_memory_map_entries;                             // +904 unsigned-byte 64.
+	mezzanine_memory_map_entry_t memory_map[mezzanine_max_memory_map_size];
+} __packed mezzanine_boot_information_t;
 
 #define BLOCK_MAP_PRESENT 1
 #define BLOCK_MAP_WRITABLE 2
@@ -147,10 +171,60 @@ typedef struct mezzanine_loader {
 
 extern void __noreturn mezzanine_arch_enter(phys_ptr_t transition_pml4, phys_ptr_t pml4, uint64_t entry_fref, uint64_t initial_process, uint64_t boot_information_location);
 
-static void generate_pmap(mmu_context_t *mmu) {
+static bool in_range(uint64_t start, uint64_t end, uint64_t value) {
+	return start <= value && value <= end;
+}
+
+static void crunch_memory_map(mezzanine_boot_information_t *boot_info) {
+	// Merge all overlapping/contiguous regions in the memory map.
+	// insert_into_memory_map may produce opportunities for merging.
+
+	// TODO.
+}
+
+static void insert_into_memory_map(mezzanine_boot_information_t *boot_info, uint64_t start, uint64_t end) {
+	// Search for a existing region to merge with/insert after.
+	uint64_t i = 0;
+	for(; i < boot_info->n_memory_map_entries; i += 1) {
+		if(boot_info->memory_map[i].start > end) {
+			// Insert before this entry.
+			break;
+		}
+		// Merge entries when the new region overlaps.
+		if(in_range(boot_info->memory_map[i].start, boot_info->memory_map[i].end, start) ||
+		   in_range(boot_info->memory_map[i].start, boot_info->memory_map[i].end, end)) {
+			if(boot_info->memory_map[i].start > start) {
+				boot_info->memory_map[i].start = start;
+			}
+			if(boot_info->memory_map[i].end < end) {
+				boot_info->memory_map[i].end = end;
+			}
+			crunch_memory_map(boot_info);
+			return;
+		}
+	}
+	// Can't merge with an existing entry. Insert a new region.
+	if(boot_info->n_memory_map_entries == mezzanine_max_memory_map_size) {
+		dprintf("Too many memory map entries. Ignoring %016" PRIx64 "-%016" PRIx64 "\n",
+			start, end);
+		return;
+	}
+	// Shuffle entries up.
+	memcpy(&boot_info->memory_map[i], &boot_info->memory_map[i+1], (boot_info->n_memory_map_entries - i) * sizeof(mezzanine_memory_map_entry_t));
+	// Set.
+	boot_info->memory_map[i].start = start;
+	boot_info->memory_map[i].end = end;
+	boot_info->n_memory_map_entries += 1;
+
+	crunch_memory_map(boot_info);
+}
+
+
+static void generate_memory_map(mmu_context_t *mmu, mezzanine_boot_information_t *boot_info) {
 	// Iterate the E820 memory map to generate the physical mapping region.
 	// Only memory mentioned by the E820 map is mapped here. Device memory, etc is
 	// left for the OS to detect and map.
+	// TODO, eventually the system will need to know about ACPI reclaim/NVS areas.
 
 	e820_entry_t *mmap = (e820_entry_t *)BIOS_MEM_BASE;
 	size_t count = 0, i;
@@ -182,14 +256,8 @@ static void generate_pmap(mmu_context_t *mmu) {
 		phys_ptr_t start = ROUND_DOWN(mmap[i].start, PAGE_SIZE);
 		phys_ptr_t end = ROUND_UP(mmap[i].start + mmap[i].length, PAGE_SIZE);
 
-		/* What we did above may have made the region too small, warn
-		 * and ignore it if this is the case. */
-		if(end <= start) {
-			continue;
-		}
-
 		// Ignore this region if exceeds the map area limit.
-		if(start > mezzanine_physical_map_size) {
+		if(start >= mezzanine_physical_map_size) {
 			continue;
 		}
 
@@ -198,16 +266,40 @@ static void generate_pmap(mmu_context_t *mmu) {
 			end = mezzanine_physical_map_size;
 		}
 
-		dprintf("mezzanine: Map E820 region %016" PRIx64 "-%016" PRIx64 "\n",
-			start, end);
+		/* What we did above may have made the region too small,
+		 * ignore it if this is the case. */
+		if(end <= start) {
+			continue;
+		}
 
+		dprintf("mezzanine: Map E820 region %016" PRIx64 "-%016" PRIx64 " %016" PRIx64 "-%016" PRIx64 "\n",
+			mmap[i].start, mmap[i].start + mmap[i].length, start, end);
+
+		// Map the memory into the physical map region.
 		mmu_map(mmu, mezzanine_physical_map_address + start, start, end - start);
 
-		// Allocate the information area for these pages.
-		// FIXME: This has a bit of a problem with overlap, leaking a few pages.
+		// Carefully insert it into the memory map, maintaining the sortedness.
+		insert_into_memory_map(boot_info, start, end);
+	}
+
+	dprintf("mezzanine: Final memory map:\n");
+	for(uint64_t i = 0; i < boot_info->n_memory_map_entries; i += 1) {
+		dprintf("  %016" PRIx64 "-%016" PRIx64 "\n",
+			boot_info->memory_map[i].start,
+			boot_info->memory_map[i].end);
+	}
+
+	// Allocate the information structs for all the pages in the memory map.
+	// FIXME: This has a bit of a problem with overlap, leaking a few pages.
+	for(uint64_t i = 0; i < boot_info->n_memory_map_entries; i += 1) {
+		phys_ptr_t start = boot_info->memory_map[i].start;
+		phys_ptr_t end = boot_info->memory_map[i].end;
 		phys_ptr_t info_start = ROUND_DOWN((mezzanine_physical_info_address + (start / PAGE_SIZE) * sizeof(mezzanine_page_info_t)), PAGE_SIZE);
 		phys_ptr_t info_end = ROUND_UP((mezzanine_physical_info_address + (end / PAGE_SIZE) * sizeof(mezzanine_page_info_t)), PAGE_SIZE);
 		phys_ptr_t phys_info_addr;
+		dprintf("mezzanine: info range %016" PRIx64 "-%016" PRIx64 "\n", info_start, info_end);
+		// FIXME/TODO: It's ok for the backing pages to be discontinuous.
+		// Could use 2MB pages here as well.
 		phys_memory_alloc(info_end - info_start, // size
 				  0x1000, // alignment
 				  0x100000, 0, // min/max address
@@ -222,6 +314,10 @@ static void generate_pmap(mmu_context_t *mmu) {
 /// Convert val to a fixnum.
 static uint64_t fixnum(int64_t val) {
 	return val << 1;
+}
+// And the other way.
+static int64_t unfixnum(uint64_t fix) {
+	return ((int64_t)fix) >> 1;
 }
 
 #define PAGE_FLAG_FREE 1
@@ -277,16 +373,42 @@ static void set_page_info_prev(mmu_context_t *mmu, phys_ptr_t page, uint64_t val
 }
 
 static phys_ptr_t buddy(int k, phys_ptr_t x) {
-	return x ^ ((phys_ptr_t)1 << (k + 12));
+	return x ^ ((phys_ptr_t)1 << (k + log2_4k_page));
+}
+
+static bool page_exists(mezzanine_boot_information_t *boot_info, phys_ptr_t page) {
+	for(uint64_t i = 0; i < boot_info->n_memory_map_entries; i += 1) {
+		if(boot_info->memory_map[i].start <= page && page < boot_info->memory_map[i].end) {
+			return true;
+		}
+	}
+	return false;
 }
 
 static void buddy_free_page(mmu_context_t *mmu, mezzanine_boot_information_t *boot_info, uint64_t nil, phys_ptr_t l) {
-	int m = mezzanine_n_buddy_bins-1;
+	//phys_ptr_t orig = l;
+	mezzanine_buddy_bin_t *buddies;
+	int m;
 	int k = 0;
+
+	if(l < 0x100000000ull) { // 4GB
+		m = mezzanine_n_buddy_bins_32_bit - 1;
+		buddies = boot_info->buddy_bin_32;
+	} else {
+		m = mezzanine_n_buddy_bins_64_bit - 1;
+		buddies = boot_info->buddy_bin_64;
+	}
+
+	//if(orig > 0x000000013FF00000ull)
+	//	dprintf("Freeing page %016" PRIx64 "\n", l);
 
 	while(1) {
 		phys_ptr_t p = buddy(k, l);
+		//if(orig > 0x000000013FF00000ull)
+		//	dprintf(" buddy %016" PRIx64 "  order %i\n", p, k);
+
 		if(k == m || // Stop trying to combine at the last bin.
+		   !page_exists(boot_info, p) || // Stop when the buddy doesn't actually exist.
 		   // Don't combine if buddy is not free
 		   (page_info_flags(mmu, p) & fixnum(PAGE_FLAG_FREE)) != fixnum(PAGE_FLAG_FREE) ||
 		   // Only combine when the buddy is in this bin.
@@ -295,30 +417,33 @@ static void buddy_free_page(mmu_context_t *mmu, mezzanine_boot_information_t *bo
 			break;
 		}
 		// remove buddy from avail[k]
-		if(boot_info->buddy_bin[k].first_page == fixnum(p / PAGE_SIZE)) {
-			boot_info->buddy_bin[k].first_page = page_info_next(mmu, p);
+		if(buddies[k].first_page == fixnum(p / PAGE_SIZE)) {
+			buddies[k].first_page = page_info_next(mmu, p);
 		}
 		if(page_info_next(mmu, p) != nil) {
-			set_page_info_prev(mmu, page_info_next(mmu, p), page_info_prev(mmu, p));
+			set_page_info_prev(mmu, unfixnum(page_info_next(mmu, p)) * PAGE_SIZE, page_info_prev(mmu, p));
 		}
 		if(page_info_prev(mmu, p) != nil) {
-			set_page_info_next(mmu, page_info_prev(mmu, p), page_info_next(mmu, p));
+			set_page_info_next(mmu, unfixnum(page_info_prev(mmu, p)) * PAGE_SIZE, page_info_next(mmu, p));
 		}
-		boot_info->buddy_bin[k].count -= fixnum(1);
+		buddies[k].count -= fixnum(1);
 		k += 1;
 		if(p < l) {
 			l = p;
 		}
 	}
+	//if(orig > 0x000000013FF00000ull)
+	//	dprintf(" final %016" PRIx64 "\n", l);
+
 	set_page_info_flags(mmu, l, page_info_flags(mmu, l) | fixnum(PAGE_FLAG_FREE));
 	set_page_info_bin(mmu, l, fixnum(k));
-	set_page_info_next(mmu, l, boot_info->buddy_bin[k].first_page);
+	set_page_info_next(mmu, l, buddies[k].first_page);
 	set_page_info_prev(mmu, l, nil);
-	if(boot_info->buddy_bin[k].first_page != nil) {
-		set_page_info_prev(mmu, boot_info->buddy_bin[k].first_page, fixnum(l));
+	if(buddies[k].first_page != nil) {
+		set_page_info_prev(mmu, unfixnum(buddies[k].first_page) * PAGE_SIZE, fixnum(l / PAGE_SIZE));
 	}
-	boot_info->buddy_bin[k].first_page = fixnum(l / PAGE_SIZE);
-	boot_info->buddy_bin[k].count += fixnum(1);
+	buddies[k].first_page = fixnum(l / PAGE_SIZE);
+	buddies[k].count += fixnum(1);
 }
 
 static int determine_vbe_mode_layout(vbe_mode_t *mode) {
@@ -416,11 +541,11 @@ static void set_video_mode(mezzanine_boot_information_t *boot_info)
 
 	dprintf("mezzanine: Using %ix%i video mode, layout %i, pitch %i, fb at %08x\n",
 		mode->info.x_resolution, mode->info.y_resolution, layout, mode->info.bytes_per_scan_line, mode->info.phys_base_ptr);
-	boot_info->framebuffer_physical_address = fixnum(mode->info.phys_base_ptr);
-	boot_info->framebuffer_width = fixnum(mode->info.x_resolution);
-	boot_info->framebuffer_pitch = fixnum(mode->info.bytes_per_scan_line);
-	boot_info->framebuffer_height = fixnum(mode->info.y_resolution);
-	boot_info->framebuffer_layout = fixnum(layout);
+	boot_info->video.framebuffer_physical_address = fixnum(mode->info.phys_base_ptr);
+	boot_info->video.framebuffer_width = fixnum(mode->info.x_resolution);
+	boot_info->video.framebuffer_pitch = fixnum(mode->info.bytes_per_scan_line);
+	boot_info->video.framebuffer_height = fixnum(mode->info.y_resolution);
+	boot_info->video.framebuffer_layout = fixnum(layout);
 	vbe_mode_set(mode);
 }
 
@@ -544,13 +669,50 @@ static void load_page(mezzanine_loader_t *loader, mmu_context_t *mmu, uint64_t v
 	}
 }
 
+static void dump_one_buddy_allocator(mmu_context_t *mmu, mezzanine_boot_information_t *boot_info, uint64_t nil, mezzanine_buddy_bin_t *buddies, int max) {
+	for(int k = 0; k < max; k += 1) {
+		dprintf("Order %i %" PRIu64 " %016" PRIx64 ":\n", (k + log2_4k_page), buddies[k].count, buddies[k].first_page);
+		uint64_t current = buddies[k].first_page;
+		while(true) {
+			if(current == nil) {
+				break;
+			}
+			assert((current & 1) == 0);
+			dprintf("  %016" PRIx64 "-%016" PRIx64 " %016" PRIx64 " %016" PRIx64 "\n",
+				unfixnum(current) * PAGE_SIZE,
+				unfixnum(current) * PAGE_SIZE + ((phys_ptr_t)1 << (12+k)),
+				page_info_next(mmu, unfixnum(current) * PAGE_SIZE),
+				page_info_prev(mmu, unfixnum(current) * PAGE_SIZE));
+			current = page_info_next(mmu, unfixnum(current) * PAGE_SIZE);
+		}
+	}
+}
+
+static void dump_buddy_allocator(mmu_context_t *mmu, mezzanine_boot_information_t *boot_info, uint64_t nil) {
+	dprintf("32-bit buddy allocator:\n");
+	dump_one_buddy_allocator(mmu, boot_info, nil, boot_info->buddy_bin_32, mezzanine_n_buddy_bins_32_bit);
+	dprintf("64-bit buddy allocator:\n");
+	dump_one_buddy_allocator(mmu, boot_info, nil, boot_info->buddy_bin_64, mezzanine_n_buddy_bins_64_bit);
+}
+
 /** Load the operating system. */
 static __noreturn void mezzanine_loader_load(void) {
 	mezzanine_loader_t *loader = current_environ->data;
 	mmu_context_t *mmu = mmu_context_create(TARGET_TYPE_64BIT, PHYS_MEMORY_PAGETABLES);
 	mmu_context_t *transition = mmu_context_create(TARGET_TYPE_64BIT, PHYS_MEMORY_INTERNAL);
 
-	generate_pmap(mmu);
+	// Allocate the boot info page.
+	phys_ptr_t boot_info_page;
+	phys_memory_alloc(PAGE_SIZE, // size
+			  0x1000, // alignment
+			  0x100000, 0, // min/max address
+			  PHYS_MEMORY_ALLOCATED, // type
+			  0, // flags
+			  &boot_info_page);
+	mezzanine_boot_information_t *boot_info = (mezzanine_boot_information_t *)P2V(boot_info_page);
+	memset(boot_info, 0, PAGE_SIZE);
+
+	generate_memory_map(mmu, boot_info);
 
 	for(uint32_t i = 0; i < loader->header.n_extents; ++i) {
 		// Each extent must be 4k (page) aligned in memory.
@@ -573,16 +735,6 @@ static __noreturn void mezzanine_loader_load(void) {
 			load_page(loader, mmu, loader->header.extents[i].virtual_base + offset);
 		}
 	}
-
-	// Allocate the boot info page.
-	phys_ptr_t boot_info_page;
-	phys_memory_alloc(PAGE_SIZE, // size
-			  0x1000, // alignment
-			  0x100000, 0, // min/max address
-			  PHYS_MEMORY_ALLOCATED, // type
-			  0, // flags
-			  &boot_info_page);
-	mezzanine_boot_information_t *boot_info = (mezzanine_boot_information_t *)P2V(boot_info_page);
 
 	// When there are modules, allocate the module info pages.
 	if(loader->modules.list->count) {
@@ -632,9 +784,13 @@ static __noreturn void mezzanine_loader_load(void) {
 	set_video_mode(boot_info);
 
 	// Initialize buddy bins.
-	for(int i = 0; i < mezzanine_n_buddy_bins; ++i) {
-		boot_info->buddy_bin[i].first_page = loader->header.nil;
-		boot_info->buddy_bin[i].count = fixnum(0);
+	for(int i = 0; i < mezzanine_n_buddy_bins_32_bit; ++i) {
+		boot_info->buddy_bin_32[i].first_page = loader->header.nil;
+		boot_info->buddy_bin_32[i].count = fixnum(0);
+	}
+	for(int i = 0; i < mezzanine_n_buddy_bins_64_bit; ++i) {
+		boot_info->buddy_bin_64[i].first_page = loader->header.nil;
+		boot_info->buddy_bin_64[i].count = fixnum(0);
 	}
 
 	// Generate the page tables used for transitioning from identity mapping
@@ -644,12 +800,14 @@ static __noreturn void mezzanine_loader_load(void) {
 	ptr_t loader_size = ROUND_UP((ptr_t)__end - (ptr_t)__start, PAGE_SIZE);
 	mmu_map(transition, loader_start, loader_start, loader_size);
 	mmu_map(transition, mezzanine_physical_map_address + loader_start, loader_start, loader_size);
+	mmu_map(mmu, mezzanine_physical_map_address + loader_start, loader_start, loader_size);
 
 	/* Reclaim all memory used internally. */
 	memory_finalize();
 
 	// For each free kboot memory region, add pages to the buddy allocator.
 	// Also avoid any memory below 1MB, it's weird.
+	// https://lkml.org/lkml/2013/11/11/614
 	// fixme: do this in a less stupid way (whole power-of-two chunks at a time, not single pages).
 	LIST_FOREACH(&memory_ranges, iter) {
 		memory_range_t *range = list_entry(iter, memory_range_t, header);
@@ -660,6 +818,8 @@ static __noreturn void mezzanine_loader_load(void) {
 			}
 		}
 	}
+
+	dump_buddy_allocator(mmu, boot_info, loader->header.nil);
 
 	dprintf("mezzanine: Starting system...\n");
 	mezzanine_arch_enter(transition->cr3,
@@ -691,6 +851,27 @@ static loader_type_t mezzanine_loader_type = {
  * @param args		Command arguments.
  * @return		Whether completed successfully. */
 static bool config_cmd_mezzanine(value_list_t *args) {
+	STATIC_ASSERT(offsetof(mezzanine_video_information_t, framebuffer_physical_address) == 0);
+	STATIC_ASSERT(offsetof(mezzanine_video_information_t, framebuffer_width) == 8);
+	STATIC_ASSERT(offsetof(mezzanine_video_information_t, framebuffer_pitch) == 16);
+	STATIC_ASSERT(offsetof(mezzanine_video_information_t, framebuffer_height) == 24);
+	STATIC_ASSERT(offsetof(mezzanine_video_information_t, framebuffer_layout) == 32);
+	STATIC_ASSERT(offsetof(mezzanine_boot_information_t, uuid) == 0);
+	STATIC_ASSERT(offsetof(mezzanine_boot_information_t, buddy_bin_32) == 16);
+	STATIC_ASSERT(offsetof(mezzanine_boot_information_t, buddy_bin_64) == 336);
+	STATIC_ASSERT(offsetof(mezzanine_boot_information_t, video) == 768);
+	STATIC_ASSERT(offsetof(mezzanine_boot_information_t, module_info_base) == 808);
+	STATIC_ASSERT(offsetof(mezzanine_boot_information_t, n_memory_map_entries) == 824);
+	STATIC_ASSERT(offsetof(mezzanine_boot_information_t, memory_map) == 832);
+	STATIC_ASSERT(offsetof(mezzanine_page_info_t, flags) == 0);
+	STATIC_ASSERT(offsetof(mezzanine_page_info_t, bin) == 8);
+	STATIC_ASSERT(offsetof(mezzanine_page_info_t, next) == 16);
+	STATIC_ASSERT(offsetof(mezzanine_page_info_t, prev) == 24);
+	STATIC_ASSERT(offsetof(mezzanine_buddy_bin_t, first_page) == 0);
+	STATIC_ASSERT(offsetof(mezzanine_buddy_bin_t, count) == 8);
+	STATIC_ASSERT(offsetof(mezzanine_memory_map_entry_t, start) == 0);
+	STATIC_ASSERT(offsetof(mezzanine_memory_map_entry_t, end) == 8);
+
 	mezzanine_loader_t *data;
 
 	if((args->count != 1 && args->count != 2) ||
