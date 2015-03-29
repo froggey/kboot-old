@@ -137,6 +137,9 @@ void multiboot_init(void) {
 			/* We only want the base name, take off any path strings. */
 			file->name = strrchr((char *)modules[i].cmdline, '/');
 			file->name = (file->name) ? file->name + 1 : (char *)modules[i].cmdline;
+			/* Work around bug in Grub2, it doesn't seem to be
+			 * passing the module name in properly. */
+			file->name = (char *)"loader.cfg";
 
 			/* We now need to re-allocate the module data as high
 			 * as possible so as to make it unlikely that we will
