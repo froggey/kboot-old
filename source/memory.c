@@ -413,8 +413,6 @@ bool phys_memory_alloc(phys_size_t size, phys_size_t align, phys_ptr_t min_addr,
 	/* Insert a new range over the top of the allocation. */
 	memory_range_insert(start, size, type);
 
-	dprintf("memory: allocated 0x%" PRIxPHYS "-0x%" PRIxPHYS " (align: 0x%" PRIxPHYS ", "
-		"type: %u, flags: 0x%x)\n", start, start + size, align, type, flags);
 	*physp = start;
 	return true;
 }
