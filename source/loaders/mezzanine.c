@@ -210,7 +210,7 @@ static void insert_into_memory_map(mezzanine_boot_information_t *boot_info, uint
 		return;
 	}
 	// Shuffle entries up.
-	memcpy(&boot_info->memory_map[i], &boot_info->memory_map[i+1], (boot_info->n_memory_map_entries - i) * sizeof(mezzanine_memory_map_entry_t));
+	memmove(&boot_info->memory_map[i+1], &boot_info->memory_map[i], (boot_info->n_memory_map_entries - i) * sizeof(mezzanine_memory_map_entry_t));
 	// Set.
 	boot_info->memory_map[i].start = start;
 	boot_info->memory_map[i].end = end;
